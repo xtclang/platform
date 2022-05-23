@@ -1,6 +1,9 @@
 /*
  * Build the "common" module.
  */
+
+val xdkExe = "${rootProject.projectDir}/xdk/bin"
+
 tasks.register("compile") {
     group       = "Build"
     description = "Compile this module"
@@ -10,7 +13,7 @@ tasks.register("compile") {
     val libDir    = "$rootDir/lib"
 
     project.exec {
-        commandLine("xtc", "-verbose",
+        commandLine("$xdkExe/xtc", "-verbose",
                     "-o", "$libDir",
                     "$srcModule")
     }

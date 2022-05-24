@@ -28,17 +28,18 @@ service Controller(HostManager mgr)
     @Post("/load")
     (HttpStatus, String) load(@QueryParam("app") String appName, @QueryParam String domain)
         {
-        // temporary hack: it will be another argument:
-        //    @SessionParam("userId") String userId
-        String userId = "TODO";
-
         // there is one and only one application per [sub] domain
         if (mgr.getWebHost(domain))
             {
             return HttpStatus.OK, "Already loaded";
             }
 
-        Directory userDir = getUserDirectory(userId);
+        // temporary hack: it will be another argument:
+        //    @SessionParam("userId") String userId
+        // which will map to an account
+        String account = "acme";
+
+        Directory userDir = getUserHomeDirectory(account);
         ErrorLog  errors  = new ErrorLog();
 
         if (WebHost webHost := mgr.createWebHost(userDir, appName, domain, errors))
@@ -99,12 +100,14 @@ service Controller(HostManager mgr)
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Get a user directory for the specified user.
+     * Get a user directory for the specified account.
      */
-    private Directory getUserDirectory(String userId)
+    private Directory getUserHomeDirectory(String account)
         {
         // temporary hack
-        @Inject Directory curDir;
-        return curDir;
+        @Inject Directory homeDir;
+        Directory accountDir = homeDir.dirFor($"Development/staging/platform/{account}");
+        accountDir.ensure();
+        return accountDir;
         }
     }

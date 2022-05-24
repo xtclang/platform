@@ -39,18 +39,19 @@ service HostManager
     @Override
     conditional WebHost createWebHost(Directory userDir, String appName, String domain, Log errors)
         {
-        String    libDirName = "build"; // REVIEW: replace with "lib/"?
         Directory libDir;
-        if (!(libDir := userDir.findDir(libDirName)))
+        if (!(libDir := userDir.findDir("lib")))
             {
-            errors.add($"Error: {libDirName.quoted()} directory not found in {userDir}");
+            errors.add($"Error: \"{userDir}/lib\" directory not found");
             return False;
             }
 
+        Directory buildDir = userDir.dirFor("build").ensure();
+
         @Inject("repository") ModuleRepository coreRepo;
 
-        ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir)].freeze(True);
-        ModuleRepository   repository = new LinkedRepository(baseRepos);
+        ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir), new DirRepository(buildDir)];
+        ModuleRepository   repository = new LinkedRepository(baseRepos.freeze(True));
         FileTemplate       fileTemplate;
         try
             {
@@ -119,7 +120,7 @@ service HostManager
 
             for ((String dbPath, String dbModuleName) : dbNames)
                 {
-                Directory userDir = appHomeDir.parent ?: assert;
+                Directory userDir = appHomeDir.parent?.parent? : assert;
                 DbHost    dbHost;
 
                 if (!(dbHost := createDbHost(repository, userDir, dbModuleName, errors)))
@@ -200,7 +201,7 @@ service HostManager
                 return False;
             }
 
-        assert Directory buildDir := userDir.findDir("build");
+        Directory buildDir = userDir.dirFor("build").ensure();
 
         if (!(dbModuleTemplate := dbHost.ensureDBModule(repository, buildDir, errors)))
             {
@@ -274,9 +275,9 @@ service HostManager
     /**
      * Ensure a home directory for the specified module.
      */
-    Directory ensureHome(Directory parentDir, String moduleName)
+    Directory ensureHome(Directory userDir, String moduleName)
         {
-        return parentDir.dirFor(moduleName).ensure();
+        return userDir.dirFor($"host/{moduleName}").ensure();
         }
 
     /**

@@ -106,7 +106,7 @@ service Controller(HostManager mgr)
         {
         // temporary hack
         @Inject Directory homeDir;
-        Directory accountDir = homeDir.dirFor($"Development/staging/platform/{account}");
+        Directory accountDir = homeDir.dirFor($"xqiz.it/platform/{account}");
         accountDir.ensure();
         return accountDir;
         }

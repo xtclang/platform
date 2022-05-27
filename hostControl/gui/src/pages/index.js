@@ -8,7 +8,7 @@ class Home extends Component {
       this.state = {userId: "???"};
       }
 
-    componentDidMount() {
+    componentWillMount() {
       fetch('host/userId')
         .then(response => response.text())
         .then(data => this.setState(state => ({userId: data})));

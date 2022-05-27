@@ -25,6 +25,13 @@ service Controller(HostManager mgr)
      */
     private HostManager mgr;
 
+    @Get("/userId")
+    String getUserId()
+      {
+      // TODO: session attribute
+      return "acme";
+      }
+
     @Post("/load")
     (HttpStatus, String) load(@QueryParam("app") String appName, @QueryParam String domain)
         {
@@ -92,7 +99,7 @@ service Controller(HostManager mgr)
     @Post("/debug")
     HttpStatus debug()
         {
-        // temporary
+        // temporary; TODO: remove
         assert:debug;
         return HttpStatus.OK;
         }

@@ -2,19 +2,24 @@
  * Build the "common" module.
  */
 
-val xdkExe = "${rootProject.projectDir}/xdk/bin"
+val libDir = "${rootProject.projectDir}/lib"
+val xdkBin = "${rootProject.projectDir}/xdk/bin"
 
-tasks.register("compile") {
+tasks.register("build") {
     group       = "Build"
-    description = "Compile this module"
+    description = "Build this module"
 
-    val srcModule = "${projectDir}/src/main/x/common.x"
-    val rootDir   = "${rootProject.rootDir}"
-    val libDir    = "$rootDir/lib"
+    val src = fileTree("${projectDir}/src").getFiles().stream().
+            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val dst = file("$libDir/common.xtc").lastModified()
 
-    project.exec {
-        commandLine("$xdkExe/xtc", "-verbose",
-                    "-o", "$libDir",
-                    "$srcModule")
+    if (src > dst) {
+        val srcModule = "${projectDir}/src/main/x/common.x"
+
+        project.exec {
+            commandLine("$xdkBin/xtc", "-verbose",
+                        "-o", "$libDir",
+                        "$srcModule")
+        }
     }
 }

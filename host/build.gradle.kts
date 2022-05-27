@@ -2,20 +2,31 @@
  * Build the "host" module.
  */
 
-val xdkExe = "${rootProject.projectDir}/xdk/bin"
+val common = project(":common");
 
-tasks.register("compile") {
+val libDir = "${rootProject.projectDir}/lib"
+val xdkBin = "${rootProject.projectDir}/xdk/bin"
+
+tasks.register("build") {
     group       = "Build"
-    description = "Compile this module"
+    description = "Build this module"
 
-    val srcModule = "${projectDir}/src/main/x/host.x"
-    val rootDir   = "${rootProject.rootDir}"
-    val libDir    = "$rootDir/lib"
+    dependsOn(common.tasks["build"])
 
-    project.exec {
-        commandLine("$xdkExe/xtc", "-verbose",
-                    "-o", "$libDir",
-                    "-L", "$libDir",
-                    "$srcModule")
+    doLast {
+        val src = fileTree("${projectDir}/src").getFiles().stream().
+                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        val dst = file("$libDir/host.xtc").lastModified()
+
+        if (src > dst) {
+            val srcModule = "${projectDir}/src/main/x/host.x"
+
+            project.exec {
+                commandLine("$xdkBin/xtc", "-verbose",
+                            "-o", "$libDir",
+                            "-L", "$libDir",
+                            "$srcModule")
+            }
+        }
     }
 }

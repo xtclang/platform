@@ -19,9 +19,18 @@ module hostControl.xqiz.it
         {
         WebServer controllerServer = new WebServer(httpController);
         controllerServer.addWebService(new Controller(mgr)); // TODO: Controller factory?
+        controllerServer.addWebService(new Content());
         controllerServer.start();
 
         @Inject Console console;
         console.println("Started the XtcPlatform at http://admin.xqiz.it:8080");
+        }
+
+    /**
+     * The web site static content.
+     */
+    @web.StaticContent(/gui, ALL_TYPE)
+    service Content
+        {
         }
     }

@@ -2,20 +2,21 @@
  * Main build file for the "platform" project.
  */
 
-group = "org.xqiz.it"
+group   = "platform.xqiz.it"
 version = "0.1.0"
 
-val common      = project(":common");
 val host        = project(":host");
 val hostControl = project(":hostControl");
 
 val libDir  = "${projectDir}/lib"
-val xdkExe  = "${projectDir}/xdk/bin"
+val xdkBin  = "${projectDir}/xdk/bin"
 
 tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
-    delete("$libDir")
+    delete(libDir)
+
+    dependsOn(hostControl.tasks["clean"])
 }
 
 tasks.register<Copy>("updateXdk") {
@@ -29,16 +30,16 @@ tasks.register<Copy>("updateXdk") {
     val xdkExt = "$xvmHome/xdk/build/xdk"
     val xdkLib = "$projectDir/xdk"
 
-    val srcTimestamp = fileTree(xdkExt).getFiles().stream().
+    val src = fileTree(xdkExt).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val dstTimestamp = fileTree(xdkLib).getFiles().stream().
+    val dst = fileTree(xdkLib).getFiles().stream().
             mapToLong({f -> f.lastModified()}).max().orElse(0)
 
-    if (srcTimestamp > dstTimestamp) {
+    if (src > dst) {
         from("$xdkExt") {
             include("**")
         }
-        into("$xdkLib")
+        into(xdkLib)
         doLast {
             println("Finished task: updateXdk")
         }
@@ -52,29 +53,8 @@ val build = tasks.register("build") {
     group       = "Build"
     description = "Build all"
 
-    val commonSrc = fileTree("${common.projectDir}/src").getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val commonDest = file("$libDir/common.xtc").lastModified()
-
-    if (commonSrc > commonDest) {
-        dependsOn(common.tasks["compile"])
-        }
-
-    val hostSrc = fileTree("${host.projectDir}/src").getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val hostDest = file("$libDir/host.xtc").lastModified()
-
-    if (hostSrc > hostDest) {
-        dependsOn(host.tasks["compile"])
-    }
-
-    val hostCtrlSrc = fileTree("${hostControl.projectDir}/src").getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val hostCtrlDest = file("$libDir/hostControl.xtc").lastModified()
-
-    if (hostCtrlSrc > hostCtrlDest) {
-        dependsOn(hostControl.tasks["compile"])
-    }
+    dependsOn(host       .tasks["build"])
+    dependsOn(hostControl.tasks["build"])
 }
 
 tasks.register("run") {
@@ -87,7 +67,7 @@ tasks.register("run") {
         val libDir = "$rootDir/lib"
 
         project.exec {
-            commandLine("$xdkExe/xec",
+            commandLine("$xdkBin/xec",
                         "-L", "$libDir",
                         "$libDir/host.xtc")
         }

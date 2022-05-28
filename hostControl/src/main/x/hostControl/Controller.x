@@ -38,7 +38,7 @@ service Controller(HostManager mgr)
         // there is one and only one application per [sub] domain
         if (mgr.getWebHost(domain))
             {
-            return HttpStatus.OK, "Already loaded";
+            return HttpStatus.OK, $"http://{domain}.xqiz.it:8080";
             }
 
         // temporary hack: it will be another argument:
@@ -55,7 +55,7 @@ service Controller(HostManager mgr)
                 {
                 webHost.container.invoke("createCatalog_", Tuple:(webHost.httpServer));
 
-                return HttpStatus.OK, $"Loaded \"{appName}\" hosting on \"http://{domain}.xqiz.it:8080\"";
+                return HttpStatus.OK, $"http://{domain}.xqiz.it:8080";
                 }
             catch (Exception e)
                 {

@@ -11,8 +11,8 @@ class Home extends Component {
                 url:     null,      // the url for the loaded application
                 error:   null
                 };
-          this.loadAction = this.loadRequest.bind(this);
-          this.loadResult = React.createRef();
+          this.action      = this.sendRequest.bind(this);
+          this.actionInput = React.createRef();
           }
 
     componentDidMount() {
@@ -22,48 +22,62 @@ class Home extends Component {
         }
 
     tick() {
-        console.log('tick.'.padEnd(this.state.loading, '.') + ' ' + this.state.lading);
         this.setState(state => ({loading: state.loading + 1}));
         }
 
-    loadRequest(event) {
-        this.setState(state => {return {loading: 0}});
-        this.interval = setInterval(() => this.tick(), 500);
-
+    sendRequest(event) {
         event.preventDefault();
+
+        const domain = 'shop.'+ this.state.userId + '.user';
         const requestOptions = {
             method:  'post',
             headers: {'Content-Type':'text/html'},
             body:    {}
             };
 
-        var uri = '/host/load?app=' + this.loadResult.current.value +
-                ',domain=shop.'+ this.state.userId + '.user';
-        fetch(uri, requestOptions)
-            .then(response =>
-                {
-                if (response.status >= 400)
+        if (this.state.url == null)
+            {
+            // load application
+            this.interval = setInterval(() => this.tick(), 500);
+            this.setState(state => ({loading: 0}));
+
+            var uri = '/host/load?app=' + this.actionInput.current.value + ',domain=' + domain;
+            fetch(uri, requestOptions)
+                .then(response =>
                     {
-                    throw new Error(response.statusText);
-                    }
-                else
-                    {
-                    return response.text();
-                    }
-                })
-            .then(data => this.setState(state => ({loading: -1, url: data, error: null})),
-                  err  => this.setState(state => ({loading: -1, url: null, error: err.message})))
-            .finally(() => clearInterval(this.interval));
+                    if (response.status >= 400)
+                        {
+                        throw new Error(response.statusText);
+                        }
+                    else
+                        {
+                        return response.text();
+                        }
+                    })
+                .then(data => this.setState(state => ({loading: -1, url: data, error: null})),
+                      err  => this.setState(state => ({loading: -1, url: null, error: err.message})))
+                .finally(() => clearInterval(this.interval));
+            }
+        else
+            {
+            // unload application
+            var uri = '/host/unload/' + domain;
+            fetch(uri, requestOptions);
+
+            this.setState(state => ({loading: -1, url: null, error: null}));
+            }
       }
 
     render()
         {
-        const url  = this.state.url;
+        const url = this.state.url;
         let   link;
+        let   actionText = 'Load application';
 
         if (url != null)
             {
-            link = <a href={url} target="_blank">run application</a>;
+            link       = <a href={url} target="_blank">run application</a>;
+            actionText = 'Unload application';
             }
         else if (this.state.loading >= 0)
             {
@@ -86,11 +100,11 @@ class Home extends Component {
 
                 <p/>
 
-                <form onSubmit={this.loadAction}>
+                <form onSubmit={this.action}>
                     <label> Module name:&nbsp;
-                        <input type="text" ref={this.loadResult} defaultValue="welcome"/>
+                        <input type="text" ref={this.actionInput} defaultValue="welcome"/>
                     </label>
-                    &nbsp; <input type="submit" value="load app" />
+                    &nbsp; <input type="submit" value={actionText} />
                     &nbsp; {link}
                 </form>
             </div>

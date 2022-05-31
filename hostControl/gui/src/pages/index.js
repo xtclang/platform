@@ -85,8 +85,7 @@ class Home extends Component {
             }
         else if (this.state.error != null)
             {
-            const style = {color: 'red'};
-            link = <span style={style}>{this.state.error}</span>;
+            link = <span style={{color: 'red'}}>{this.state.error}</span>;
             }
         else
             {

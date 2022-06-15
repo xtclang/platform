@@ -25,11 +25,35 @@ service Controller(HostManager mgr)
      */
     private HostManager mgr;
 
+    // TODO GG: temporary hack: it should be a session attribute or an argument, e.g.:
+    //    @SessionParam("userId") String userId
+    String account = "acme";
+
     @Get("/userId")
     String getUserId()
       {
-      // TODO: session attribute
-      return "acme";
+      return account;
+      }
+
+    @Get("/registeredApps")
+    String getRegistered()
+      {
+      return "[]";
+      }
+
+    @Get("/availableModules")
+    // @Produces("application/json") TODO GG: json mapping is not working for immutable Array<String>
+    String getAvailable()
+      {
+      assert Directory libDir := getUserHomeDirectory(account).findDir("lib");
+      String[] names = libDir.names()
+                    .filter(name -> name.endsWith(".xtc"))
+                    .map(name -> name.slice(0..name.size-5))
+                    .toArray(Constant);
+
+      StringBuffer buf = new StringBuffer(64);
+      names.appendTo(buf, render = name -> name.quoted());
+      return buf.toString();
       }
 
     @Post("/load")
@@ -40,11 +64,6 @@ service Controller(HostManager mgr)
             {
             return HttpStatus.OK, $"http://{domain}.xqiz.it:8080";
             }
-
-        // temporary hack: it will be another argument:
-        //    @SessionParam("userId") String userId
-        // which will map to an account
-        String account = "acme";
 
         Directory userDir = getUserHomeDirectory(account);
         ErrorLog  errors  = new ErrorLog();

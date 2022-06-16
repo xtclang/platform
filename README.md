@@ -28,16 +28,32 @@ The project is organized as a number of sub-projects, with the important ones to
   
 ## Steps to test the PAAS functionality
 
-First, run start the host:
+As a temporary process, do the following:
 
-    gradle run
+1. Make sure your "etc/hosts" file contains the following entries:
 
-As a temporary step, upload any web application (see examples.welcome documentation)
+       127.0.0.10 admin.xqiz.it
+       127.0.0.20 welcome.acme.user.xqiz.it
+       127.0.0.21 banking.acme.user.xqiz.it
 
-Load the app, for example:
+2. Allow the loopback addresses binding by running this script as an admin user: (this step needs to be repeated after reboot)
 
-    curl -i -w '\n' -X POST http://admin.xqiz.it:8080/host/load -G -d 'app=welcome,domain=shop.acme.user'
+        sudo xvm/bin/allowLoopback.sh
 
-Unload the app:
+3. Run start the host:
 
-    curl -i -w '\n' -X POST http://admin.xqiz.it:8080/host/unload/shop.acme.user  
+       gradle run
+
+4. Open the hosting site in a browser: 
+
+    http://admin.xqiz.it:8080/
+
+
+5. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and 
+   "upload" a web application.
+
+6. Click "AddModule" and specify an application module and the domain ("welcome", or "banking").
+
+7. Click "Load application" - after a couple of seconds a URL should appear.
+
+8. Click on the URL to launch your application web page.

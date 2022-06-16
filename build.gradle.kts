@@ -8,8 +8,7 @@ version = "0.1.0"
 val host        = project(":host");
 val hostControl = project(":hostControl");
 
-val libDir  = "${projectDir}/lib"
-val xdkBin  = "${projectDir}/xdk/bin"
+val libDir = "${projectDir}/lib"
 
 tasks.register("clean") {
     group       = "Build"
@@ -67,7 +66,7 @@ tasks.register("run") {
         val libDir = "$rootDir/lib"
 
         project.exec {
-            commandLine("$xdkBin/xec",
+            commandLine("xec",
                         "-L", "$libDir",
                         "$libDir/host.xtc")
         }

@@ -5,7 +5,6 @@
 val common = project(":common");
 
 val libDir = "${rootProject.projectDir}/lib"
-val xdkBin = "${rootProject.projectDir}/xdk/bin"
 
 val webContent = "${projectDir}/src/main/resources/gui"
 
@@ -32,7 +31,7 @@ tasks.register("build") {
             val srcModule = "${projectDir}/src/main/x/hostControl.x"
 
             project.exec {
-                commandLine("$xdkBin/xtc", "-verbose", "-rebuild",
+                commandLine("xtc", "-verbose", "-rebuild",
                             "-o", "$libDir",
                             "-L", "$libDir",
                             "$srcModule")

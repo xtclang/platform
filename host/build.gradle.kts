@@ -5,7 +5,6 @@
 val common = project(":common");
 
 val libDir = "${rootProject.projectDir}/lib"
-val xdkBin = "${rootProject.projectDir}/xdk/bin"
 
 tasks.register("build") {
     group       = "Build"
@@ -22,7 +21,7 @@ tasks.register("build") {
             val srcModule = "${projectDir}/src/main/x/host.x"
 
             project.exec {
-                commandLine("$xdkBin/xtc", "-verbose",
+                commandLine("xtc", "-verbose",
                             "-o", "$libDir",
                             "-L", "$libDir",
                             "$srcModule")

@@ -8,7 +8,7 @@ TODO
 
 ## Status:
 
-TODO
+This project is currently in the "proof of concept" mode.
 
 ## License
 
@@ -38,9 +38,10 @@ As a temporary process, do the following:
 
 2. Allow the loopback addresses binding by running this script as an admin user: (this step needs to be repeated after reboot)
 
-        sudo xvm/bin/allowLoopback.sh
+        cd platform
+        sudo ./bin/allowLoopback.sh
 
-3. Run start the host:
+3. Start the host using the gradle command (from within the "platform" directory):
 
        gradle run
 

@@ -18,36 +18,6 @@ tasks.register("clean") {
     dependsOn(hostControl.tasks["clean"])
 }
 
-tasks.register<Copy>("updateXdk") {
-
-    val xdkHome = "$projectDir/xdk/"
-
-    var xvmHome = System.getProperty("xvm.home")
-    if (xvmHome == null || xvmHome == "") {
-        xvmHome = "../xvm"
-    }
-    val xdkExt = "$xvmHome/xdk/build/xdk"
-    val xdkLib = "$projectDir/xdk"
-
-    val src = fileTree(xdkExt).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val dst = fileTree(xdkLib).getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-
-    if (src > dst) {
-        from("$xdkExt") {
-            include("**")
-        }
-        into(xdkLib)
-        doLast {
-            println("Finished task: updateXdk")
-        }
-    }
-    else {
-        println("Xdk is up to date")
-    }
-}
-
 val build = tasks.register("build") {
     group       = "Build"
     description = "Build all"

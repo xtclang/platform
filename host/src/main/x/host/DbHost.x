@@ -101,8 +101,8 @@ class DbHost(String moduleName, Directory homeDir)
             // if anything goes wrong - follow a regular path
             try
                 {
-                DateTime? dbStamp    = dbModule.parent.created;
-                DateTime? hostStamp  = hostModule.parent.created;
+                Time? dbStamp    = dbModule.parent.created;
+                Time? hostStamp  = hostModule.parent.created;
                 if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp)
                     {
                     errors.add($"Info: Host module '{hostedName}' for '{moduleName}' is up to date");

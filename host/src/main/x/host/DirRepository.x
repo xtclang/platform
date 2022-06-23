@@ -35,7 +35,7 @@ service DirRepository
      * Internal state.
      */
     private Map<String, ModuleInfo> modulesByName = new HashMap();
-    private DateTime                lastScan      = DateTime.EPOCH;
+    private Time                    lastScan      = Time.EPOCH;
 
 
     // ----- ModuleRepository API ------------------------------------------------------------------
@@ -59,7 +59,7 @@ service DirRepository
         if (!fresh)
             {
             // refresh the cache before blowing up
-            lastScan = DateTime.EPOCH;
+            lastScan = Time.EPOCH;
             ensureCache();
             if (ModuleInfo info := modulesByName.get(name))
                 {
@@ -159,7 +159,7 @@ service DirRepository
     static const ModuleInfo
         {
         File           file;
-        DateTime       timestamp;
+        Time           timestamp;
         Int            size;
         ModuleTemplate template;
 

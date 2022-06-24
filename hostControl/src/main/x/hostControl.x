@@ -15,12 +15,12 @@ module hostControl.xqiz.it
     /**
      * Configure the host controller.
      */
-    void configure(HostManager mgr, HttpServer httpController)
+    void configure(HostManager mgr, HttpServer httpServer)
         {
-        WebServer controllerServer = new WebServer(httpController);
-        controllerServer.addWebService(new Controller(mgr)); // TODO: Controller factory?
-        controllerServer.addWebService(new Content());
-        controllerServer.start();
+        WebServer webServer = new WebServer(httpServer);
+        webServer.addWebService(new Controller(mgr, webServer)); // TODO: Controller factory?
+        webServer.addWebService(new Content());
+        webServer.start();
 
         @Inject Console console;
         console.println("Started the XtcPlatform at http://admin.xqiz.it:8080");

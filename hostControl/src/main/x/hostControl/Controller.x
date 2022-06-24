@@ -2,9 +2,12 @@ import ecstasy.mgmt.Container;
 
 import ecstasy.reflect.FileTemplate;
 
-import common.WebHost;
 import common.ErrorLog;
 import common.HostManager;
+import common.WebHost;
+
+import common.model.AccountInfo;
+import common.model.ModuleInfo;
 
 import web.Consumes;
 import web.Get;
@@ -18,7 +21,7 @@ import web.WebServer.Handler;
 
 @web.LoginRequired
 @web.WebService("/host")
-service Controller(HostManager mgr)
+service Controller(HostManager mgr, WebServer webServer)
     {
     /**
      * The host manager.
@@ -27,33 +30,33 @@ service Controller(HostManager mgr)
 
     // TODO GG: temporary hack: it should be a session attribute or an argument, e.g.:
     //    @SessionParam("userId") String userId
-    String account = "acme";
+    String accountName = "acme";
 
     @Get("/userId")
     String getUserId()
       {
-      return account;
+      return accountName;
       }
 
     @Get("/registeredApps")
-    String getRegistered()
-      {
-      return "[]";
-      }
+    ModuleInfo[] getRegistered()
+        {
+        if (AccountInfo info := mgr.getAccount(accountName))
+            {
+            return info.modules.values.toArray();
+            }
+        return [];
+        }
 
     @Get("/availableModules")
-    // @Produces("application/json") TODO GG: json mapping is not working for immutable Array<String>
-    String getAvailable()
+    @Produces("application/json")
+    String[] getAvailable()
       {
-      assert Directory libDir := getUserHomeDirectory(account).findDir("lib");
-      String[] names = libDir.names()
-                    .filter(name -> name.endsWith(".xtc"))
-                    .map(name -> name.slice(0..name.size-5))
-                    .toArray(Constant);
-
-      StringBuffer buf = new StringBuffer(64);
-      names.appendTo(buf, render = name -> name.quoted());
-      return buf.toString();
+      assert Directory libDir := getUserHomeDirectory(accountName).findDir("lib");
+      return libDir.names()
+                   .filter(name -> name.endsWith(".xtc"))
+                   .map(name -> name.slice(0..name.size-5))
+                   .toArray(Constant);
       }
 
     @Post("/load")
@@ -65,7 +68,7 @@ service Controller(HostManager mgr)
             return HttpStatus.OK, $"http://{domain}.xqiz.it:8080";
             }
 
-        Directory userDir = getUserHomeDirectory(account);
+        Directory userDir = getUserHomeDirectory(accountName);
         ErrorLog  errors  = new ErrorLog();
 
         if (WebHost webHost := mgr.createWebHost(userDir, appName, domain, errors))
@@ -74,12 +77,19 @@ service Controller(HostManager mgr)
                 {
                 webHost.container.invoke("createCatalog_", Tuple:(webHost.httpServer));
 
+                assert AccountInfo info := mgr.getAccount(accountName);
+                if (!info.modules.contains(appName))
+                    {
+                    mgr.storeAccount(info.addModule(new ModuleInfo(appName, WebApp, domain)));
+                    }
+
                 return HttpStatus.OK, $"http://{domain}.xqiz.it:8080";
                 }
             catch (Exception e)
                 {
                 webHost.close(e);
                 mgr.removeWebHost(webHost);
+                errors.add($"Failed to initialize; reason={e.text}");
                 }
             }
         return HttpStatus.NotFound, errors.toString();
@@ -122,6 +132,22 @@ service Controller(HostManager mgr)
         assert:debug;
         return HttpStatus.OK;
         }
+
+    @Post("/shutdown")
+    HttpStatus shutdown()
+        {
+        // TODO: only the admin can shutdown the host
+        try
+            {
+            mgr.shutdown();
+            }
+        finally
+            {
+            callLater(() -> webServer.shutdown());
+            }
+        return HttpStatus.OK;
+        }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 

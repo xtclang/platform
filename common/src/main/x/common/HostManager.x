@@ -1,19 +1,21 @@
-import ecstasy.reflect.FileTemplate;
+import common.model.AccountInfo;
 
 interface HostManager
     {
+    // ----- WebHost management ----------------------------------------------------------------------------------------
+
     /**
-     * Retrieve an WebHost for the specified domain.
+     * Retrieve a 'WebHost' for the specified domain.
      *
-     * @return True iff there is an WebHost for the specified domain
+     * @return True iff there is a WebHost for the specified domain
      * @return (optional) the WebHost
      */
     conditional WebHost getWebHost(String domain);
 
     /**
-     * Create an WebHost for the specified application module.
+     * Create a 'WebHost' for the specified application module.
      *
-     * @param userDir  the user directory
+     * @param userDir  the user 'Directory'
      * @param appName  the application module name
      * @param domain   a sub-domain to use for the application (only for web applications)
      * @param errors   the error log
@@ -27,4 +29,30 @@ interface HostManager
      * Remove the specified WebHost.
      */
     void removeWebHost(WebHost webHost);
+
+
+    // ----- Account management ----------------------------------------------------------------------------------------
+
+    /**
+     * Retrieve an 'AccountInfo' for the specified name.
+     *
+     * @return True iff there is an AccountInfo
+     * @return (optional) the AccountInfo
+     */
+    conditional AccountInfo getAccount(String accountName);
+
+    /**
+     * Store the account info.
+     *
+     * @param the AccountInfo
+     */
+    void storeAccount(AccountInfo info);
+
+
+    // ----- lifecycle -------------------------------------------------------------------------------------------------
+
+    /**
+     * Shutdown all hosting services.
+     */
+    void shutdown();
     }

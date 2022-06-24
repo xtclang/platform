@@ -3,6 +3,7 @@
  */
 
 val common = project(":common");
+val hostDB = project(":hostDB");
 
 val libDir = "${rootProject.projectDir}/lib"
 
@@ -11,6 +12,7 @@ tasks.register("build") {
     description = "Build this module"
 
     dependsOn(common.tasks["build"])
+    dependsOn(hostDB.tasks["build"])
 
     doLast {
         val src = fileTree("${projectDir}/src").getFiles().stream().

@@ -1,4 +1,4 @@
 [
-{"module":"app1", "domain":"shop.acme.user"},
-{"module":"app2", "domain":"banking.acme.user"}
+{"name":"app1", "domain":"shop.acme.user"},
+{"name":"app2", "domain":"banking.acme.user"}
 ]

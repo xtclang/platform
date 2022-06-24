@@ -3,9 +3,9 @@ import ReactModal from 'react-modal';
 
 class AppInfo
     {
-    constructor(module, domain, url = null, loading = -1, error = null)
+    constructor(name, domain, url = null, loading = -1, error = null)
         {
-        this.module  = module;
+        this.name    = name;
         this.domain  = domain;
         this.url     = url; // the url for the loaded application
         this.error   = error;
@@ -86,7 +86,7 @@ class Home extends Component
             this.setState(state => ({loadingIndex: ix, loadingTicks: 0}));
             this.interval = setInterval(() => this.tick(ix), 500);
 
-            const request = '/host/load?app=' + info.module + ',domain=' + domain;
+            const request = '/host/load?app=' + info.name + ',domain=' + domain;
             fetch(request, requestOptions)
                 .then(response =>
                     {
@@ -126,14 +126,14 @@ class Home extends Component
         {
         if (action == "add")
             {
-            const module = this.moduleInput.current.value;
-            if (module == "")
+            const moduleName = this.moduleInput.current.value;
+            if (moduleName == "")
                 {
                 return;
                 }
 
             const registeredApps = this.state.registeredApps;
-            if (registeredApps.some(info => {return info.module == module;}))
+            if (registeredApps.some(info => {return info.name == moduleName;}))
                 {
                 this.moduleInput.current.value = "";
                 alert("Module already registered");
@@ -143,9 +143,9 @@ class Home extends Component
             var domain = this.domainInput.current.value;
             if (domain == "")
                 {
-                domain = module;
+                domain = moduleName;
                 }
-            registeredApps.push(new AppInfo(module, domain + '.' + this.state.userId + ".user"));
+            registeredApps.push(new AppInfo(moduleName, domain + '.' + this.state.userId + ".user"));
             this.setState(state => ({registeredApps: registeredApps, showAdd: false}));
             }
         else
@@ -188,7 +188,7 @@ class Home extends Component
 
             list.push(
                 <tr key={ix}>
-                    <td>{info.module}</td>
+                    <td>{info.name}</td>
                     <td>{info.domain}</td>
                     <td><input type="button" onClick={()=>{this.action(ix)}} value={actionText}/></td>
                     <td>{link}</td>

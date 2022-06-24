@@ -7,6 +7,7 @@ module host.xqiz.it
     package jsondb import jsondb.xtclang.org;
     package web    import web.xtclang.org;
     package common import common.xqiz.it;
+    package hostDB import hostDB;
 
     import ecstasy.io.Log;
 
@@ -23,14 +24,19 @@ module host.xqiz.it
 
     void run(String[] args=[])
         {
-        HostManager mgr    = new HostManager();
-        ErrorLog    errors = new ErrorLog();
-
         @Inject Console          console;
         @Inject Directory        curDir;
         @Inject ModuleRepository repository;
 
-        // create and configure the host controller
+        ErrorLog errors = new ErrorLog();
+
+        // create a hostDB container
+        console.println($"Creating the manager...");
+
+        HostManager mgr = new HostManager();
+        mgr.initDB(repository, errors);
+
+        // create a container for the host controller and configure it
         console.println($"Starting the host controller...");
 
         ModuleTemplate controlModule = repository.getResolvedModule("hostControl.xqiz.it");

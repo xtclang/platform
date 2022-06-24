@@ -13,6 +13,11 @@ import ecstasy.reflect.TypeTemplate;
 import common.AppHost;
 import common.WebHost;
 
+import common.model.AccountId;
+import common.model.AccountInfo;
+import common.model.UserId;
+import common.model.UserInfo;
+
 import Injector.ConsoleBuffer as Buffer;
 
 
@@ -22,13 +27,56 @@ import Injector.ConsoleBuffer as Buffer;
 service HostManager
         implements common.HostManager
     {
+    // ----- properties ------------------------------------------------------------------------------------------------
+
     /**
      * Loaded WebHost objects keyed by the application domain name.
      */
     Map<String, WebHost> loaded = new HashMap();
 
+    @Unassigned
+    DbHost platformDbHost;
 
-    // ----- common.HostManager API ----------------------------------------------------------------
+    @Unassigned
+    hostDB.Connection dbConnection;
+
+
+    // ----- DB initialization -----------------------------------------------------------------------------------------
+
+    /**
+     * Initialize the DB connection.
+     */
+    void initDB(ModuleRepository repository, Log errors)
+        {
+        import oodb.DBMap;
+        import oodb.DBUser;
+
+        @Inject Directory homeDir;
+
+        Directory dbDir = homeDir.dirFor($"xqiz.it/platformDB");
+        dbDir.ensure();
+
+        Directory libDir = dbDir.dirFor("build");
+        libDir.ensure();
+
+        repository = new LinkedRepository([new DirRepository(libDir), repository].freeze(True));
+        assert platformDbHost := createDbHost(repository, dbDir, "hostDB", errors);
+
+        DBUser user = new oodb.model.User(1, "admin");
+        dbConnection = platformDbHost.ensureDatabase()(user).as(hostDB.Connection);
+
+        DBMap<AccountId, AccountInfo> accounts = dbConnection.accounts;
+        DBMap<UserId, UserInfo>       users    = dbConnection.users;
+        if (accounts.empty)
+            {
+            UserInfo admin = new UserInfo(1, "admin", "admin@acme.com");
+            users.put(1, admin);
+            accounts.put(1, new AccountInfo(1, "acme", [], Map:[1 = Admin]));
+            }
+        }
+
+
+    // ----- common.HostManager API ------------------------------------------------------------------------------------
 
     @Override
     conditional WebHost getWebHost(String domain)
@@ -91,6 +139,28 @@ service HostManager
     void removeWebHost(WebHost webHost)
         {
         loaded.remove(webHost.domain);
+        }
+
+    @Override
+    conditional AccountInfo getAccount(String accountName)
+        {
+        return dbConnection.accounts.values.any(info -> info.name == accountName);
+        }
+
+    @Override
+    void storeAccount(AccountInfo info)
+        {
+        return dbConnection.accounts.put(info.id, info);
+        }
+
+    @Override
+    void shutdown()
+        {
+        for (WebHost webHost : loaded.values)
+            {
+            webHost.close();
+            }
+        platformDbHost.closeDatabase();
         }
 
 

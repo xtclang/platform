@@ -125,6 +125,19 @@ service Controller(HostManager mgr, WebServer webServer)
         return HttpStatus.NotFound;
         }
 
+    @Post("/unregister")
+    HttpStatus unregister(@QueryParam("app") String appName, @QueryParam String domain)
+        {
+        unload(domain);
+
+        assert AccountInfo info := mgr.getAccount(accountName);
+        if (info.modules.contains(appName))
+            {
+            mgr.storeAccount(info.removeModule(appName));
+            }
+        return HttpStatus.OK;
+        }
+
     @Post("/debug")
     HttpStatus debug()
         {

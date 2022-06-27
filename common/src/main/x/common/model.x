@@ -14,13 +14,22 @@ package model
             {
             return new AccountInfo(id, name, modules.put(info.name, info), users);
             }
-        AccountInfo addUser(UserId idUser, UserRole role)
+        AccountInfo removeModule(String moduleName)
             {
-            return new AccountInfo(id, name, modules, users.put(idUser, role));
+            return new AccountInfo(id, name, modules.remove(moduleName), users);
+            }
+
+        AccountInfo addUser(UserId userId, UserRole role)
+            {
+            return new AccountInfo(id, name, modules, users.put(userId, role));
+            }
+        AccountInfo removeUser(UserId userId)
+            {
+            return new AccountInfo(id, name, modules, users.remove(userId));
             }
         }
 
-    const AccountUser(UserId idUser, AccountId idAccount)
+    const AccountUser(UserId userId, AccountId accountId)
         {
         }
 

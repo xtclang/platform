@@ -12,6 +12,12 @@ class AppInfo
         }
     }
 
+const postOptions = {
+    method:  'post',
+    headers: {'Content-Type':'text/html'},
+    body:    {}
+    };
+
 class Home extends Component
     {
     constructor()
@@ -26,11 +32,14 @@ class Home extends Component
 
                 loadingIndex: -1,  // the index of the app being loaded
                 loadingTicks: -1,  // half seconds from the moment the load request started
+                checkedApps : []
                 };
         this.action = this.sendRequest.bind(this);
 
         this.showAddModule  = this.showAddModule.bind(this);
         this.closeAddModule = this.closeAddModule.bind(this);
+        this.unregister     = this.unregister.bind(this);
+        this.toggle         = this.toggle.bind(this);
 
         this.moduleInput = React.createRef();
         this.domainInput = React.createRef();
@@ -39,10 +48,11 @@ class Home extends Component
     componentDidMount() {
         fetch('host/userId')
             .then(response => response.text())
-            .then(data => this.setState(state => ({userId: data})));
+            .then(name => this.setState(state => ({userId: name})));
         fetch('host/registeredApps')
             .then(response => response.json())
-            .then(data => this.setState(state => ({registeredApps: data})));
+            .then(infos => this.setState(state =>
+                ({registeredApps: infos, checkedApps: Array(infos.length).fill(false)})));
         }
 
     tick(ix) {
@@ -70,12 +80,6 @@ class Home extends Component
             return;
             }
 
-        const requestOptions = {
-            method:  'post',
-            headers: {'Content-Type':'text/html'},
-            body:    {}
-            };
-
         const info   = this.state.registeredApps[ix];
         const domain = info.domain;
         const url    = info.url == null ? null : info.url;
@@ -87,7 +91,7 @@ class Home extends Component
             this.interval = setInterval(() => this.tick(ix), 500);
 
             const request = '/host/load?app=' + info.name + ',domain=' + domain;
-            fetch(request, requestOptions)
+            fetch(request, postOptions)
                 .then(response =>
                     {
                     if (response.status >= 400)
@@ -107,7 +111,7 @@ class Home extends Component
             {
             // unload application
             const request = '/host/unload/' + domain;
-            fetch(request, requestOptions);
+            fetch(request, postOptions);
 
             this.setInfo(ix, null, null);
             }
@@ -122,9 +126,9 @@ class Home extends Component
             .then(data => this.setState(state => ({availableModules: data})));
         }
 
-    closeAddModule(action)
+    closeAddModule(command)
         {
-        if (action == "add")
+        if (command == "add")
             {
             const moduleName = this.moduleInput.current.value;
             if (moduleName == "")
@@ -145,8 +149,13 @@ class Home extends Component
                 {
                 domain = moduleName;
                 }
+
+            var checkedApps = this.state.checkedApps;
+
             registeredApps.push(new AppInfo(moduleName, domain + '.' + this.state.userId + ".user"));
-            this.setState(state => ({registeredApps: registeredApps, showAdd: false}));
+            checkedApps.push(false);
+
+            this.setState(state => ({registeredApps: registeredApps, checkedApps: checkedApps, showAdd: false}));
             }
         else
             {
@@ -154,12 +163,49 @@ class Home extends Component
             }
         }
 
+    unregister()
+        {
+        const registeredOld = this.state.registeredApps;
+        const registeredNew = [];
+        const checkedOld    = this.state.checkedApps;
+        const checkedNew    = [];
+
+        for (var i = 0, c = registeredOld.length; i < c; i++)
+            {
+            if (checkedOld[i])
+                {
+                const info    = registeredOld[i];
+                const request = '/host/unregister?app=' + info.name + ',domain=' + info.domain;
+                fetch(request, postOptions);
+                }
+            else
+                {
+                checkedNew.push(false);
+                registeredNew.push(registeredOld[i]);
+                }
+            }
+
+        if (checkedNew.length != checkedOld.length)
+            {
+            this.setState(state => ({registeredApps: registeredNew, checkedApps: checkedNew}));
+            }
+        }
+
+    toggle(ix)
+        {
+        var checks = this.state.checkedApps;
+        checks[ix] = !checks[ix];
+        this.setState({checkedApps: checks});
+        }
+
     render()
         {
         const registeredApps   = this.state.registeredApps;
+        const checkedApps      = this.state.checkedApps;
         const availableModules = this.state.availableModules.map((name, index) => <option key={index}>{name}</option>);
         let   list = [];
-        for (var i = 0; i < registeredApps.length; i++)
+
+        for (var i = 0, c = registeredApps.length; i < c; i++)
             {
             const ix   = i;
             const info = registeredApps[i];
@@ -188,9 +234,12 @@ class Home extends Component
 
             list.push(
                 <tr key={ix}>
+                    <td><input id={'check-' + ix} type="checkbox" checked={checkedApps[ix]}
+                        onChange={() => this.toggle(ix)} /></td>
                     <td>{info.name}</td>
                     <td>{info.domain}</td>
-                    <td><input type="button" onClick={()=>{this.action(ix)}} value={actionText}/></td>
+                    <td><input type="button" value={actionText}
+                        onClick={() => this.action(ix)} /></td>
                     <td>{link}</td>
                 </tr>
                 );
@@ -202,18 +251,22 @@ class Home extends Component
                 <b>User:</b> {this.state.userId}
 
                 <p/>
-                <table><tbody>
-                  <tr>
+                <table>
+                  <thead><tr>
+                    <td><b></b></td>
                     <td><b>Module</b></td>
                     <td><b>Domain</b></td>
                     <td><b>Action</b></td>
                     <td><b>URL</b></td>
-                  </tr>
-                  {list}
-                </tbody></table>
+                  </tr></thead>
+                  <tbody>
+                    {list}
+                  </tbody>
+                </table>
                 <p/>
 
-                <button onClick={this.showAddModule}>Add Module</button>
+                <button onClick={this.showAddModule}>Register Module</button>&nbsp;&nbsp;
+                <button onClick={this.unregister}>Unregister Module</button>
                 <ReactModal
                   isOpen={this.state.showAdd}
                   onRequestClose={() => this.closeAddModule(null)}

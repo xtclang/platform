@@ -91,7 +91,7 @@ module %appName%_jsondb
             }
 
         @Override
-        Client_.DBObjectImpl createImpl(Int id)
+        DBObjectImpl createImpl(Int id)
             {
             switch (id)
                 {
@@ -102,7 +102,6 @@ module %appName%_jsondb
 
             return super(id);
             }
-
 %CustomDeclarations%
         }
     }

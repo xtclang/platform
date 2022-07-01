@@ -171,28 +171,17 @@ service DirRepository
             this.size      = file.size;
             }
 
-        static ModuleTemplate tryLoad(File fileXtc)
+        static ModuleTemplate tryLoad(File xtcFile)
             {
-            Byte[] bytes;
-            try
-                {
-                bytes = fileXtc.contents;
-                }
-            catch (IOException e)
-                {
-                throw new IOException($"Error: Failed to read the module: {fileXtc}");
-                }
-
-            FileTemplate fileTemplate;
             try
                 {
                 @Inject Container.Linker linker;
 
-                return linker.loadFileTemplate(bytes).mainModule;
+                return linker.loadFileTemplate(xtcFile).mainModule;
                 }
             catch (Exception e)
                 {
-                throw new IOException($"Error: Failed to resolve the module: {fileXtc} ({e.text})");
+                throw new IOException($"Error: Failed to resolve the module: {xtcFile} ({e.text})");
                 }
             }
         }

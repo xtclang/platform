@@ -9,7 +9,6 @@ import common.WebHost;
 import common.model.AccountInfo;
 import common.model.ModuleInfo;
 
-import web.Consumes;
 import web.Get;
 import web.HttpStatus;
 import web.PathParam;
@@ -17,7 +16,6 @@ import web.Post;
 import web.Produces;
 import web.QueryParam;
 import web.WebServer;
-import web.WebServer.Handler;
 
 @web.LoginRequired
 @web.WebService("/host")

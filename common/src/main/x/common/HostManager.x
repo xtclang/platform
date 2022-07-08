@@ -1,5 +1,10 @@
 import common.model.AccountInfo;
 
+import ecstasy.text.Log;
+
+/**
+ * The Host Manager API.
+ */
 interface HostManager
     {
     // ----- WebHost management ----------------------------------------------------------------------------------------

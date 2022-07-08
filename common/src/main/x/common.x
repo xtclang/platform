@@ -5,28 +5,20 @@ module common.xqiz.it
     {
     package web import web.xtclang.org;
 
+    import ecstasy.text.SimpleLog;
+
     /**
-     * A Log as a service. REVIEW CP: where does it belong?
+     * A Log as a service.
      */
     service ErrorLog
-            delegates Log(errors)
+            extends SimpleLog
         {
-        String[] errors = new String[];
-
         void reportAll(function void (String) report)
             {
             for (String error : errors)
                 {
                 report(error);
                 }
-            }
-
-        @Override
-        String toString()
-            {
-            StringBuffer buf = new StringBuffer(
-                errors.estimateStringLength(sep="\n", pre="", post=""));
-            return errors.appendTo(buf, sep="\n", pre="", post="").toString();
             }
         }
     }

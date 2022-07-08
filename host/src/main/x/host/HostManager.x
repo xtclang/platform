@@ -10,6 +10,8 @@ import ecstasy.reflect.FileTemplate;
 import ecstasy.reflect.ModuleTemplate;
 import ecstasy.reflect.TypeTemplate;
 
+import ecstasy.text.Log;
+
 import common.AppHost;
 import common.WebHost;
 

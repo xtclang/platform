@@ -12,6 +12,7 @@
             <option value="$PROJECT_DIR$/common" />
             <option value="$PROJECT_DIR$/host" />
             <option value="$PROJECT_DIR$/hostControl" />
+            <option value="$PROJECT_DIR$/hostDB" />
           </set>
         </option>
       </GradleProjectSettings>

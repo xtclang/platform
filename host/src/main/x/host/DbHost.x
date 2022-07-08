@@ -1,5 +1,3 @@
-import ecstasy.io.Log;
-
 import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.AnnotationTemplate;
@@ -13,6 +11,8 @@ import ecstasy.reflect.ParameterTemplate;
 import ecstasy.reflect.PropertyTemplate;
 import ecstasy.reflect.TypeParameter;
 import ecstasy.reflect.TypeTemplate;
+
+import ecstasy.text.Log;
 
 import oodb.DBObject.DBCategory;
 import oodb.RootSchema;

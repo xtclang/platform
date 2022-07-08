@@ -1,4 +1,4 @@
-import ecstasy.io.Log;
+import ecstasy.text.Log;
 
 import oodb.Connection;
 import oodb.DBUser;

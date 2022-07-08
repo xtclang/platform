@@ -50,11 +50,14 @@ service Controller(HostManager mgr, WebServer webServer)
     @Produces("application/json")
     String[] getAvailable()
       {
-      assert Directory libDir := getUserHomeDirectory(accountName).findDir("lib");
-      return libDir.names()
-                   .filter(name -> name.endsWith(".xtc"))
-                   .map(name -> name.slice(0..name.size-5))
-                   .toArray(Constant);
+      if (Directory libDir := getUserHomeDirectory(accountName).findDir("lib"))
+          {
+          return libDir.names()
+                       .filter(name -> name.endsWith(".xtc"))
+                       .map(name -> name.slice(0..name.size-5))
+                       .toArray(Constant);
+          }
+      return [];
       }
 
     @Post("/load")

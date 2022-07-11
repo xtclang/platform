@@ -11,12 +11,8 @@ module host.xqiz.it
 
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.ModuleRepository;
-    import ecstasy.mgmt.ResourceProvider;
 
-    import ecstasy.reflect.FileTemplate;
     import ecstasy.reflect.ModuleTemplate;
-
-    import ecstasy.text.Log;
 
     import common.ErrorLog;
 

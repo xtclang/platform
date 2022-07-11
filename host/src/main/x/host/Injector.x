@@ -1,4 +1,9 @@
+import ecstasy.lang.src.Compiler;
+
 import ecstasy.annotations.InjectedRef;
+
+import ecstasy.mgmt.ModuleRepository;
+import ecstasy.mgmt.ResourceProvider;
 
 /**
  * The Injector service.
@@ -75,58 +80,36 @@ service Injector(Directory appHomeDir, Boolean platform)
         {
         import Container.Linker;
 
-        Boolean wrongName = False;
-        switch (type)
+        switch (type, name)
             {
-            case Console:
-                if (name == "console")
+            case (Console, "console"):
+                if (platform)
                     {
-                    if (platform)
-                        {
-                        @Inject Console console;
-                        return console;
-                        }
-                    return &consoleImpl.maskAs(Console);
+                    @Inject Console console;
+                    return console;
                     }
-                wrongName = True;
-                break;
+                return &consoleImpl.maskAs(Console);
 
-            case Clock:
-                if (name == "clock")
+            case (Clock, "clock"):
+                @Inject Clock clock;
+                return clock;
+
+            case (Timer, "timer"):
+                return (InjectedRef.Options opts) ->
                     {
-                    @Inject Clock clock;
-                    return clock;
-                    }
-                wrongName = True;
-                break;
+                    @Inject(opts=opts) Timer timer;
+                    return timer;
+                    };
 
-            case Timer:
-                if (name == "timer")
+            case (FileStore, "storage"):
+                if (platform)
                     {
-                    return (InjectedRef.Options opts) ->
-                        {
-                        @Inject(opts=opts) Timer timer;
-                        return timer;
-                        };
+                    @Inject FileStore storage;
+                    return storage;
                     }
-                wrongName = True;
-                break;
+                return &store.maskAs(FileStore);
 
-            case FileStore:
-                if (name == "storage")
-                    {
-                    if (platform)
-                        {
-                        @Inject FileStore storage;
-                        return storage;
-                        }
-
-                    return &store.maskAs(FileStore);
-                    }
-                wrongName = True;
-                break;
-
-            case Directory:
+            case (Directory, _):
                 switch (name)
                     {
                     case "rootDir":
@@ -170,35 +153,31 @@ service Injector(Directory appHomeDir, Boolean platform)
                         return &temp.maskAs(Directory);
 
                     default:
-                        wrongName = True;
-                        break;
+                        throw new Exception($"Invalid Directory resource: \"{name}\"");
                     }
-                break;
 
-            case Linker:
-                if (name == "linker")
+            case (Random, "random"):
+            case (Random, "rnd"):
+                return (InjectedRef.Options opts) ->
                     {
-                    @Inject Linker linker;
-                    return linker;
-                    }
-                wrongName = True;
-                break;
+                    @Inject(opts=opts) Random random;
+                    return random;
+                    };
 
-            case Random:
-                if (name == "random" || name == "rnd")
-                    {
-                    return (InjectedRef.Options opts) ->
-                        {
-                        @Inject(opts=opts) Random random;
-                        return random;
-                        };
-                    }
-                wrongName = True;
-                break;
+            case (Compiler, "compiler"):
+                @Inject Compiler compiler;
+                return compiler;
+
+            case (Linker, "linker"):
+                @Inject Linker linker;
+                return linker;
+
+            case (ModuleRepository, "repository"):
+                @Inject ModuleRepository repository;
+                return repository;
+
+            default:
+               throw new Exception($"Invalid resource: type=\"{type}\", name=\"{name}\"");
             }
-
-        throw wrongName
-            ? new Exception($"Invalid resource name: \"{name}\" of type \"{type}\"")
-            : new Exception($"Invalid resource type: \"{type}\" for name \"{name}\"");
         }
     }

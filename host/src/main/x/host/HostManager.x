@@ -3,6 +3,8 @@ import ecstasy.annotations.InjectedRef;
 import ecstasy.io.IOException;
 
 import ecstasy.mgmt.Container;
+import ecstasy.mgmt.DirRepository;
+import ecstasy.mgmt.LinkedRepository;
 import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.ClassTemplate;
@@ -265,7 +267,7 @@ service HostManager
             {
             case "":
             case "json":
-                dbHost = new JsondbHost(dbModuleName, dbHomeDir);
+                dbHost = new JsondbHost(dbModuleName, dbHomeDir, new jsondb.tools.ModuleGenerator(dbModuleName));
                 break;
 
             default:
@@ -275,7 +277,7 @@ service HostManager
 
         Directory buildDir = userDir.dirFor("build").ensure();
 
-        if (!(dbModuleTemplate := dbHost.ensureDBModule(repository, buildDir, errors)))
+        if (!(dbModuleTemplate := dbHost.generator.ensureDBModule(repository, buildDir, errors)))
             {
             errors.add($"Error: Failed to create a host for : {dbModuleName}");
             return False;

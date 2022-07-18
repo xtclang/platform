@@ -15,9 +15,9 @@ module common.xqiz.it
         {
         void reportAll(function void (String) report)
             {
-            for (String error : errors)
+            for (String msg : messages)
                 {
-                report(error);
+                report(msg);
                 }
             }
         }

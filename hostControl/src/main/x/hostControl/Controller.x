@@ -84,6 +84,11 @@ service Controller(HostManager mgr, WebServer webServer)
                     mgr.storeAccount(info.addModule(new ModuleInfo(appName, WebApp, domain)));
                     }
 
+                if (!errors.empty)
+                    {
+                    File consoleFile = webHost.homeDir.fileFor("console.log");
+                    consoleFile.append(errors.toString().utf8());
+                    }
                 return HttpStatus.OK, $"http://{domain}.xqiz.it:8080";
                 }
             catch (Exception e)

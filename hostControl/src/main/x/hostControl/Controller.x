@@ -54,7 +54,7 @@ service Controller(HostManager mgr, WebServer webServer)
           {
           return libDir.names()
                        .filter(name -> name.endsWith(".xtc"))
-                       .map(name -> name.slice(0..name.size-5))
+                       .map(name -> name[0 ..< name.size-4])
                        .toArray(Constant);
           }
       return [];

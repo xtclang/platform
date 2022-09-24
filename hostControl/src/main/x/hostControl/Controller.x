@@ -15,6 +15,7 @@ import web.PathParam;
 import web.Post;
 import web.Produces;
 import web.QueryParam;
+import web.WebModule;
 import web.WebServer;
 
 @web.LoginRequired
@@ -76,7 +77,8 @@ service Controller(HostManager mgr, WebServer webServer)
             {
             try
                 {
-                webHost.container.invoke("createCatalog_", Tuple:(webHost.httpServer));
+                WebModule webModule = webHost.container.innerTypeSystem.primaryModule.as(WebModule);
+                webModule.createCatalog_(webHost.httpServer);
 
                 assert AccountInfo info := mgr.getAccount(accountName);
                 if (!info.modules.contains(appName))

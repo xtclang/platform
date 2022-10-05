@@ -239,7 +239,7 @@ service HostManager
             {
             if (dependsOn != TypeSystem.MackKernel)
                 {
-                ModuleTemplate depModule = fileTemplate.getModule(dependsOn);
+                assert ModuleTemplate depModule := fileTemplate.getModule(dependsOn);
                 if (depModule.type.isA(dbTypeTemplate))
                     {
                     dbNames.put(name, dependsOn);

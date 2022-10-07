@@ -1,7 +1,5 @@
 import ecstasy.mgmt.Container;
 
-import web.HttpServer;
-
 /**
  * AppHost for a Web module.
  */
@@ -9,13 +7,13 @@ const WebHost
         extends AppHost
     {
     construct (Container container, String moduleName, Directory homeDir, String domain,
-               HttpServer httpServer, AppHost[] dependents)
+               function void() shutdown, AppHost[] dependents)
         {
         construct AppHost(moduleName, homeDir);
 
         this.container  = container;
-        this.httpServer = httpServer;
         this.domain     = domain;
+        this.shutdown   = shutdown;
         this.dependents = dependents;
         }
 
@@ -25,9 +23,9 @@ const WebHost
     String domain;
 
     /**
-     * The HttpServer used by this Web module.
+     * The function that would shutdown the HTTP server for this module.
      */
-    HttpServer httpServer;
+    function void() shutdown;
 
     /**
      * The AppHosts for the containers this module depends on.
@@ -44,6 +42,6 @@ const WebHost
             {
             dependent.close(e);
             }
-        httpServer.close(e);
+        shutdown();
         }
     }

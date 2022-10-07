@@ -11,17 +11,19 @@ import common.model.ModuleInfo;
 
 import web.Get;
 import web.HttpStatus;
-import web.PathParam;
 import web.Post;
-import web.Produces;
 import web.QueryParam;
-import web.WebModule;
-import web.WebServer;
+import web.WebApp;
 
-@web.LoginRequired
+// @web.LoginRequired
 @web.WebService("/host")
-service Controller(HostManager mgr, WebServer webServer)
+service Controller()
     {
+    construct()
+        {
+        mgr = ControllerConfig.mgr;
+        }
+
     /**
      * The host manager.
      */
@@ -31,13 +33,13 @@ service Controller(HostManager mgr, WebServer webServer)
     //    @SessionParam("userId") String userId
     String accountName = "acme";
 
-    @Get("/userId")
+    @Get("userId")
     String getUserId()
       {
       return accountName;
       }
 
-    @Get("/registeredApps")
+    @Get("registeredApps")
     ModuleInfo[] getRegistered()
         {
         if (AccountInfo info := mgr.getAccount(accountName))
@@ -47,8 +49,7 @@ service Controller(HostManager mgr, WebServer webServer)
         return [];
         }
 
-    @Get("/availableModules")
-    @Produces("application/json")
+    @Get("availableModules")
     String[] getAvailable()
       {
       if (Directory libDir := getUserHomeDirectory(accountName).findDir("lib"))
@@ -61,13 +62,13 @@ service Controller(HostManager mgr, WebServer webServer)
       return [];
       }
 
-    @Post("/load")
-    (HttpStatus, String) load(@QueryParam("app") String appName, @QueryParam String domain)
+    @Post("load")
+    json.Doc load(@QueryParam("app") String appName, @QueryParam String domain)
         {
         // there is one and only one application per [sub] domain
         if (mgr.getWebHost(domain))
             {
-            return HttpStatus.OK, $"http://{domain}.xqiz.it:8080";
+            return [True, $"http://{domain}.xqiz.it:8080"];
             }
 
         Directory userDir = getUserHomeDirectory(accountName);
@@ -77,9 +78,6 @@ service Controller(HostManager mgr, WebServer webServer)
             {
             try
                 {
-                WebModule webModule = webHost.container.innerTypeSystem.primaryModule.as(WebModule);
-                webModule.createCatalog_(webHost.httpServer);
-
                 assert AccountInfo info := mgr.getAccount(accountName);
                 if (!info.modules.contains(appName))
                     {
@@ -91,7 +89,7 @@ service Controller(HostManager mgr, WebServer webServer)
                     File consoleFile = webHost.homeDir.fileFor("console.log");
                     consoleFile.append(errors.toString().utf8());
                     }
-                return HttpStatus.OK, $"http://{domain}.xqiz.it:8080";
+                return [True, $"http://{domain}.xqiz.it:8080"];
                 }
             catch (Exception e)
                 {
@@ -100,12 +98,11 @@ service Controller(HostManager mgr, WebServer webServer)
                 errors.add($"Failed to initialize; reason={e.text}");
                 }
             }
-        return HttpStatus.NotFound, errors.toString();
+        return [False, errors.toString()];
         }
 
-    @Get("/report/{domain}")
-    @Produces("application/json")
-    String report(@PathParam String domain)
+    @Get("report/{domain}")
+    String report(String domain)
         {
         String response;
         if (WebHost webHost := mgr.getWebHost(domain))
@@ -117,11 +114,11 @@ service Controller(HostManager mgr, WebServer webServer)
             {
             response = "Not loaded";
             }
-        return response.quoted();
+        return response;
         }
 
-    @Post("/unload/{domain}")
-    HttpStatus unload(@PathParam String domain)
+    @Post("unload/{domain}")
+    HttpStatus unload(String domain)
         {
         if (WebHost webHost := mgr.getWebHost(domain))
             {
@@ -133,7 +130,7 @@ service Controller(HostManager mgr, WebServer webServer)
         return HttpStatus.NotFound;
         }
 
-    @Post("/unregister")
+    @Post("unregister")
     HttpStatus unregister(@QueryParam("app") String appName, @QueryParam String domain)
         {
         unload(domain);
@@ -146,7 +143,7 @@ service Controller(HostManager mgr, WebServer webServer)
         return HttpStatus.OK;
         }
 
-    @Post("/debug")
+    @Post("debug")
     HttpStatus debug()
         {
         // temporary; TODO: remove
@@ -154,7 +151,7 @@ service Controller(HostManager mgr, WebServer webServer)
         return HttpStatus.OK;
         }
 
-    @Post("/shutdown")
+    @Post("shutdown")
     HttpStatus shutdown()
         {
         // TODO: only the admin can shutdown the host
@@ -164,7 +161,7 @@ service Controller(HostManager mgr, WebServer webServer)
             }
         finally
             {
-            callLater(() -> webServer.shutdown());
+            callLater(ControllerConfig.shutdownServer);
             }
         return HttpStatus.OK;
         }

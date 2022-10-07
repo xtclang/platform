@@ -1,36 +1,47 @@
 /**
  * The web module for basic hosting functionality.
  */
-@web.WebModule
+@web.WebApp
 module hostControl.xqiz.it
     {
     package common import common.xqiz.it;
+    package json   import json.xtclang.org;
     package web    import web.xtclang.org;
+    package xenia  import xenia.xtclang.org;
 
     import common.HostManager;
-
-    import web.HttpServer;
-    import web.WebServer;
 
     /**
      * Configure the host controller.
      */
-    void configure(HostManager mgr, HttpServer httpServer)
+    void configure(HostManager mgr, String address)
         {
-        WebServer webServer = new WebServer(httpServer);
-        webServer.addWebService(new Controller(mgr, webServer)); // TODO: Controller factory?
-        webServer.addWebService(new Content());
-        webServer.start();
-
-        @Inject Console console;
-        console.println("Started the XtcPlatform at http://admin.xqiz.it:8080");
+        ControllerConfig.init(mgr, xenia.createServer(address, this));
         }
 
     /**
      * The web site static content.
      */
-    @web.StaticContent(/gui, ALL_TYPE)
+    @web.StaticContent("/", /gui)
     service Content
         {
+        }
+
+    /**
+     * The singleton service holding configuration info.
+     */
+    static service ControllerConfig
+        {
+        @Unassigned
+        HostManager mgr;
+
+        @Unassigned
+        function void() shutdownServer;
+
+        void init(HostManager mgr, function void() shutdownServer)
+            {
+            this.mgr            = mgr;
+            this.shutdownServer = shutdownServer;
+            }
         }
     }

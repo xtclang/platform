@@ -5,6 +5,8 @@ import ecstasy.annotations.InjectedRef;
 import ecstasy.mgmt.ModuleRepository;
 import ecstasy.mgmt.ResourceProvider;
 
+import xenia.HttpServer;
+
 /**
  * The Injector service.
  */
@@ -177,7 +179,17 @@ service Injector(Directory appHomeDir, Boolean platform)
                 return repository;
 
             default:
-               throw new Exception($"Invalid resource: type=\"{type}\", name=\"{name}\"");
+                // HttpServer is not a shared type, so it's not handled by the switch()
+                if (type.is(Type<HttpServer>) && name=="server")
+                    {
+                    return (InjectedRef.Options address) ->
+                        {
+                        @Inject(resourceName="server", opts=address) HttpServer server;
+                        return server;
+                        };
+                    }
+
+                throw new Exception($"Invalid resource: type=\"{type}\", name=\"{name}\"");
             }
         }
     }

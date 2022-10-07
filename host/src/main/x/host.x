@@ -6,6 +6,8 @@ module host.xqiz.it
     package oodb   import oodb.xtclang.org;
     package jsondb import jsondb.xtclang.org;
     package web    import web.xtclang.org;
+    package xenia  import xenia.xtclang.org;
+
     package common import common.xqiz.it;
     package hostDB import hostDB;
 
@@ -15,8 +17,6 @@ module host.xqiz.it
     import ecstasy.reflect.ModuleTemplate;
 
     import common.ErrorLog;
-
-    import web.HttpServer;
 
     void run(String[] args=[])
         {
@@ -37,10 +37,13 @@ module host.xqiz.it
 
         ModuleTemplate controlModule = repository.getResolvedModule("hostControl.xqiz.it");
         if (Container container :=
-                mgr.createContainer(repository, controlModule.parent, curDir, True, errors))
+                mgr.createContainer(repository, controlModule, curDir, True, errors))
             {
-            @Inject("server", "admin.xqiz.it:8080") HttpServer httpAdmin;
-            container.invoke("configure", Tuple:(&mgr.maskAs(common.HostManager), httpAdmin));
+            String address = "admin.xqiz.it:8080";
+
+            container.invoke("configure", Tuple:(&mgr.maskAs(common.HostManager), address));
+
+            console.println($"Started the XtcPlatform at http://{address}");
             }
 
         // TODO create and configure the account manager, etc.

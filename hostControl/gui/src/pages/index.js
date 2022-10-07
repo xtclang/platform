@@ -92,19 +92,18 @@ class Home extends Component
 
             const request = '/host/load?app=' + info.name + ',domain=' + domain;
             fetch(request, postOptions)
-                .then(response =>
+                .then(response => response.json())
+                .then(data =>
                     {
-                    if (response.status >= 400)
+                    if (data[0])
                         {
-                        throw new Error(response.statusText);
+                        this.setInfo(ix, data[1], null);
                         }
                     else
                         {
-                        return response.text();
+                        this.setInfo(ix, null, data[1]);
                         }
                     })
-                .then(data => this.setInfo(ix, data, null),
-                      err  => this.setInfo(ix, null, err.message))
                 .finally(() => clearInterval(this.interval));
             }
         else

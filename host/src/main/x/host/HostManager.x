@@ -22,8 +22,6 @@ import common.model.AccountInfo;
 import common.model.UserId;
 import common.model.UserInfo;
 
-import Injector.ConsoleBuffer as Buffer;
-
 
 /**
  * The module for basic hosting functionality.
@@ -91,6 +89,8 @@ service HostManager
     @Override
     conditional WebHost createWebHost(Directory userDir, String appName, String domain, Log errors)
         {
+        import xenia.tools.ModuleGenerator;
+
         Directory libDir;
         if (!(libDir := userDir.findDir("lib")))
             {
@@ -104,12 +104,10 @@ service HostManager
 
         ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir), new DirRepository(buildDir)];
         ModuleRepository   repository = new LinkedRepository(baseRepos.freeze(True));
-        FileTemplate       fileTemplate;
+        ModuleTemplate     mainModule;
         try
             {
-            ModuleTemplate template = repository.getResolvedModule(appName);
-
-            fileTemplate = template.parent;
+            mainModule = repository.getResolvedModule(appName); // TODO GG: why do we need the resolved module?
             }
         catch (Exception e)
             {
@@ -117,23 +115,41 @@ service HostManager
             return False;
             }
 
-        ModuleTemplate mainModule = fileTemplate.mainModule;
-        String         moduleName = mainModule.displayName;
-        if (!mainModule.findAnnotation("web.WebModule"))
+        String moduleName = mainModule.displayName;
+        try
             {
-            errors.add($"Module \"{moduleName}\" is not a WebModule");
-            return False;
+            if (!mainModule.findAnnotation("web.WebApp"))
+                {
+                errors.add($"Module \"{moduleName}\" is not a WebApp");
+                return False;
+                }
+
+            ModuleGenerator generator = new ModuleGenerator(moduleName);
+            if (ModuleTemplate hostTemplate := generator.ensureWebModule(repository, buildDir, errors))
+                {
+                Directory appHomeDir = ensureHome(userDir, mainModule.qualifiedName);
+
+                if ((Container container, AppHost[] dependents) :=
+                        createContainer(repository, hostTemplate, appHomeDir, False, errors))
+                    {
+                    String address = getAddress(domain);
+                    Tuple  result  = container.invoke("createServer_", Tuple:(address));
+
+                    function void() shutdown = result[0].as(function void());
+
+                    WebHost webHost = new WebHost(container, moduleName, appHomeDir, domain, shutdown, dependents);
+                    loaded.put(domain, webHost);
+                    return True, webHost;
+                    }
+                }
+            else
+                {
+                errors.add($"Error: Failed to create a host for {moduleName.quoted()}");
+                }
             }
-
-        Directory appHomeDir = ensureHome(userDir, mainModule.qualifiedName);
-
-        if ((Container container, AppHost[] dependents) :=
-                createContainer(repository, fileTemplate, appHomeDir, False, errors))
+        catch (Exception e)
             {
-            WebHost webHost = new WebHost(container, moduleName, appHomeDir, domain,
-                                createHttpServer(domain), dependents);
-            loaded.put(domain, webHost);
-            return True, webHost;
+            errors.add($"Error: Failed to create a host for {moduleName.quoted()}; reason={e.text}");
             }
 
         return False;
@@ -181,13 +197,13 @@ service HostManager
      *         loaded along the "main" container
      */
     conditional (Container, AppHost[]) createContainer(
-            ModuleRepository repository, FileTemplate fileTemplate, Directory appHomeDir,
+            ModuleRepository repository, ModuleTemplate template, Directory appHomeDir,
             Boolean platform, Log errors)
         {
         DbHost[] dbHosts;
         Injector injector;
 
-        Map<String, String> dbNames = detectDatabases(fileTemplate);
+        Map<String, String> dbNames = detectDatabases(template);
         if (dbNames.size > 0)
             {
             dbHosts = new DbHost[];
@@ -213,7 +229,6 @@ service HostManager
             injector = new Injector(appHomeDir, platform);
             }
 
-        ModuleTemplate template = fileTemplate.mainModule;
         try
             {
             return True, new Container(template, Lightweight, repository, injector), dbHosts;
@@ -226,16 +241,17 @@ service HostManager
         }
 
     /**
-     * @return an array of the Database module names that the specified template depends on
+     * @return an array of the Database module names that the specified module depends on
      */
-    Map<String, String> detectDatabases(FileTemplate fileTemplate)
+    Map<String, String> detectDatabases(ModuleTemplate template)
         {
         import ClassTemplate.Contribution;
 
+        FileTemplate        fileTemplate   = template.parent;
         TypeTemplate        dbTypeTemplate = oodb.Database.as(Type).template;
         Map<String, String> dbNames        = new HashMap();
 
-        for ((String name, String dependsOn) : fileTemplate.mainModule.moduleNamesByPath)
+        for ((String name, String dependsOn) : template.moduleNamesByPath)
             {
             if (dependsOn != TypeSystem.MackKernel)
                 {
@@ -355,13 +371,12 @@ service HostManager
         }
 
     /**
-     * TODO: temporary
+     * Get an HTTP address for the specified domain.
      */
-    HttpServer createHttpServer(String domain)
+    String getAddress(String domain)
         {
-        String address = $"{domain}.xqiz.it:8080";
+        // TODO: the address must be in the database
         // TODO: ensure a DNS entry
-        @Inject(opts=address) HttpServer server;
-        return server;
+        return $"{domain}.xqiz.it:8080";
         }
     }

@@ -22,7 +22,7 @@ module hostControl.xqiz.it
     /**
      * The web site static content.
      */
-    @web.StaticContent("/", /gui)
+    @web.StaticContent("/", Directory:/gui)
     service Content
         {
         }

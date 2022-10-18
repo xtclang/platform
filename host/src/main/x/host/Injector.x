@@ -54,13 +54,7 @@ service Injector(Directory appHomeDir, Boolean platform)
             }
 
         @Override
-        String readLine()
-            {
-            throw new UnsupportedOperation();
-            }
-
-        @Override
-        Boolean echo(Boolean flag)
+        String readLine(Boolean echo = True)
             {
             throw new UnsupportedOperation();
             }

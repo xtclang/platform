@@ -48,9 +48,9 @@ service HostManager
     /**
      * Initialize the DB connection.
      *
-     * @param repository  the core module repository
-     * @param dbDir       the directory for the platform database
-     * @param buildDir    the directory to place auto-generated modules at
+     * @param repository  the core [ModuleRepository]
+     * @param dbDir       the directory for the platform database (e.g. "~/xqiz.it/platform/")
+     * @param buildDir    the directory to place auto-generated modules at  (e.g. "~/xqiz.it/platform/build")
      * @param errors      the error log
      */
     void initDB(ModuleRepository repository, Directory dbDir, Directory buildDir, Log errors)
@@ -189,7 +189,10 @@ service HostManager
     /**
      * Create a Container for the specified template.
      *
-     * @param buildDir  the directory to place build artifacts to
+     * @param repository  the [ModuleRepository] to load the module(s) from
+     * @param template    the [ModuleTemplate] for the "main" module
+     * @param appHomeDir  the "home" directory for the module (e.g. "~/xqiz.it/users/acme/host/shopping)"
+     * @param platform    True iff the loading module is one of the "core" platform modules
      *
      * @return True iff the container has been loaded successfully
      * @return (optional) the Container
@@ -197,8 +200,8 @@ service HostManager
      *         loaded along the "main" container
      */
     conditional (Container, AppHost[]) createContainer(
-            ModuleRepository repository, ModuleTemplate template, Directory appHomeDir,
-            Boolean platform, Log errors)
+                    ModuleRepository repository, ModuleTemplate template, Directory appHomeDir,
+                    Boolean platform, Log errors)
         {
         DbHost[] dbHosts;
         Injector injector;
@@ -268,6 +271,10 @@ service HostManager
     /**
      * Create a DbHost for the specified db module.
      *
+     * @param repository    the [ModuleRepository] to load the module(s) from
+     * @param userDir       the user 'Directory' (e.g. "~/xqiz.it/users/acme/")
+     * @param dbModuleName  the name of `Database` module
+     *
      * @return (optional) the DbHost
      */
     conditional DbHost createDbHost(
@@ -306,6 +313,11 @@ service HostManager
         }
 
     /**
+     * Create a database [Injector].
+     *
+     * @param dbHosts     the array of [DbHost]s for databases the Injector should be able to provide connections to
+     * @param appHomeDir  the "home" directory for the module (e.g. "~/xqiz.it/users/acme/host/shopping)"
+     *
      * @return an Injector that injects db connections based on the arrays of the specified DbHosts
      */
     Injector createDbInjector(DbHost[] dbHosts, Directory appHomeDir)
@@ -364,6 +376,11 @@ service HostManager
 
     /**
      * Ensure a home directory for the specified module.
+     *
+     * @param userDir     the user 'Directory' (e.g. "~/xqiz.it/users/acme/")
+     * @param moduleName  the application module name
+     *
+     * @return the "home" directory for the module (e.g. "~/xqiz.it/users/acme/host/shopping)"
      */
     Directory ensureHome(Directory userDir, String moduleName)
         {

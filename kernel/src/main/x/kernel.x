@@ -42,7 +42,7 @@ module kernel.xqiz.it
             password = args[0];
             }
 
-        Directory platformDir = homeDir.dirFor($"xqiz.it/platform");
+        Directory platformDir = homeDir.dirFor("xqiz.it/platform");
         platformDir.ensure();
 
         Directory buildDir = platformDir.dirFor("build");

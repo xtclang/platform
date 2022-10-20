@@ -20,7 +20,7 @@ interface HostManager
     /**
      * Create a 'WebHost' for the specified application module.
      *
-     * @param userDir  the user 'Directory'
+     * @param userDir  the user 'Directory' (e.g. "~/xqiz.it/users/acme/")
      * @param appName  the application module name
      * @param domain   a sub-domain to use for the application (only for web applications)
      * @param errors   the error log

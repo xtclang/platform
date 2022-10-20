@@ -173,8 +173,8 @@ service Injector(Directory appHomeDir, Boolean platform)
                 return repository;
 
             default:
-                // HttpServer is not a shared type, so it's not handled by the switch()
-                if (type.is(Type<HttpServer>) && name=="server")
+                // HttpServer is not a shared Ecstasy type, so it's not handled by the switch()
+                if (type.is(Type<HttpServer>) && name == "server")
                     {
                     return (InjectedRef.Options address) ->
                         {
@@ -183,7 +183,8 @@ service Injector(Directory appHomeDir, Boolean platform)
                         };
                     }
 
-                throw new Exception($"Invalid resource: type=\"{type}\", name=\"{name}\"");
+                throw new Exception($|Invalid resource: type="{type}", name="{name}"
+                                   );
             }
         }
     }

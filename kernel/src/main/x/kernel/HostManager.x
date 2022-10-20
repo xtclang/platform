@@ -129,8 +129,11 @@ service HostManager
                 if ((Container container, AppHost[] dependents) :=
                         createContainer(repository, hostTemplate, appHomeDir, False, errors))
                     {
-                    String address = getAddress(domain);
-                    Tuple  result  = container.invoke("createServer_", Tuple:(address));
+                    (String hostName, UInt16 httpPort, UInt16 httpsPort) = getAddress(domain);
+
+                    (File keyStore, String password) = getKeyStore(userDir);
+
+                    Tuple result = container.invoke("createServer_", Tuple:(hostName, keyStore, password, httpPort, httpsPort));
 
                     function void() shutdown = result[0].as(function void());
 
@@ -368,12 +371,21 @@ service HostManager
         }
 
     /**
-     * Get an HTTP address for the specified domain.
+     * Get the HTTP server info for the specified domain.
      */
-    String getAddress(String domain)
+    (String hostName, UInt16 httpPort, UInt16 httpsPort) getAddress(String domain)
         {
         // TODO: the address must be in the database
         // TODO: ensure a DNS entry
-        return $"{domain}.xqiz.it:8080";
+        return $"{domain}.xqiz.it", 8080, 8090;
+        }
+
+    /**
+     * Get the key store info
+     */
+    (File, String) getKeyStore(Directory userDir)
+        {
+        // TODO: retrieve from the db
+        return userDir.fileFor("certs.p12"), "password";
         }
     }

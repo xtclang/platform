@@ -47,7 +47,7 @@ class Home extends Component
 
     componentDidMount() {
         fetch('host/userId')
-            .then(response => response.text())
+            .then(response => response.json())
             .then(name => this.setState(state => ({userId: name})));
         fetch('host/registeredApps')
             .then(response => response.json())

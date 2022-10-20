@@ -28,7 +28,6 @@ module kernel.xqiz.it
     void run(String[] args=[])
         {
         @Inject Console          console;
-        @Inject Directory        curDir;
         @Inject Directory        homeDir;
         @Inject ModuleRepository repository;
 
@@ -43,10 +42,10 @@ module kernel.xqiz.it
             password = args[0];
             }
 
-        Directory dbDir = homeDir.dirFor($"xqiz.it/platform");
-        dbDir.ensure();
+        Directory platformDir = homeDir.dirFor($"xqiz.it/platform");
+        platformDir.ensure();
 
-        Directory buildDir = dbDir.dirFor("build");
+        Directory buildDir = platformDir.dirFor("build");
         buildDir.ensure();
 
         ErrorLog errors = new ErrorLog();
@@ -55,20 +54,22 @@ module kernel.xqiz.it
         console.println($"Creating the manager...");
 
         HostManager mgr = new HostManager();
-        mgr.initDB(repository, dbDir, buildDir, errors);
+        mgr.initDB(repository, platformDir, buildDir, errors);
 
         // create a container for the platformUI controller and configure it
         console.println($"Starting the platform UI controller...");
 
         ModuleTemplate controlModule = repository.getResolvedModule("platformUI.xqiz.it");
         if (Container container :=
-                mgr.createContainer(repository, controlModule, curDir, True, errors))
+                mgr.createContainer(repository, controlModule, buildDir, True, errors))
             {
-            String hostName = "admin.xqiz.it";
-            File   keyStore = homeDir.fileFor($"xqiz.it/certs.p12");
+            String hostName  = "admin.xqiz.it";
+            File   keyStore  = platformDir.fileFor("certs.p12");
             UInt16 httpPort  = 8080;
             UInt16 httpsPort = 8090;
-            container.invoke("configure", Tuple:(&mgr.maskAs(common.HostManager), hostName, httpPort, httpsPort));
+
+            container.invoke("configure",
+                Tuple:(&mgr.maskAs(common.HostManager), hostName, keyStore, password, httpPort, httpsPort));
 
             console.println($"Started the XtcPlatform at http://{hostName}:{httpPort}");
             }

@@ -21,10 +21,9 @@ The project is organized as a number of sub-projects, with the important ones to
 * The *common* library ([platform/common](./common)), contains common interfaces shared across 
   platform modules. 
   
-* The *host* library ([platform/host](./host)), contains the host manager functionality. 
+* The *kernel* library ([platform/kernel](./kernel)), contains the core functionality. 
   
-* The *hostControl* library ([platform/hostControl](./hostControl)), contains the end-points 
-  for the platform web-application. 
+* The *platformUI* library ([platform/platformUI](./platformUI)), contains the end-points for the platform web-application. 
   
 ## Steps to test the PAAS functionality
 
@@ -41,7 +40,7 @@ As a temporary process, do the following:
         cd platform
         sudo ./bin/allowLoopback.sh
 
-3. Start the host using the gradle command (from within the "platform" directory):
+3. Start the platform services using the gradle command (from within the "platform" directory):
 
        gradle run
 

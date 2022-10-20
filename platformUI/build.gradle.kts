@@ -1,5 +1,5 @@
 /*
- * Build the "hostControl" module.
+ * Build the "platformUI" module.
  */
 
 val common = project(":common");
@@ -12,7 +12,8 @@ tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
 
-    delete(buildDir)
+    delete("$projectDir/gui/build")
+    delete("$projectDir/src/main/resources/gui")
 }
 
 tasks.register("build") {
@@ -25,10 +26,10 @@ tasks.register("build") {
     doLast {
         val src = fileTree("${projectDir}/src").getFiles().stream().
                 mapToLong({f -> f.lastModified()}).max().orElse(0)
-        val dst = file("$libDir/hostControl.xtc").lastModified()
+        val dst = file("$libDir/platformUI.xtc").lastModified()
 
         if (src > dst) {
-            val srcModule = "${projectDir}/src/main/x/hostControl.x"
+            val srcModule = "${projectDir}/src/main/x/platformUI.x"
 
             project.exec {
                 commandLine("xtc", "-verbose", "-rebuild",

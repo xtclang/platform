@@ -1,6 +1,6 @@
 rootProject.name = "platform"
 
 include(":common")
-include(":host")
-include(":hostControl")
-include(":hostDB")
+include(":kernel")
+include(":platformDB")
+include(":platformUI")

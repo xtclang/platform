@@ -1,9 +1,9 @@
 /*
- * Build the "host" module.
+ * Build the "kernel" module.
  */
 
-val common = project(":common");
-val hostDB = project(":hostDB");
+val common     = project(":common");
+val platformDB = project(":platformDB");
 
 val libDir = "${rootProject.projectDir}/lib"
 
@@ -11,16 +11,16 @@ tasks.register("build") {
     group       = "Build"
     description = "Build this module"
 
-    dependsOn(common.tasks["build"])
-    dependsOn(hostDB.tasks["build"])
+    dependsOn(common    .tasks["build"])
+    dependsOn(platformDB.tasks["build"])
 
     doLast {
         val src = fileTree("${projectDir}/src").getFiles().stream().
                 mapToLong({f -> f.lastModified()}).max().orElse(0)
-        val dst = file("$libDir/host.xtc").lastModified()
+        val dst = file("$libDir/kernel.xtc").lastModified()
 
         if (src > dst) {
-            val srcModule = "${projectDir}/src/main/x/host.x"
+            val srcModule = "${projectDir}/src/main/x/kernel.x"
 
             project.exec {
                 commandLine("xtc", "-verbose",

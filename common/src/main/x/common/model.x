@@ -29,17 +29,11 @@ package model
             }
         }
 
-    const AccountUser(UserId userId, AccountId accountId)
-        {
-        }
+    const AccountUser(UserId userId, AccountId accountId);
 
-    const UserInfo(UserId id, String name, String email)
-        {
-        }
+    const UserInfo(UserId id, String name, String email);
 
     enum ModuleStyle {Generic, WebApp, DB}
 
-    const ModuleInfo(String name, ModuleStyle style, String? domain = Null)
-        {
-        }
+    const ModuleInfo(String name, ModuleStyle style, String? domain = Null);
     }

@@ -176,7 +176,7 @@ service Controller()
         {
         // temporary hack
         @Inject Directory homeDir;
-        Directory accountDir = homeDir.dirFor($"xqiz.it/platform/{account}");
+        Directory accountDir = homeDir.dirFor($"xqiz.it/users/{account}");
         accountDir.ensure();
         return accountDir;
         }

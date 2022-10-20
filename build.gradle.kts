@@ -5,8 +5,8 @@
 group   = "platform.xqiz.it"
 version = "0.1.0"
 
-val host        = project(":host");
-val hostControl = project(":hostControl");
+val kernel     = project(":kernel");
+val platformDB = project(":platformDB");
 
 val libDir = "${projectDir}/lib"
 
@@ -14,16 +14,14 @@ tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
     delete(libDir)
-
-    dependsOn(hostControl.tasks["clean"])
 }
 
 val build = tasks.register("build") {
     group       = "Build"
     description = "Build all"
 
-    dependsOn(host       .tasks["build"])
-    dependsOn(hostControl.tasks["build"])
+    dependsOn(kernel    .tasks["build"])
+    dependsOn(platformDB.tasks["build"])
 }
 
 tasks.register("run") {
@@ -38,7 +36,7 @@ tasks.register("run") {
         project.exec {
             commandLine("xec",
                         "-L", "$libDir",
-                        "$libDir/host.xtc")
+                        "$libDir/kernel.xtc")
         }
     }
 }

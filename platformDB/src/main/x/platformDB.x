@@ -1,8 +1,8 @@
 /**
- * The host database.
+ * The platform database.
  */
 @oodb.Database
-module hostDB
+module platformDB
     {
     package oodb import oodb.xtclang.org;
 
@@ -15,7 +15,7 @@ module hostDB
 
     import oodb.DBMap;
 
-    interface HostSchema
+    interface Schema
             extends oodb.RootSchema
         {
         @RO DBMap<AccountId, AccountInfo> accounts;
@@ -23,7 +23,7 @@ module hostDB
         @RO DBMap<UserId, UserInfo> users;
         }
 
-    typedef (oodb.Connection<HostSchema>  + HostSchema) as Connection;
+    typedef (oodb.Connection<Schema>  + Schema) as Connection;
 
-    typedef (oodb.Transaction<HostSchema> + HostSchema) as Transaction;
+    typedef (oodb.Transaction<Schema> + Schema) as Transaction;
     }

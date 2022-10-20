@@ -2,7 +2,7 @@
  * The web module for basic hosting functionality.
  */
 @web.WebApp
-module hostControl.xqiz.it
+module platformUI.xqiz.it
     {
     package common import common.xqiz.it;
     package json   import json.xtclang.org;
@@ -12,11 +12,12 @@ module hostControl.xqiz.it
     import common.HostManager;
 
     /**
-     * Configure the host controller.
+     * Configure the controller.
      */
-    void configure(HostManager mgr, String address)
+    void configure(HostManager mgr, String hostName, File keyStore, String password, UInt16 httpPort, UInt16 httpsPort)
         {
-        ControllerConfig.init(mgr, xenia.createServer(address, this));
+        ControllerConfig.init(mgr,
+            xenia.createServer(this, hostName, keyStore, password, httpPort, httpsPort));
         }
 
     /**

@@ -40,32 +40,29 @@ service HostManager
     DbHost platformDbHost;
 
     @Unassigned
-    hostDB.Connection dbConnection;
+    platformDB.Connection dbConnection;
 
 
     // ----- DB initialization -----------------------------------------------------------------------------------------
 
     /**
      * Initialize the DB connection.
+     *
+     * @param repository  the core module repository
+     * @param dbDir       the directory for the platform database
+     * @param buildDir    the directory to place auto-generated modules at
+     * @param errors      the error log
      */
-    void initDB(ModuleRepository repository, Log errors)
+    void initDB(ModuleRepository repository, Directory dbDir, Directory buildDir, Log errors)
         {
         import oodb.DBMap;
         import oodb.DBUser;
 
-        @Inject Directory homeDir;
-
-        Directory dbDir = homeDir.dirFor($"xqiz.it/platformDB");
-        dbDir.ensure();
-
-        Directory libDir = dbDir.dirFor("build");
-        libDir.ensure();
-
-        repository = new LinkedRepository([new DirRepository(libDir), repository].freeze(True));
-        assert platformDbHost := createDbHost(repository, dbDir, "hostDB", errors);
+        repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
+        assert platformDbHost := createDbHost(repository, dbDir, "platformDB", errors);
 
         DBUser user = new oodb.model.User(1, "admin");
-        dbConnection = platformDbHost.ensureDatabase()(user).as(hostDB.Connection);
+        dbConnection = platformDbHost.ensureDatabase()(user).as(platformDB.Connection);
 
         DBMap<AccountId, AccountInfo> accounts = dbConnection.accounts;
         DBMap<UserId, UserInfo>       users    = dbConnection.users;

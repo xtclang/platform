@@ -33,7 +33,9 @@ package model
 
     const UserInfo(UserId id, String name, String email);
 
-    enum ModuleStyle {Generic, WebApp, DB}
+    @Abstract
+    const ModuleInfo(String name);
 
-    const ModuleInfo(String name, ModuleStyle style, String? domain = Null);
+    const WebModuleInfo(String name, String domain, String hostName, UInt16 httpPort, UInt16 httpsPort)
+        extends ModuleInfo(name);
     }

@@ -2,17 +2,14 @@
  * Build the "kernel" module.
  */
 
-val common     = project(":common");
-val platformDB = project(":platformDB");
-
 val libDir = "${rootProject.projectDir}/lib"
 
 tasks.register("build") {
     group       = "Build"
     description = "Build this module"
 
-    dependsOn(common    .tasks["build"])
-    dependsOn(platformDB.tasks["build"])
+    dependsOn(project(":common")    .tasks["build"])
+    dependsOn(project(":platformDB").tasks["build"])
 
     doLast {
         val src = fileTree("${projectDir}/src").getFiles().stream().

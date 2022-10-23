@@ -1,10 +1,6 @@
 import ecstasy.annotations.InjectedRef;
 
-import ecstasy.io.IOException;
-
 import ecstasy.mgmt.Container;
-import ecstasy.mgmt.DirRepository;
-import ecstasy.mgmt.LinkedRepository;
 import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.ClassTemplate;
@@ -14,176 +10,9 @@ import ecstasy.reflect.TypeTemplate;
 
 import ecstasy.text.Log;
 
-import common.AppHost;
-import common.WebHost;
 
-import common.model.AccountId;
-import common.model.AccountInfo;
-import common.model.UserId;
-import common.model.UserInfo;
-
-
-/**
- * The module for basic hosting functionality.
- */
-service HostManager
-        implements common.HostManager
+package utils
     {
-    // ----- properties ------------------------------------------------------------------------------------------------
-
-    /**
-     * Loaded WebHost objects keyed by the application domain name.
-     */
-    Map<String, WebHost> loaded = new HashMap();
-
-    @Unassigned
-    DbHost platformDbHost;
-
-    @Unassigned
-    platformDB.Connection dbConnection;
-
-
-    // ----- DB initialization -----------------------------------------------------------------------------------------
-
-    /**
-     * Initialize the DB connection.
-     *
-     * @param repository  the core [ModuleRepository]
-     * @param dbDir       the directory for the platform database (e.g. "~/xqiz.it/platform/")
-     * @param buildDir    the directory to place auto-generated modules at  (e.g. "~/xqiz.it/platform/build")
-     * @param errors      the error log
-     */
-    void initDB(ModuleRepository repository, Directory dbDir, Directory buildDir, Log errors)
-        {
-        import oodb.DBMap;
-        import oodb.DBUser;
-
-        repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
-        assert platformDbHost := createDbHost(repository, dbDir, "platformDB", errors);
-
-        DBUser user = new oodb.model.User(1, "admin");
-        dbConnection = platformDbHost.ensureDatabase()(user).as(platformDB.Connection);
-
-        DBMap<AccountId, AccountInfo> accounts = dbConnection.accounts;
-        DBMap<UserId, UserInfo>       users    = dbConnection.users;
-        if (accounts.empty)
-            {
-            UserInfo admin = new UserInfo(1, "admin", "admin@acme.com");
-            users.put(1, admin);
-            accounts.put(1, new AccountInfo(1, "acme", [], Map:[1 = Admin]));
-            }
-        }
-
-
-    // ----- common.HostManager API ------------------------------------------------------------------------------------
-
-    @Override
-    conditional WebHost getWebHost(String domain)
-        {
-        return loaded.get(domain);
-        }
-
-    @Override
-    conditional WebHost createWebHost(Directory userDir, String appName, String domain, Log errors)
-        {
-        import xenia.tools.ModuleGenerator;
-
-        Directory libDir;
-        if (!(libDir := userDir.findDir("lib")))
-            {
-            errors.add($"Error: \"{userDir}/lib\" directory not found");
-            return False;
-            }
-
-        Directory buildDir = userDir.dirFor("build").ensure();
-
-        @Inject("repository") ModuleRepository coreRepo;
-
-        ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir), new DirRepository(buildDir)];
-        ModuleRepository   repository = new LinkedRepository(baseRepos.freeze(True));
-        ModuleTemplate     mainModule;
-        try
-            {
-            mainModule = repository.getResolvedModule(appName); // TODO GG: why do we need the resolved module?
-            }
-        catch (Exception e)
-            {
-            errors.add($"Error: Failed to resolve the module: {appName.quoted()} ({e.text})");
-            return False;
-            }
-
-        String moduleName = mainModule.displayName;
-        try
-            {
-            if (!mainModule.findAnnotation("web.WebApp"))
-                {
-                errors.add($"Module \"{moduleName}\" is not a WebApp");
-                return False;
-                }
-
-            ModuleGenerator generator = new ModuleGenerator(moduleName);
-            if (ModuleTemplate hostTemplate := generator.ensureWebModule(repository, buildDir, errors))
-                {
-                Directory appHomeDir = ensureHome(userDir, mainModule.qualifiedName);
-
-                if ((Container container, AppHost[] dependents) :=
-                        createContainer(repository, hostTemplate, appHomeDir, False, errors))
-                    {
-                    (String hostName, UInt16 httpPort, UInt16 httpsPort) = getAddress(domain);
-
-                    (File keyStore, String password) = getKeyStore(userDir);
-
-                    Tuple result = container.invoke("createServer_", Tuple:(hostName, keyStore, password, httpPort, httpsPort));
-
-                    function void() shutdown = result[0].as(function void());
-
-                    WebHost webHost = new WebHost(container, moduleName, appHomeDir, domain, shutdown, dependents);
-                    loaded.put(domain, webHost);
-                    return True, webHost;
-                    }
-                }
-            else
-                {
-                errors.add($"Error: Failed to create a host for {moduleName.quoted()}");
-                }
-            }
-        catch (Exception e)
-            {
-            errors.add($"Error: Failed to create a host for {moduleName.quoted()}; reason={e.text}");
-            }
-
-        return False;
-        }
-
-    @Override
-    void removeWebHost(WebHost webHost)
-        {
-        loaded.remove(webHost.domain);
-        }
-
-    @Override
-    conditional AccountInfo getAccount(String accountName)
-        {
-        return dbConnection.accounts.values.any(info -> info.name == accountName);
-        }
-
-    @Override
-    void storeAccount(AccountInfo info)
-        {
-        return dbConnection.accounts.put(info.id, info);
-        }
-
-    @Override
-    void shutdown()
-        {
-        for (WebHost webHost : loaded.values)
-            {
-            webHost.close();
-            }
-        platformDbHost.closeDatabase();
-        }
-
-
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -199,7 +28,7 @@ service HostManager
      * @return (optional) an array of AppHost objects for all dependent containers that have been
      *         loaded along the "main" container
      */
-    conditional (Container, AppHost[]) createContainer(
+    static conditional (Container, AppHost[]) createContainer(
                     ModuleRepository repository, ModuleTemplate template, Directory appHomeDir,
                     Boolean platform, Log errors)
         {
@@ -216,7 +45,7 @@ service HostManager
                 Directory userDir = appHomeDir.parent?.parent? : assert;
                 DbHost    dbHost;
 
-                if (!(dbHost := createDbHost(repository, userDir, dbModuleName, errors)))
+                if (!(dbHost := createDbHost(repository, userDir, dbModuleName, "json", errors)))
                     {
                     return False;
                     }
@@ -246,7 +75,7 @@ service HostManager
     /**
      * @return an array of the Database module names that the specified module depends on
      */
-    Map<String, String> detectDatabases(ModuleTemplate template)
+    static Map<String, String> detectDatabases(ModuleTemplate template)
         {
         import ClassTemplate.Contribution;
 
@@ -274,19 +103,18 @@ service HostManager
      * @param repository    the [ModuleRepository] to load the module(s) from
      * @param userDir       the user 'Directory' (e.g. "~/xqiz.it/users/acme/")
      * @param dbModuleName  the name of `Database` module
+     * @param dbImpl        the database implementation name (currently always "json")
      *
      * @return (optional) the DbHost
      */
-    conditional DbHost createDbHost(
-            ModuleRepository repository, Directory userDir, String dbModuleName, Log errors)
+    static conditional DbHost createDbHost(
+            ModuleRepository repository, Directory userDir, String dbModuleName, String dbImpl, Log errors)
         {
         Directory      dbHomeDir = ensureHome(userDir, dbModuleName);
         DbHost         dbHost;
         ModuleTemplate dbModuleTemplate;
 
-        @Inject Map<String, String> properties;
-
-        switch (String impl = properties.getOrDefault("db.impl", "json"))
+        switch (dbImpl)
             {
             case "":
             case "json":
@@ -294,7 +122,7 @@ service HostManager
                 break;
 
             default:
-                errors.add($"Error: Unknown db implementation: {impl}");
+                errors.add($"Error: Unknown db implementation: {dbImpl}");
                 return False;
             }
 
@@ -320,7 +148,7 @@ service HostManager
      *
      * @return an Injector that injects db connections based on the arrays of the specified DbHosts
      */
-    Injector createDbInjector(DbHost[] dbHosts, Directory appHomeDir)
+    static Injector createDbInjector(DbHost[] dbHosts, Directory appHomeDir)
         {
         import oodb.Connection;
         import oodb.RootSchema;
@@ -382,27 +210,8 @@ service HostManager
      *
      * @return the "home" directory for the module (e.g. "~/xqiz.it/users/acme/host/shopping)"
      */
-    Directory ensureHome(Directory userDir, String moduleName)
+    static Directory ensureHome(Directory userDir, String moduleName)
         {
         return userDir.dirFor($"host/{moduleName}").ensure();
-        }
-
-    /**
-     * Get the HTTP server info for the specified domain.
-     */
-    (String hostName, UInt16 httpPort, UInt16 httpsPort) getAddress(String domain)
-        {
-        // TODO: the address must be in the database
-        // TODO: ensure a DNS entry
-        return $"{domain}.xqiz.it", 8080, 8090;
-        }
-
-    /**
-     * Get the key store info
-     */
-    (File, String) getKeyStore(Directory userDir)
-        {
-        // TODO: retrieve from the db
-        return userDir.fileFor("certs.p12"), "password";
         }
     }

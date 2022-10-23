@@ -1,6 +1,7 @@
-import common.model.AccountInfo;
-
 import ecstasy.text.Log;
+
+import common.model.WebModuleInfo;
+
 
 /**
  * The Host Manager API.
@@ -21,14 +22,13 @@ interface HostManager
      * Create a 'WebHost' for the specified application module.
      *
      * @param userDir  the user 'Directory' (e.g. "~/xqiz.it/users/acme/")
-     * @param appName  the application module name
-     * @param domain   a sub-domain to use for the application (only for web applications)
+     * @param webInfo  the web module info
      * @param errors   the error log
      *
      * @return True iff the WebHost was successfully created
      * @return (optional) the WebHost for the newly loaded Container
      */
-    conditional WebHost createWebHost(Directory userDir, String appName, String domain, Log errors);
+    conditional WebHost ensureWebHost(Directory userDir, WebModuleInfo webInfo, Log errors);
 
     /**
      * Remove the specified WebHost.
@@ -36,28 +36,10 @@ interface HostManager
     void removeWebHost(WebHost webHost);
 
 
-    // ----- Account management ----------------------------------------------------------------------------------------
-
-    /**
-     * Retrieve an 'AccountInfo' for the specified name.
-     *
-     * @return True iff there is an AccountInfo
-     * @return (optional) the AccountInfo
-     */
-    conditional AccountInfo getAccount(String accountName);
-
-    /**
-     * Store the account info.
-     *
-     * @param the AccountInfo
-     */
-    void storeAccount(AccountInfo info);
-
-
     // ----- lifecycle -------------------------------------------------------------------------------------------------
 
     /**
-     * Shutdown all hosting services.
+     * Shutdown all hosted services.
      */
     void shutdown();
     }

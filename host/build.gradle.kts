@@ -1,5 +1,5 @@
 /*
- * Build the platformDB module.
+ * Build the host module.
  */
 
 val libDir = "${rootProject.projectDir}/lib"
@@ -9,13 +9,14 @@ tasks.register("build") {
     description = "Build this module"
 
     dependsOn(project(":common").tasks["build"])
+
     doLast {
         val src = fileTree("${projectDir}/src").getFiles().stream().
                 mapToLong({f -> f.lastModified()}).max().orElse(0)
-        val dst = file("$libDir/platformDB.xtc").lastModified()
+        val dst = file("$libDir/host.xtc").lastModified()
 
         if (src > dst) {
-            val srcModule = "${projectDir}/src/main/x/platformDB.x"
+            val srcModule = "${projectDir}/src/main/x/host.x"
 
             project.exec {
                 commandLine("xtc", "-verbose",

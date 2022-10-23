@@ -8,26 +8,35 @@ import common.WebHost;
 
 import common.model.AccountInfo;
 import common.model.ModuleInfo;
+import common.model.WebModuleInfo;
 
 import web.Get;
 import web.HttpStatus;
+import web.LoginRequired;
 import web.Post;
 import web.QueryParam;
 import web.WebApp;
+import web.WebService;
 
-// @web.LoginRequired
-@web.WebService("/host")
+// @LoginRequired
+@WebService("/host")
 service Controller()
     {
     construct()
         {
-        mgr = ControllerConfig.mgr;
+        accountManager = ControllerConfig.accountManager;
+        hostManager    = ControllerConfig.hostManager;
         }
+
+    /**
+     * The account manager.
+     */
+    private AccountManager accountManager;
 
     /**
      * The host manager.
      */
-    private HostManager mgr;
+    private HostManager hostManager;
 
     // TODO GG: temporary hack: it should be a session attribute or an argument, e.g.:
     //    @SessionParam("userId") String userId
@@ -42,7 +51,7 @@ service Controller()
     @Get("registeredApps")
     ModuleInfo[] getRegistered()
         {
-        if (AccountInfo info := mgr.getAccount(accountName))
+        if (AccountInfo info := accountManager.getAccount(accountName))
             {
             return info.modules.values.toArray();
             }
@@ -66,46 +75,45 @@ service Controller()
     json.Doc load(@QueryParam("app") String appName, @QueryParam String domain)
         {
         // there is one and only one application per [sub] domain
-        if (mgr.getWebHost(domain))
+        WebHost webHost;
+        if (webHost := hostManager.getWebHost(domain)) {}
+        else
             {
-            return [True, $"http://{domain}.xqiz.it:8080"];
-            }
-
-        Directory userDir = getUserHomeDirectory(accountName);
-        ErrorLog  errors  = new ErrorLog();
-
-        if (WebHost webHost := mgr.createWebHost(userDir, appName, domain, errors))
-            {
-            try
+            AccountInfo accountInfo;
+            if (!(accountInfo := accountManager.getAccount(accountName)))
                 {
-                assert AccountInfo info := mgr.getAccount(accountName);
-                if (!info.modules.contains(appName))
-                    {
-                    mgr.storeAccount(info.addModule(new ModuleInfo(appName, WebApp, domain)));
-                    }
+                return [False, $"account {accountName} is missing"];
+                }
 
-                if (!errors.empty)
-                    {
-                    File consoleFile = webHost.homeDir.fileFor("console.log");
-                    consoleFile.append(errors.toString().utf8());
-                    }
-                return [True, $"http://{domain}.xqiz.it:8080"];
-                }
-            catch (Exception e)
+            WebModuleInfo webInfo;
+            if (ModuleInfo info := accountInfo.modules.get(appName))
                 {
-                webHost.close(e);
-                mgr.removeWebHost(webHost);
-                errors.add($"Failed to initialize; reason={e.text}");
+                assert webInfo := info.is(WebModuleInfo);
                 }
+            else
+                {
+                (String hostName, UInt16 httpPort, UInt16 httpsPort) = getAuthority(domain);
+
+                webInfo = new WebModuleInfo(appName, domain, hostName, httpPort, httpsPort);
+                }
+
+            Directory userDir = getUserHomeDirectory(accountName);
+            ErrorLog  errors  = new ErrorLog();
+
+            if (!(webHost := hostManager.ensureWebHost(userDir, webInfo, errors)))
+                {
+                return [False, errors.toString()];
+                }
+            accountManager.addModule(appName, webInfo);
             }
-        return [False, errors.toString()];
+        return [True, $"http://{webHost.info.hostName}:{webHost.info.httpPort}"];
         }
 
     @Get("report/{domain}")
     String report(String domain)
         {
         String response;
-        if (WebHost webHost := mgr.getWebHost(domain))
+        if (WebHost webHost := hostManager.getWebHost(domain))
             {
             Container container = webHost.container;
             response = $"{container.status} {container.statusIndicator}";
@@ -120,9 +128,9 @@ service Controller()
     @Post("unload/{domain}")
     HttpStatus unload(String domain)
         {
-        if (WebHost webHost := mgr.getWebHost(domain))
+        if (WebHost webHost := hostManager.getWebHost(domain))
             {
-            mgr.removeWebHost(webHost);
+            hostManager.removeWebHost(webHost);
             webHost.close();
 
             return HttpStatus.OK;
@@ -135,11 +143,7 @@ service Controller()
         {
         unload(domain);
 
-        assert AccountInfo info := mgr.getAccount(accountName);
-        if (info.modules.contains(appName))
-            {
-            mgr.storeAccount(info.removeModule(appName));
-            }
+        accountManager.removeModule(accountName, appName);
         return HttpStatus.OK;
         }
 
@@ -157,7 +161,8 @@ service Controller()
         // TODO: only the admin can shutdown the host
         try
             {
-            mgr.shutdown();
+            hostManager.shutdown();
+            accountManager.shutdown();
             }
         finally
             {
@@ -180,4 +185,15 @@ service Controller()
         accountDir.ensure();
         return accountDir;
         }
+
+    /**
+     * Get the host name and ports for the specified domain.
+     */
+    (String hostName, UInt16 httpPort, UInt16 httpsPort) getAuthority(String domain)
+        {
+        // TODO: the address must be in the database
+        // TODO: ensure a DNS entry
+        return $"{domain}.xqiz.it", 8080, 8090;
+        }
+
     }

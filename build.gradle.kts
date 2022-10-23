@@ -5,9 +5,6 @@
 group   = "platform.xqiz.it"
 version = "0.1.0"
 
-val kernel     = project(":kernel");
-val platformDB = project(":platformDB");
-
 val libDir = "${projectDir}/lib"
 
 tasks.register("clean") {
@@ -20,8 +17,10 @@ val build = tasks.register("build") {
     group       = "Build"
     description = "Build all"
 
-    dependsOn(kernel    .tasks["build"])
-    dependsOn(platformDB.tasks["build"])
+    dependsOn(project(":kernel")    .tasks["build"])
+    dependsOn(project(":host")      .tasks["build"])
+    dependsOn(project(":platformDB").tasks["build"])
+    dependsOn(project(":platformUI").tasks["build"])
 }
 
 tasks.register("run") {

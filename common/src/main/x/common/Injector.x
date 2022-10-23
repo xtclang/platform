@@ -2,6 +2,7 @@ import ecstasy.lang.src.Compiler;
 
 import ecstasy.annotations.InjectedRef;
 
+import ecstasy.mgmt.Container;
 import ecstasy.mgmt.ModuleRepository;
 import ecstasy.mgmt.ResourceProvider;
 

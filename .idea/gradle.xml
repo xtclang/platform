@@ -11,8 +11,9 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/common" />
             <option value="$PROJECT_DIR$/host" />
-            <option value="$PROJECT_DIR$/hostControl" />
-            <option value="$PROJECT_DIR$/hostDB" />
+            <option value="$PROJECT_DIR$/kernel" />
+            <option value="$PROJECT_DIR$/platformDB" />
+            <option value="$PROJECT_DIR$/platformUI" />
           </set>
         </option>
       </GradleProjectSettings>

@@ -9,14 +9,16 @@ module platformUI.xqiz.it
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 
+    import common.AccountManager;
     import common.HostManager;
 
     /**
      * Configure the controller.
      */
-    void configure(HostManager mgr, String hostName, File keyStore, String password, UInt16 httpPort, UInt16 httpsPort)
+    void configure(AccountManager accountManager, HostManager hostManager,
+                   String hostName, File keyStore, String password, UInt16 httpPort, UInt16 httpsPort)
         {
-        ControllerConfig.init(mgr,
+        ControllerConfig.init(accountManager, hostManager,
             xenia.createServer(this, hostName, keyStore, password, httpPort, httpsPort));
         }
 
@@ -34,14 +36,18 @@ module platformUI.xqiz.it
     static service ControllerConfig
         {
         @Unassigned
-        HostManager mgr;
+        AccountManager accountManager;
+
+        @Unassigned
+        HostManager hostManager;
 
         @Unassigned
         function void() shutdownServer;
 
-        void init(HostManager mgr, function void() shutdownServer)
+        void init(AccountManager accountManager, HostManager hostManager, function void() shutdownServer)
             {
-            this.mgr            = mgr;
+            this.accountManager = accountManager;
+            this.hostManager    = hostManager;
             this.shutdownServer = shutdownServer;
             }
         }

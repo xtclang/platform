@@ -3,7 +3,10 @@
  */
 module common.xqiz.it
     {
-    package web import web.xtclang.org;
+    package oodb   import oodb.xtclang.org;
+    package jsondb import jsondb.xtclang.org;
+    package xenia  import xenia.xtclang.org;
+    package web    import web.xtclang.org;
 
     import ecstasy.text.SimpleLog;
 

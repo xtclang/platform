@@ -1,18 +1,21 @@
 import ecstasy.mgmt.Container;
 
+import common.model.WebModuleInfo;
+
+
 /**
  * AppHost for a Web module.
  */
 const WebHost
         extends AppHost
     {
-    construct (Container container, String moduleName, Directory homeDir, String domain,
+    construct (Container container, WebModuleInfo info, Directory homeDir,
                function void() shutdown, AppHost[] dependents)
         {
-        construct AppHost(moduleName, homeDir);
+        construct AppHost(info.name, homeDir);
 
         this.container  = container;
-        this.domain     = domain;
+        this.info       = info;
         this.shutdown   = shutdown;
         this.dependents = dependents;
         }
@@ -20,7 +23,7 @@ const WebHost
     /**
      * The application domain.
      */
-    String domain;
+    WebModuleInfo info;
 
     /**
      * The function that would shutdown the HTTP server for this module.

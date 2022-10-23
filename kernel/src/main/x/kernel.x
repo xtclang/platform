@@ -24,6 +24,9 @@ module kernel.xqiz.it
     import ecstasy.reflect.ModuleTemplate;
 
     import common.ErrorLog;
+    import common.HostManager;
+
+    import common.utils;
 
     void run(String[] args=[])
         {
@@ -50,31 +53,52 @@ module kernel.xqiz.it
 
         ErrorLog errors = new ErrorLog();
 
-        // create the host manager and initialize the platform database
-        console.println($"Creating the manager...");
-
-        HostManager mgr = new HostManager();
-        mgr.initDB(repository, platformDir, buildDir, errors);
-
-        // create a container for the platformUI controller and configure it
-        console.println($"Starting the platform UI controller...");
-
-        ModuleTemplate controlModule = repository.getResolvedModule("platformUI.xqiz.it");
-        if (Container container :=
-                mgr.createContainer(repository, controlModule, buildDir, True, errors))
+        do
             {
-            String hostName  = "admin.xqiz.it";
-            File   keyStore  = platformDir.fileFor("certs.p12");
-            UInt16 httpPort  = 8080;
-            UInt16 httpsPort = 8090;
+            // initialize the account manager
+            console.println($"Starting the AccountManager..."); // inside the kernel for now
+            AccountManager accountManager = new AccountManager();
+            accountManager.initDB(repository, platformDir, buildDir, errors);
 
-            container.invoke("configure",
-                Tuple:(&mgr.maskAs(common.HostManager), hostName, keyStore, password, httpPort, httpsPort));
+            // create a container for the platformUI controller and configure it
+            console.println($"Starting the HostManager...");
 
-            console.println($"Started the XtcPlatform at http://{hostName}:{httpPort}");
+            ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
+            HostManager    hostManager;
+            if (Container  container :=
+                    utils.createContainer(repository, hostModule, buildDir, True, errors))
+                {
+                hostManager = container.invoke("configure", Tuple:())[0].as(HostManager);
+                }
+            else
+                {
+                break;
+                }
+
+            // create a container for the platformUI controller and configure it
+            console.println($"Starting the platform UI controller...");
+
+            ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
+            if (Container  container := utils.createContainer(repository, uiModule, buildDir, True, errors))
+                {
+                String hostName  = "admin.xqiz.it";
+                File   keyStore  = platformDir.fileFor("certs.p12");
+                UInt16 httpPort  = 8080;
+                UInt16 httpsPort = 8090;
+
+                container.invoke("configure",
+                    Tuple:(accountManager, hostManager, hostName, keyStore, password, httpPort, httpsPort));
+
+                console.println($"Started the XtcPlatform at http://{hostName}:{httpPort}");
+                }
+            else
+                {
+                break;
+                }
+
+            // TODO create and configure the account-, IO-, keyStore-manager, etc.
             }
-
-        // TODO create and configure the account-, IO-, keyStore-manager, etc.
+        while (False);
 
         errors.reportAll(msg -> console.println(msg));
         }

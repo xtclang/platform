@@ -24,7 +24,6 @@ interface AccountManager
      */
     void addModule(String accountName, ModuleInfo moduleInfo);
 
-
     /**
      * Remove the specified module from the account.
      *

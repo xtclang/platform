@@ -1,9 +1,6 @@
 import ecstasy.mgmt.Container;
 
-import ecstasy.reflect.FileTemplate;
-
 import common.ErrorLog;
-import common.HostManager;
 import common.WebHost;
 
 import common.model.AccountInfo;
@@ -104,7 +101,7 @@ service Controller()
                 {
                 return [False, errors.toString()];
                 }
-            accountManager.addModule(appName, webInfo);
+            accountManager.addModule(accountName, webInfo);
             }
         return [True, $"http://{webHost.info.hostName}:{webHost.info.httpPort}"];
         }

@@ -110,15 +110,19 @@ package utils
     static conditional DbHost createDbHost(
             ModuleRepository repository, Directory userDir, String dbModuleName, String dbImpl, Log errors)
         {
-        Directory      dbHomeDir = ensureHome(userDir, dbModuleName);
-        DbHost         dbHost;
-        ModuleTemplate dbModuleTemplate;
+        import jsondb.tools.ModuleGenerator;
+
+        Directory       dbHomeDir = ensureHome(userDir, dbModuleName);
+        DbHost          dbHost;
+        ModuleTemplate  dbModuleTemplate;
+        ModuleGenerator generator;
 
         switch (dbImpl)
             {
             case "":
             case "json":
-                dbHost = new JsondbHost(dbModuleName, dbHomeDir, new jsondb.tools.ModuleGenerator(dbModuleName));
+                dbHost    = new JsondbHost(dbModuleName, dbHomeDir);
+                generator = new jsondb.tools.ModuleGenerator(dbModuleName);
                 break;
 
             default:
@@ -128,7 +132,7 @@ package utils
 
         Directory buildDir = userDir.dirFor("build").ensure();
 
-        if (!(dbModuleTemplate := dbHost.generator.ensureDBModule(repository, buildDir, errors)))
+        if (!(dbModuleTemplate := generator.ensureDBModule(repository, buildDir, errors)))
             {
             errors.add($"Error: Failed to create a host for : {dbModuleName}");
             return False;

@@ -12,8 +12,8 @@ import oodb.RootSchema;
 /**
  * Host for jsondb-based DB module.
  */
-class JsondbHost(String dbModuleName, Directory homeDir, ModuleGenerator generator)
-        extends DbHost(dbModuleName, homeDir, generator)
+class JsondbHost(String dbModuleName, Directory homeDir)
+        extends DbHost(dbModuleName, homeDir)
     {
     /**
      * Cached CatalogMetadata instance.

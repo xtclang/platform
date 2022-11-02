@@ -46,5 +46,7 @@ const WebHost
             dependent.close(e);
             }
         shutdown();
+
+        super(e);
         }
     }

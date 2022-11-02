@@ -29,5 +29,6 @@ class AppHost(String moduleName, Directory homeDir)
     @Override
     void close(Exception? e = Null)
         {
+        container.kill();
         }
     }

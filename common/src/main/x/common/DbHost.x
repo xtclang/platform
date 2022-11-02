@@ -8,14 +8,9 @@ import oodb.tools.ModuleGenerator;
  * An abstract host for a DB module.
  */
 @Abstract
-class DbHost(String dbModuleName, Directory homeDir, ModuleGenerator generator)
+class DbHost(String dbModuleName, Directory homeDir)
         extends AppHost(dbModuleName, homeDir)
     {
-    /**
-     * The ModuleGenerator to be used with this DbHost.
-     */
-    public/private ModuleGenerator generator;
-
     /**
      * The actual [RootSchema] type associated with the DB module represented by this DbHost.
      */
@@ -41,5 +36,7 @@ class DbHost(String dbModuleName, Directory homeDir, ModuleGenerator generator)
     void close(Exception? e)
         {
         closeDatabase();
+
+        super(e);
         }
     }

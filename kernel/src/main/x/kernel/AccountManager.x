@@ -40,7 +40,7 @@ service AccountManager
         import oodb.DBUser;
 
         repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
-        assert platformDbHost := utils.createDbHost(repository, dbDir, "platformDB", "json", errors);
+        assert platformDbHost := utils.createDbHost(repository, dbDir, "platformDB.xqiz.it", "jsondb", errors);
 
         DBUser user = new oodb.model.User(1, "admin");
         dbConnection = platformDbHost.ensureDatabase()(user).as(platformDB.Connection);

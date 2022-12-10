@@ -45,7 +45,7 @@ package utils
                 Directory userDir = appHomeDir.parent?.parent? : assert;
                 DbHost    dbHost;
 
-                if (!(dbHost := createDbHost(repository, userDir, dbModuleName, "json", errors)))
+                if (!(dbHost := createDbHost(repository, userDir, dbModuleName, "jsondb", errors)))
                     {
                     return False;
                     }
@@ -101,9 +101,9 @@ package utils
      * Create a DbHost for the specified db module.
      *
      * @param repository    the [ModuleRepository] to load the module(s) from
-     * @param userDir       the user 'Directory' (e.g. "~/xqiz.it/users/acme/")
-     * @param dbModuleName  the name of `Database` module
-     * @param dbImpl        the database implementation name (currently always "json")
+     * @param userDir       the user `Directory` (e.g. "~/xqiz.it/users/acme/")
+     * @param dbModuleName  the name of `Database` module (fully qualified)
+     * @param dbImpl        the database implementation name (currently always "jsondb")
      *
      * @return (optional) the DbHost
      */
@@ -120,7 +120,7 @@ package utils
         switch (dbImpl)
             {
             case "":
-            case "json":
+            case "jsondb":
                 dbHost    = new JsondbHost(dbModuleName, dbHomeDir);
                 generator = new jsondb.tools.ModuleGenerator(dbModuleName);
                 break;
@@ -212,7 +212,7 @@ package utils
      * @param userDir     the user 'Directory' (e.g. "~/xqiz.it/users/acme/")
      * @param moduleName  the application module name
      *
-     * @return the "home" directory for the module (e.g. "~/xqiz.it/users/acme/host/shopping)"
+     * @return the "home" directory for the module (e.g. "~/xqiz.it/users/acme/host/welcome)"
      */
     static Directory ensureHome(Directory userDir, String moduleName)
         {

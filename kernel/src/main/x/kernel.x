@@ -16,7 +16,7 @@ module kernel.xqiz.it
     package xenia  import xenia.xtclang.org;
 
     package common     import common.xqiz.it;
-    package platformDB import platformDB;
+    package platformDB import platformDB.xqiz.it;
 
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.ModuleRepository;

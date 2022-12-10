@@ -2,7 +2,7 @@
  * The platform database.
  */
 @oodb.Database
-module platformDB
+module platformDB.xqiz.it
     {
     package oodb import oodb.xtclang.org;
 

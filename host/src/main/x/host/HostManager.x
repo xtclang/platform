@@ -67,7 +67,7 @@ service HostManager
             return False;
             }
 
-        String moduleName = mainModule.displayName;
+        String moduleName = mainModule.qualifiedName;
         try
             {
             if (!mainModule.findAnnotation("web.WebApp"))

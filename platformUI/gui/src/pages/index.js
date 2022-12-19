@@ -75,7 +75,7 @@ class Home extends Component
 
     sendRequest(ix)
         {
-        if (this.state.loadingIndex != -1)
+        if (this.state.loadingIndex !== -1)
             {
             return;
             }
@@ -127,16 +127,16 @@ class Home extends Component
 
     closeAddModule(command)
         {
-        if (command == "add")
+        if (command === "add")
             {
             const moduleName = this.moduleInput.current.value;
-            if (moduleName == "")
+            if (moduleName === "")
                 {
                 return;
                 }
 
             const registeredApps = this.state.registeredApps;
-            if (registeredApps.some(info => {return info.name == moduleName;}))
+            if (registeredApps.some(info => {return info.name === moduleName;}))
                 {
                 this.moduleInput.current.value = "";
                 alert("Module already registered");
@@ -144,7 +144,7 @@ class Home extends Component
                 }
 
             var domain = this.domainInput.current.value;
-            if (domain == "")
+            if (domain === "")
                 {
                 domain = moduleName;
                 }
@@ -184,7 +184,7 @@ class Home extends Component
                 }
             }
 
-        if (checkedNew.length != checkedOld.length)
+        if (checkedNew.length !== checkedOld.length)
             {
             this.setState(state => ({registeredApps: registeredNew, checkedApps: checkedNew}));
             }
@@ -213,16 +213,16 @@ class Home extends Component
             let   link;
             let   actionText = 'Load application';
 
-            if (url != null)
+            if (url !== null)
                 {
-                link       = <a href={url} target="_blank">run application</a>;
+                link       = <a href={url} target="_blank" rel="noopener noreferrer">run application</a>;
                 actionText = 'Unload application';
                 }
-            else if (info.error != null)
+            else if (info.error !== null)
                 {
                 link = <span style={{color: 'red'}}>{info.error}</span>;
                 }
-            else if (this.state.loadingIndex == ix)
+            else if (this.state.loadingIndex === ix)
                 {
                 link = 'loading.'.padEnd(this.state.loadingTicks, '.');
                 }

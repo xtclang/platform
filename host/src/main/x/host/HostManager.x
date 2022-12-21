@@ -102,7 +102,7 @@ service HostManager
                 }
             else
                 {
-                errors.add($"Error: Failed to create a host for {moduleName.quoted()}");
+                errors.add($"Error: Failed to create a Web host for {moduleName.quoted()}");
                 }
             }
         catch (Exception e)

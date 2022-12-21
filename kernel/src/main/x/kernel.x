@@ -53,7 +53,7 @@ module kernel.xqiz.it
 
         ErrorLog errors = new ErrorLog();
 
-        do
+        try
             {
             // initialize the account manager
             console.println($"Starting the AccountManager..."); // inside the kernel for now
@@ -72,7 +72,7 @@ module kernel.xqiz.it
                 }
             else
                 {
-                break;
+                return;
                 }
 
             // create a container for the platformUI controller and configure it
@@ -93,13 +93,14 @@ module kernel.xqiz.it
                 }
             else
                 {
-                break;
+                return;
                 }
 
             // TODO create and configure the account-, IO-, keyStore-manager, etc.
             }
-        while (False);
-
-        errors.reportAll(msg -> console.println(msg));
+        finally
+            {
+            errors.reportAll(msg -> console.println(msg));
+            }
         }
     }

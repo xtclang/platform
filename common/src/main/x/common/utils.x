@@ -134,7 +134,7 @@ package utils
 
         if (!(dbModuleTemplate := generator.ensureDBModule(repository, buildDir, errors)))
             {
-            errors.add($"Error: Failed to create a host for : {dbModuleName}");
+            errors.add($"Error: Failed to create a DB host for : {dbModuleName}");
             return False;
             }
 

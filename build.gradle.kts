@@ -11,6 +11,17 @@ tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
     delete(libDir)
+
+    val userHome = System.getProperty("user.home")
+
+    // clean up the "platform" lib
+    val platformDir = "$userHome/xqiz.it/platform"
+    delete("$platformDir/build")
+
+    // clean up the "acme" account lib
+    val usersDir = "$userHome/xqiz.it/users"
+    val account  = "acme"
+    delete("$usersDir/$account/build")
 }
 
 val build = tasks.register("build") {

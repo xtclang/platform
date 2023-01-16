@@ -4,6 +4,7 @@
 module host.xqiz.it
     {
     package common import common.xqiz.it;
+    package crypto import crypto.xtclang.org;
     package xenia  import xenia.xtclang.org;
 
     /**

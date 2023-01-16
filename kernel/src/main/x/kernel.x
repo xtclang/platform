@@ -10,8 +10,9 @@
  */
 module kernel.xqiz.it
     {
-    package oodb   import oodb.xtclang.org;
+    package crypto import crypto.xtclang.org;
     package jsondb import jsondb.xtclang.org;
+    package oodb   import oodb.xtclang.org;
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 
@@ -82,12 +83,15 @@ module kernel.xqiz.it
             if (Container  container := utils.createContainer(repository, uiModule, buildDir, True, errors))
                 {
                 String hostName  = "admin.xqiz.it";
-                File   keyStore  = platformDir.fileFor("certs.p12");
+                File   storeFile = platformDir.fileFor("certs.p12");
                 UInt16 httpPort  = 8080;
                 UInt16 httpsPort = 8090;
 
+                import crypto.KeyStore;
+                @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
+
                 container.invoke("configure",
-                    Tuple:(accountManager, hostManager, hostName, keyStore, password, httpPort, httpsPort));
+                    Tuple:(accountManager, hostManager, hostName, keystore, httpPort, httpsPort));
 
                 console.println($"Started the XtcPlatform at http://{hostName}:{httpPort}");
                 }

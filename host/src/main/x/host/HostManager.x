@@ -14,6 +14,8 @@ import common.model.WebModuleInfo;
 
 import common.utils;
 
+import crypto.KeyStore;
+
 
 /**
  * The module for basic hosting functionality.
@@ -84,10 +86,10 @@ service HostManager
                 if ((Container container, AppHost[] dependents) :=
                         utils.createContainer(repository, hostTemplate, appHomeDir, False, errors))
                     {
-                    (File keyStore, String password) = getKeyStore(userDir);
+                    KeyStore keystore = getKeyStore(userDir);
 
                     Tuple result = container.invoke("createServer_",
-                        Tuple:(webInfo.hostName, keyStore, password, webInfo.httpPort, webInfo.httpsPort));
+                        Tuple:(webInfo.hostName, keystore, webInfo.httpPort, webInfo.httpsPort));
 
                     function void() shutdown = result[0].as(function void());
 
@@ -129,11 +131,13 @@ service HostManager
         }
 
     /**
-     * Get the key store info (file and password).
+     * Get the KeyStore.
      */
-    (File, String) getKeyStore(Directory userDir)
+    KeyStore getKeyStore(Directory userDir)
         {
         // TODO: retrieve from the db
-        return userDir.fileFor("certs.p12"), "password";
+        @Inject(opts=new KeyStore.Info(userDir.fileFor("certs.p12").contents, "password"))
+        KeyStore keystore;
+        return keystore;
         }
     }

@@ -5,6 +5,7 @@
 module platformUI.xqiz.it
     {
     package common import common.xqiz.it;
+    package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
@@ -12,14 +13,16 @@ module platformUI.xqiz.it
     import common.AccountManager;
     import common.HostManager;
 
+    import crypto.KeyStore;
+
     /**
      * Configure the controller.
      */
     void configure(AccountManager accountManager, HostManager hostManager,
-                   String hostName, File keyStore, String password, UInt16 httpPort, UInt16 httpsPort)
+                   String hostName, KeyStore keystore, UInt16 httpPort, UInt16 httpsPort)
         {
         ControllerConfig.init(accountManager, hostManager,
-            xenia.createServer(this, hostName, keyStore, password, httpPort, httpsPort));
+            xenia.createServer(this, hostName, keystore, httpPort, httpsPort));
         }
 
     /**

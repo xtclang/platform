@@ -6,6 +6,8 @@ import ecstasy.mgmt.Container;
 import ecstasy.mgmt.ModuleRepository;
 import ecstasy.mgmt.ResourceProvider;
 
+import crypto.KeyStore;
+
 import xenia.HttpServer;
 
 /**
@@ -172,6 +174,13 @@ service Injector(Directory appHomeDir, Boolean platform)
             case (ModuleRepository, "repository"):
                 @Inject ModuleRepository repository;
                 return repository;
+
+            case (KeyStore, "keystore"):
+                return (InjectedRef.Options opts) ->
+                    {
+                    @Inject(opts=opts) KeyStore keystore;
+                    return keystore;
+                    };
 
             default:
                 // HttpServer is not a shared Ecstasy type, so it's not handled by the switch()

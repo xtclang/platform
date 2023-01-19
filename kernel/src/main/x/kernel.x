@@ -39,7 +39,7 @@ module kernel.xqiz.it
         if (args.size == 0)
             {
             console.print("Enter password:");
-            password = console.readLine(echo=False);
+            password = console.readLine(suppressEcho=True);
             }
         else
             {
@@ -57,12 +57,12 @@ module kernel.xqiz.it
         try
             {
             // initialize the account manager
-            console.println($"Starting the AccountManager..."); // inside the kernel for now
+            console.print($"Starting the AccountManager..."); // inside the kernel for now
             AccountManager accountManager = new AccountManager();
             accountManager.initDB(repository, platformDir, buildDir, errors);
 
             // create a container for the platformUI controller and configure it
-            console.println($"Starting the HostManager...");
+            console.print($"Starting the HostManager...");
 
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
@@ -77,7 +77,7 @@ module kernel.xqiz.it
                 }
 
             // create a container for the platformUI controller and configure it
-            console.println($"Starting the platform UI controller...");
+            console.print($"Starting the platform UI controller...");
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container := utils.createContainer(repository, uiModule, buildDir, True, errors))
@@ -93,7 +93,7 @@ module kernel.xqiz.it
                 container.invoke("configure",
                     Tuple:(accountManager, hostManager, hostName, keystore, httpPort, httpsPort));
 
-                console.println($"Started the XtcPlatform at http://{hostName}:{httpPort}");
+                console.print($"Started the XtcPlatform at http://{hostName}:{httpPort}");
                 }
             else
                 {
@@ -104,7 +104,7 @@ module kernel.xqiz.it
             }
         finally
             {
-            errors.reportAll(msg -> console.println(msg));
+            errors.reportAll(msg -> console.print(msg));
             }
         }
     }

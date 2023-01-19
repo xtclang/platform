@@ -45,32 +45,24 @@ service Injector(Directory appHomeDir, Boolean platform)
             implements Console
         {
         @Override
-        void print(Object o)
+        void print(Object o, Boolean suppressNewline=False)
             {
-            write(o.is(String) ? o : o.toString());
+            write(o.is(String) ? o : o.toString(), suppressNewline);
             }
 
         @Override
-        void println(Object o = "")
-            {
-            writeln(o.is(String) ? o : o.toString());
-            }
-
-        @Override
-        String readLine(Boolean echo = True)
+        String readLine(Boolean suppressEcho = False)
             {
             throw new UnsupportedOperation();
             }
 
-        void write(String s)
+        void write(String s, Boolean suppressNewline)
             {
             consoleFile.append(s.utf8());
-            }
-
-        void writeln(String s)
-            {
-            // consider remembering the position if the file size calls for pruning
-            consoleFile.append(s.utf8()).append(['\n'.toByte()]);
+            if (!suppressNewline)
+                {
+                consoleFile.append(['\n'.toByte()]);
+                }
             }
         }
 

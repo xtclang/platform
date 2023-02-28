@@ -8,6 +8,8 @@ import ecstasy.mgmt.ResourceProvider;
 
 import crypto.KeyStore;
 
+import web.security.Authenticator;
+
 import xenia.HttpServer;
 
 /**
@@ -172,6 +174,13 @@ service Injector(Directory appHomeDir, Boolean platform)
                     {
                     @Inject(opts=opts) KeyStore keystore;
                     return keystore;
+                    };
+
+            case (Authenticator?, "providedAuthenticator"):
+                return (InjectedRef.Options address) ->
+                    {
+                    // TODO GG/CP: this is a big todo...
+                    return Null;
                     };
 
             default:

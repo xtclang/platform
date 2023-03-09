@@ -6,6 +6,7 @@ import ecstasy.mgmt.Container;
 import ecstasy.mgmt.ModuleRepository;
 import ecstasy.mgmt.ResourceProvider;
 
+import crypto.Algorithms;
 import crypto.KeyStore;
 
 import web.security.Authenticator;
@@ -168,6 +169,13 @@ service Injector(Directory appHomeDir, Boolean platform)
             case (ModuleRepository, "repository"):
                 @Inject ModuleRepository repository;
                 return repository;
+
+            case (Algorithms, "algorithms"):
+                return (InjectedRef.Options opts) ->
+                    {
+                    @Inject(opts=opts) Algorithms algorithms;
+                    return algorithms;
+                    };
 
             case (KeyStore, "keystore"):
                 return (InjectedRef.Options opts) ->

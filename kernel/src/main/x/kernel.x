@@ -1,12 +1,13 @@
 /**
- * The module for boot-strapping. The kernel is expected to run in "container zero", i.e. the initial container within
- * the server process. As such, it will be the only container with access to all of the "unrestricted" OS capabilities,
- * via injection. Its purpose is to provide maximally restricted forms of those injectable resources to each of its
- * sub-containers (each of which represent specific system services), such that each system service has exactly the
- * capabilities that it requires, and no more. Furthermore, the kernel is responsible for introducing system services to
- * each other, by injecting "common" interfaces into dependent system services, with those interfaces coming from the
- * systems services that are depended on; as with the OS capabilities, the minimally required set of maximally
- * restricted interfaces are injected.
+ * The module for boot-strapping. The kernel is expected to run in "container zero", i.e. the
+ * initial container within the server process. As such, it will be the only container with access
+ * to all of the "unrestricted" OS capabilities via injection. Its purpose is to provide maximally
+ * restricted forms of those injectable resources to each of its sub-containers (each of which
+ * represent specific system services), such that each system service has exactly the capabilities
+ * that it requires, and no more. Furthermore, the kernel is responsible for introducing system
+ * services to each other, by injecting "common" interfaces into dependent system services, with
+ * those interfaces coming from the systems services that are depended on; as with the OS
+ * capabilities, the minimally required set of maximally restricted interfaces are injected.
  */
 module kernel.xqiz.it
     {

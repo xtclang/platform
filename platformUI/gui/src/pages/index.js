@@ -25,9 +25,10 @@ class Home extends Component
         super();
 
         this.state = {
-                userId:  "<none>",
+                userId: "<none>",
                 availableModules : [],
                 registeredApps: [],
+                showUpload: false,
                 showAdd: false,
 
                 loadingIndex: -1,  // the index of the app being loaded
@@ -36,10 +37,12 @@ class Home extends Component
                 };
         this.action = this.sendRequest.bind(this);
 
-        this.showAddModule  = this.showAddModule.bind(this);
-        this.closeAddModule = this.closeAddModule.bind(this);
-        this.unregister     = this.unregister.bind(this);
-        this.toggle         = this.toggle.bind(this);
+        this.showUploadModule  = this.showUploadModule.bind(this);
+        this.showAddModule     = this.showAddModule.bind(this);
+        this.closeUploadModule = this.closeUploadModule.bind(this);
+        this.closeAddModule    = this.closeAddModule.bind(this);
+        this.unregister        = this.unregister.bind(this);
+        this.toggle            = this.toggle.bind(this);
 
         this.moduleInput = React.createRef();
         this.domainInput = React.createRef();
@@ -82,13 +85,13 @@ class Home extends Component
 
         const info   = this.state.registeredApps[ix];
         const domain = info.domain;
-        const url    = info.url == null ? null : info.url;
+        const url    = info.url === undefined ? null : info.url;
 
         if (url == null)
             {
             // load application
             this.setState(state => ({loadingIndex: ix, loadingTicks: 0}));
-            this.interval = setInterval(() => this.tick(ix), 500);
+            this.interval = setInterval(() => this.tick(ix), 250);
 
             const request = '/host/load?app=' + info.name + ',domain=' + domain;
             fetch(request, postOptions)
@@ -115,6 +118,31 @@ class Home extends Component
             this.setInfo(ix, null, null);
             }
       }
+
+    showUploadModule()
+        {
+        this.setState(state => ({showUpload: true}));
+        }
+
+    closeUploadModule(event)
+        {
+        if (event !== null)
+            {
+            const formData = new FormData();
+            const files    = event.target.files;
+            for (var i = 0, c = files.length; i < c; i++)
+                {
+                const file = files[i];
+                formData.append("file", file, file.name);
+
+                // Details of the uploaded file
+                console.log("uploading " + file.name);
+                }
+
+            fetch("host/upload", {body: formData, method: "post"});
+            }
+        this.setState(state => ({showUpload: false}));
+        }
 
     showAddModule()
         {
@@ -208,12 +236,12 @@ class Home extends Component
             {
             const ix   = i;
             const info = registeredApps[i];
-            const url  = info.url;
+            const url  = info.url === undefined ? null : info.url;
 
             let   link;
             let   actionText = 'Load application';
 
-            if (url !== null)
+            if (url != null)
                 {
                 link       = <a href={url} target="_blank" rel="noopener noreferrer">run application</a>;
                 actionText = 'Unload application';
@@ -264,9 +292,26 @@ class Home extends Component
                 </table>
                 <p/>
 
+                <button onClick={this.showUploadModule}>Upload Module</button>&nbsp;&nbsp;
                 <button onClick={this.showAddModule}>Register Module</button>&nbsp;&nbsp;
                 <button onClick={this.unregister}>Unregister Module</button>
-                <ReactModal
+
+                <ReactModal // Upload Module dialog
+                  isOpen={this.state.showUpload}
+                  onRequestClose={() => this.closeUploadModule(null)}
+                  className="modal"
+                  shouldCloseOnOverlayClick={false}
+                  appElement={document.body}>
+
+                  <h2>Upload Module</h2>
+                  <p/>
+                  <form>
+                    <input id='fileUpload' type='file' name='files[]' multiple onChange={this.closeUploadModule}/>
+                    <button onClick={() => this.closeUploadModule(null)}>Cancel</button>
+                  </form>
+                </ReactModal>
+
+                <ReactModal // Add Module dialog
                   isOpen={this.state.showAdd}
                   onRequestClose={() => this.closeAddModule(null)}
                   className="modal"

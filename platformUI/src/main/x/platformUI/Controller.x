@@ -7,11 +7,16 @@ import common.model.AccountInfo;
 import common.model.ModuleInfo;
 import common.model.WebModuleInfo;
 
+import web.http;
+import web.http.FormDataFile;
+
 import web.Get;
 import web.HttpStatus;
 import web.LoginRequired;
 import web.Post;
+import web.BodyParam;
 import web.QueryParam;
+import web.RequestIn;
 import web.WebApp;
 import web.WebService;
 
@@ -67,6 +72,22 @@ service Controller()
           }
       return [];
       }
+
+    @Post("upload")
+    void uploadModule()
+        {
+        assert RequestIn request ?= this.request;
+        if (web.Body body ?= request.body)
+            {
+            Directory libDir = getUserHomeDirectory(accountName).dirFor("lib").ensure();
+
+            for (FormDataFile fileData : http.extractFileData(body))
+                {
+                File file = libDir.fileFor(fileData.fileName);
+                file.contents = fileData.contents;
+                }
+            }
+        }
 
     @Post("load")
     json.Doc load(@QueryParam("app") String appName, @QueryParam String domain)

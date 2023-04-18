@@ -7,20 +7,9 @@ import common.model.AccountInfo;
 import common.model.ModuleInfo;
 import common.model.WebModuleInfo;
 
-import web.http;
+import web.*;
 import web.http.FormDataFile;
 
-import web.Get;
-import web.HttpStatus;
-import web.LoginRequired;
-import web.Post;
-import web.BodyParam;
-import web.QueryParam;
-import web.RequestIn;
-import web.WebApp;
-import web.WebService;
-
-// @LoginRequired
 @WebService("/host")
 service Controller()
     {
@@ -40,8 +29,17 @@ service Controller()
      */
     private HostManager hostManager;
 
-    // TODO GG: temporary hack: it should be a session attribute or an argument, e.g.:
-    //    @SessionParam("userId") String userId
+// TODO GG: temporary hack: it should be a session attribute e.g.:
+//    Authenticator createAuthenticator()
+//        {
+//        return new DigestAuthenticator(new FixedRealm("Platform", ["acme"="password"]));
+//        }
+//
+//    private String accountName.get()
+//        {
+//        return session?.userId? : "";
+//        }
+
     String accountName = "acme";
 
     @Get("userId")
@@ -165,6 +163,13 @@ service Controller()
         return HttpStatus.OK;
         }
 
+    @Put("sign-out")
+    HttpStatus signOut()
+        {
+        session?.deauthenticate();
+        return HttpStatus.OK;
+        }
+
     @Post("debug")
     HttpStatus debug()
         {
@@ -213,5 +218,4 @@ service Controller()
         // TODO: ensure a DNS entry
         return $"{domain}.xqiz.it", 8080, 8090;
         }
-
     }

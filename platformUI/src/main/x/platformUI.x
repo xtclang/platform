@@ -1,7 +1,7 @@
 /**
  * The web module for basic hosting functionality.
  */
-@web.WebApp
+@WebApp
 module platformUI.xqiz.it
     {
     package common import common.xqiz.it;
@@ -14,6 +14,10 @@ module platformUI.xqiz.it
     import common.HostManager;
 
     import crypto.KeyStore;
+
+    import web.StaticContent;
+    import web.WebApp;
+    import web.WebService;
 
     /**
      * Configure the controller.
@@ -28,9 +32,23 @@ module platformUI.xqiz.it
     /**
      * The web site static content.
      */
-    @web.StaticContent("/", /gui)
-    service Content
+    @WebService("/")
+    service Content()
+            incorporates StaticContent(path, /gui)
         {
+        import web.Get;
+        import web.ResponseOut;
+
+        @Get("{path}")
+        @Override
+        conditional ResponseOut getResource(String path)
+            {
+            if (ResponseOut response := super(path))
+                {
+                return True, response;
+                }
+            return super(defaultPage);
+            }
         }
 
     /**

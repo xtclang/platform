@@ -109,6 +109,8 @@ service HostManager
             }
         catch (Exception e)
             {
+            @Inject Console console;
+            console.print(e); // TODO GG: remove
             errors.add($"Error: Failed to create a host for {moduleName.quoted()}; reason={e.text}");
             }
 

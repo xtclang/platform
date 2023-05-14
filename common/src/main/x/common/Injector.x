@@ -202,8 +202,9 @@ service Injector(Directory appHomeDir, Boolean platform)
                         };
                     }
 
-                throw new Exception($|Invalid resource: type="{type}", name="{name}"
-                                   );
+                return (InjectedRef.Options address) ->
+                    throw new Exception($|Invalid resource: type="{type}", name="{name}"
+                                       );
             }
         }
     }

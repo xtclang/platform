@@ -1,8 +1,7 @@
 /**
  * The module for all platform APIs.
  */
-module common.xqiz.it
-    {
+module common.xqiz.it {
     package crypto import crypto.xtclang.org;
     package jsondb import jsondb.xtclang.org;
     package oodb   import oodb.xtclang.org;
@@ -15,14 +14,12 @@ module common.xqiz.it
      * A Log as a service.
      */
     service ErrorLog
-            extends SimpleLog
-        {
-        void reportAll(function void (String) report)
-            {
-            for (String msg : messages)
-                {
+            extends SimpleLog {
+
+        void reportAll(function void (String) report) {
+            for (String msg : messages) {
                 report(msg);
-                }
             }
         }
     }
+}

@@ -2,8 +2,7 @@
  * The platform database.
  */
 @oodb.Database
-module platformDB.xqiz.it
-    {
+module platformDB.xqiz.it {
     package oodb import oodb.xtclang.org;
 
     package common import common.xqiz.it;
@@ -16,14 +15,14 @@ module platformDB.xqiz.it
     import oodb.DBMap;
 
     interface Schema
-            extends oodb.RootSchema
-        {
+            extends oodb.RootSchema {
+
         @RO DBMap<AccountId, AccountInfo> accounts;
 
         @RO DBMap<UserId, UserInfo> users;
-        }
+    }
 
     typedef (oodb.Connection<Schema>  + Schema) as Connection;
 
     typedef (oodb.Transaction<Schema> + Schema) as Transaction;
-    }
+}

@@ -1,8 +1,7 @@
 /**
  * The platform host service.
  */
-module host.xqiz.it
-    {
+module host.xqiz.it {
     package common import common.xqiz.it;
     package crypto import crypto.xtclang.org;
     package xenia  import xenia.xtclang.org;
@@ -10,9 +9,8 @@ module host.xqiz.it
     /**
      * Bootstrapping: configure and return the HostManager.
      */
-    common.HostManager configure()
-        {
+    common.HostManager configure() {
         HostManager mgr = new HostManager();
         return &mgr.maskAs(common.HostManager); // TODO GG: should masking be done automatically by "invoke"?
-        }
     }
+}

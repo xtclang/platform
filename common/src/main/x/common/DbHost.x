@@ -9,8 +9,7 @@ import oodb.tools.ModuleGenerator;
  */
 @Abstract
 class DbHost(String dbModuleName, Directory homeDir)
-        extends AppHost(dbModuleName, homeDir)
-    {
+        extends AppHost(dbModuleName, homeDir) {
     /**
      * The actual [RootSchema] type associated with the DB module represented by this DbHost.
      */
@@ -33,10 +32,9 @@ class DbHost(String dbModuleName, Directory homeDir)
     // ----- Closeable -------------------------------------------------------------------------------------------------
 
     @Override
-    void close(Exception? e)
-        {
+    void close(Exception? e) {
         closeDatabase();
 
         super(e);
-        }
     }
+}

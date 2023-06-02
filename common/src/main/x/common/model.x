@@ -1,5 +1,4 @@
-package model
-    {
+package model {
     typedef UInt as AccountId;
     typedef UInt as UserId;
 
@@ -8,26 +7,24 @@ package model
     const AccountInfo(AccountId id, String name,
                       Map<String, ModuleInfo> modules = [],
                       Map<UserId, UserRole>   users   = []
-                      )
-        {
-        AccountInfo addModule(ModuleInfo info)
-            {
-            return new AccountInfo(id, name, modules.put(info.name, info), users);
-            }
-        AccountInfo removeModule(String moduleName)
-            {
-            return new AccountInfo(id, name, modules.remove(moduleName), users);
-            }
+                      ) {
 
-        AccountInfo addUser(UserId userId, UserRole role)
-            {
-            return new AccountInfo(id, name, modules, users.put(userId, role));
-            }
-        AccountInfo removeUser(UserId userId)
-            {
-            return new AccountInfo(id, name, modules, users.remove(userId));
-            }
+        AccountInfo addModule(ModuleInfo info) {
+            return new AccountInfo(id, name, modules.put(info.name, info), users);
         }
+
+        AccountInfo removeModule(String moduleName) {
+            return new AccountInfo(id, name, modules.remove(moduleName), users);
+        }
+
+        AccountInfo addUser(UserId userId, UserRole role) {
+            return new AccountInfo(id, name, modules, users.put(userId, role));
+        }
+
+        AccountInfo removeUser(UserId userId) {
+            return new AccountInfo(id, name, modules, users.remove(userId));
+        }
+    }
 
     const AccountUser(UserId userId, AccountId accountId);
 
@@ -38,4 +35,4 @@ package model
 
     const WebModuleInfo(String name, String domain, String hostName, UInt16 httpPort, UInt16 httpsPort)
         extends ModuleInfo(name);
-    }
+}

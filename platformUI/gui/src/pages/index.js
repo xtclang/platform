@@ -1,7 +1,6 @@
 import React from "react";
 
-const Home = () =>
-  {
+const Home = () => {
   return (
     <div>
     <h1>
@@ -9,6 +8,6 @@ const Home = () =>
     </h1>
     </div>
     );
-  };
+};
 
 export default Home;

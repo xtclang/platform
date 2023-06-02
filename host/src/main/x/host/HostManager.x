@@ -21,8 +21,7 @@ import crypto.KeyStore;
  * The module for basic hosting functionality.
  */
 service HostManager
-        implements common.HostManager
-    {
+        implements common.HostManager {
     // ----- properties ------------------------------------------------------------------------------------------------
 
     /**
@@ -34,22 +33,19 @@ service HostManager
     // ----- common.HostManager API ------------------------------------------------------------------------------------
 
     @Override
-    conditional WebHost getWebHost(String domain)
-        {
+    conditional WebHost getWebHost(String domain) {
         return loaded.get(domain);
-        }
+    }
 
     @Override
-    conditional WebHost ensureWebHost(Directory userDir, WebModuleInfo webInfo, Log errors)
-        {
+    conditional WebHost ensureWebHost(Directory userDir, WebModuleInfo webInfo, Log errors) {
         import xenia.tools.ModuleGenerator;
 
         Directory libDir;
-        if (!(libDir := userDir.findDir("lib")))
-            {
+        if (!(libDir := userDir.findDir("lib"))) {
             errors.add($"Error: \"{userDir}/lib\" directory not found");
             return False;
-            }
+        }
 
         Directory buildDir = userDir.dirFor("build").ensure();
 
@@ -58,34 +54,27 @@ service HostManager
         ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir), new DirRepository(buildDir)];
         ModuleRepository   repository = new LinkedRepository(baseRepos.freeze(True));
         ModuleTemplate     mainModule;
-        try
-            {
+        try {
             mainModule = repository.getResolvedModule(webInfo.name); // TODO GG: why do we need the resolved module?
-            }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             errors.add($|Error: Failed to resolve the module: "{webInfo.name}" ({e.text})
                       );
             return False;
-            }
+        }
 
         String moduleName = mainModule.qualifiedName;
-        try
-            {
-            if (!mainModule.findAnnotation("web.WebApp"))
-                {
+        try {
+            if (!mainModule.findAnnotation("web.WebApp")) {
                 errors.add($"Module \"{moduleName}\" is not a WebApp");
                 return False;
-                }
+            }
 
             ModuleGenerator generator = new ModuleGenerator(moduleName);
-            if (ModuleTemplate hostTemplate := generator.ensureWebModule(repository, buildDir, errors))
-                {
+            if (ModuleTemplate hostTemplate := generator.ensureWebModule(repository, buildDir, errors)) {
                 Directory appHomeDir = utils.ensureHome(userDir, mainModule.qualifiedName);
 
                 if ((Container container, AppHost[] dependents) :=
-                        utils.createContainer(repository, hostTemplate, appHomeDir, False, errors))
-                    {
+                        utils.createContainer(repository, hostTemplate, appHomeDir, False, errors)) {
                     KeyStore keystore = getKeyStore(userDir);
 
                     Tuple result = container.invoke("createServer_",
@@ -100,46 +89,38 @@ service HostManager
                     consoleFile.append(errors.toString().utf8());
 
                     return True, webHost;
-                    }
                 }
-            else
-                {
+            } else {
                 errors.add($"Error: Failed to create a Web host for {moduleName.quoted()}");
-                }
             }
-        catch (Exception e)
-            {
+        } catch (Exception e) {
             @Inject Console console;
             console.print(e); // TODO GG: remove
             errors.add($"Error: Failed to create a host for {moduleName.quoted()}; reason={e.text}");
-            }
+        }
 
         return False;
-        }
+    }
 
     @Override
-    void removeWebHost(WebHost webHost)
-        {
+    void removeWebHost(WebHost webHost) {
         loaded.remove(webHost.info.domain);
-        }
+    }
 
     @Override
-    void shutdown()
-        {
-        for (WebHost webHost : loaded.values)
-            {
+    void shutdown() {
+        for (WebHost webHost : loaded.values) {
             webHost.close();
-            }
         }
+    }
 
     /**
      * Get the KeyStore.
      */
-    KeyStore getKeyStore(Directory userDir)
-        {
+    KeyStore getKeyStore(Directory userDir) {
         // TODO: retrieve from the db
         @Inject(opts=new KeyStore.Info(userDir.fileFor("certs.p12").contents, "password"))
         KeyStore keystore;
         return keystore;
-        }
     }
+}

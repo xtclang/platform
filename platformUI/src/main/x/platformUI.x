@@ -2,8 +2,7 @@
  * The web module for basic hosting functionality.
  */
 @WebApp
-module platformUI.xqiz.it
-    {
+module platformUI.xqiz.it {
     package common import common.xqiz.it;
     package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
@@ -23,39 +22,35 @@ module platformUI.xqiz.it
      * Configure the controller.
      */
     void configure(AccountManager accountManager, HostManager hostManager,
-                   String hostName, KeyStore keystore, UInt16 httpPort, UInt16 httpsPort)
-        {
+                   String hostName, KeyStore keystore, UInt16 httpPort, UInt16 httpsPort) {
         ControllerConfig.init(accountManager, hostManager,
             xenia.createServer(this, hostName, keystore, httpPort, httpsPort));
-        }
+    }
 
     /**
      * The web site static content.
      */
     @WebService("/")
     service Content()
-            incorporates StaticContent(path, /gui)
-        {
+            incorporates StaticContent(path, /gui) {
         import web.Get;
         import web.ResponseOut;
 
         @Get("{path}")
         @Override
-        conditional ResponseOut getResource(String path)
-            {
-            if (ResponseOut response := super(path))
-                {
+        conditional ResponseOut getResource(String path) {
+            if (ResponseOut response := super(path)) {
                 return True, response;
-                }
-            return super(defaultPage);
             }
+            return super(defaultPage);
         }
+    }
 
     /**
      * The singleton service holding configuration info.
      */
-    static service ControllerConfig
-        {
+    static service ControllerConfig {
+
         @Unassigned
         AccountManager accountManager;
 
@@ -65,11 +60,10 @@ module platformUI.xqiz.it
         @Unassigned
         function void() shutdownServer;
 
-        void init(AccountManager accountManager, HostManager hostManager, function void() shutdownServer)
-            {
+        void init(AccountManager accountManager, HostManager hostManager, function void() shutdownServer) {
             this.accountManager = accountManager;
             this.hostManager    = hostManager;
             this.shutdownServer = shutdownServer;
-            }
         }
     }
+}

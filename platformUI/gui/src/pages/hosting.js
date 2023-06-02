@@ -1,27 +1,25 @@
 import React, {Component} from 'react';
 import ReactModal from 'react-modal';
 
-class AppInfo
-    {
-    constructor(name, domain, url = null, loading = -1, error = null)
-        {
+class AppInfo {
+
+    constructor(name, domain, url = null, loading = -1, error = null) {
         this.name    = name;
         this.domain  = domain;
         this.url     = url; // the url for the loaded application
         this.error   = error;
-        }
     }
+}
 
 const postOptions = {
     method:  'post',
     headers: {'Content-Type':'text/html'},
     body:    {}
-    };
+};
 
-class Hosting extends Component
-    {
-    constructor()
-        {
+class Hosting extends Component {
+
+    constructor() {
         super();
 
         this.state = {
@@ -34,7 +32,7 @@ class Hosting extends Component
                 loadingIndex: -1,  // the index of the app being loaded
                 loadingTicks: -1,  // half seconds from the moment the load request started
                 checkedApps : []
-                };
+        };
         this.action = this.sendRequest.bind(this);
 
         this.showUploadModule  = this.showUploadModule.bind(this);
@@ -47,7 +45,7 @@ class Hosting extends Component
 
         this.moduleInput = React.createRef();
         this.domainInput = React.createRef();
-        }
+    }
 
     componentDidMount() {
         fetch('host/userId')
@@ -57,14 +55,13 @@ class Hosting extends Component
             .then(response => response.json())
             .then(infos => this.setState(state =>
                 ({registeredApps: infos, checkedApps: Array(infos.length).fill(false)})));
-        }
+    }
 
     tick(ix) {
         this.setState(state => ({loadingTicks: state.loadingTicks + 1}));
-        }
+    }
 
-    setInfo(ix, url, err)
-        {
+    setInfo(ix, url, err) {
         this.setState(state => {
             let infos = state.registeredApps;
             let info  = infos[ix];
@@ -74,22 +71,19 @@ class Hosting extends Component
             infos[ix]  = info;
 
             return {loadingIndex: -1, registeredApps: infos};
-            });
-        }
+        });
+    }
 
-    sendRequest(ix)
-        {
-        if (this.state.loadingIndex !== -1)
-            {
+    sendRequest(ix) {
+        if (this.state.loadingIndex !== -1) {
             return;
-            }
+        }
 
         const info   = this.state.registeredApps[ix];
         const domain = info.domain;
         const url    = info.url === undefined ? null : info.url;
 
-        if (url == null)
-            {
+        if (url == null) {
             // load application
             this.setState(state => ({loadingIndex: ix, loadingTicks: 0}));
             this.interval = setInterval(() => this.tick(ix), 250);
@@ -97,38 +91,29 @@ class Hosting extends Component
             const request = '/host/load?app=' + info.name + ',domain=' + domain;
             fetch(request, postOptions)
                 .then(response => response.json())
-                .then(data =>
-                    {
-                    if (data[0])
-                        {
+                .then(data => {
+                    if (data[0]) {
                         this.setInfo(ix, data[1], null);
-                        }
-                    else
-                        {
+                    } else {
                         this.setInfo(ix, null, data[1]);
-                        }
-                    })
+                    }
+                })
                 .finally(() => clearInterval(this.interval));
-            }
-        else
-            {
+        } else {
             // unload application
             const request = '/host/unload/' + domain;
             fetch(request, postOptions);
 
             this.setInfo(ix, null, null);
-            }
-      }
-
-    showUploadModule()
-        {
-        this.setState(state => ({showUpload: true}));
         }
+    }
 
-    closeUploadModule(event)
-        {
-        if (event !== null)
-            {
+    showUploadModule() {
+        this.setState(state => ({showUpload: true}));
+    }
+
+    closeUploadModule(event) {
+        if (event !== null) {
             const formData = new FormData();
             const files    = event.target.files;
             for (var i = 0, c = files.length; i < c; i++)
@@ -141,42 +126,36 @@ class Hosting extends Component
                 }
 
             fetch("host/upload", {body: formData, method: "post"});
-            }
-        this.setState(state => ({showUpload: false}));
         }
+        this.setState(state => ({showUpload: false}));
+    }
 
-    showAddModule()
-        {
+    showAddModule() {
         this.setState(state => ({showAdd: true}));
 
         fetch('host/availableModules')
             .then(response => response.json())
             .then(data => this.setState(state => ({availableModules: data})));
-        }
+    }
 
-    closeAddModule(command)
-        {
-        if (command === "add")
-            {
+    closeAddModule(command) {
+        if (command === "add") {
             const moduleName = this.moduleInput.current.value;
-            if (moduleName === "")
-                {
+            if (moduleName === "") {
                 return;
-                }
+            }
 
             const registeredApps = this.state.registeredApps;
-            if (registeredApps.some(info => {return info.name === moduleName;}))
-                {
+            if (registeredApps.some(info => {return info.name === moduleName;})) {
                 this.moduleInput.current.value = "";
                 alert("Module already registered");
                 return;
-                }
+            }
 
             var domain = this.domainInput.current.value;
-            if (domain === "")
-                {
+            if (domain === "") {
                 domain = moduleName;
-                }
+            }
 
             var checkedApps = this.state.checkedApps;
 
@@ -184,63 +163,51 @@ class Hosting extends Component
             checkedApps.push(false);
 
             this.setState(state => ({registeredApps: registeredApps, checkedApps: checkedApps, showAdd: false}));
-            }
-        else
-            {
+        } else {
             this.setState(state => ({showAdd: false}));
-            }
         }
+    }
 
-    unregister()
-        {
+    unregister() {
         const registeredOld = this.state.registeredApps;
         const registeredNew = [];
         const checkedOld    = this.state.checkedApps;
         const checkedNew    = [];
 
-        for (var i = 0, c = registeredOld.length; i < c; i++)
-            {
-            if (checkedOld[i])
-                {
+        for (var i = 0, c = registeredOld.length; i < c; i++) {
+            if (checkedOld[i]) {
                 const info    = registeredOld[i];
                 const request = '/host/unregister?app=' + info.name + ',domain=' + info.domain;
                 fetch(request, postOptions);
-                }
-            else
-                {
+            } else {
                 checkedNew.push(false);
                 registeredNew.push(registeredOld[i]);
-                }
-            }
-
-        if (checkedNew.length !== checkedOld.length)
-            {
-            this.setState(state => ({registeredApps: registeredNew, checkedApps: checkedNew}));
             }
         }
 
-    toggle(ix)
-        {
+        if (checkedNew.length !== checkedOld.length) {
+            this.setState(state => ({registeredApps: registeredNew, checkedApps: checkedNew}));
+        }
+    }
+
+    toggle(ix) {
         var checks = this.state.checkedApps;
         checks[ix] = !checks[ix];
         this.setState({checkedApps: checks});
-        }
+    }
 
-    signOut()
-        {
+    signOut() {
         fetch('/host/sign-out', {method: 'put'})
             .then(response => window.location.assign('/'));
-        }
+    }
 
-    render()
-        {
+    render() {
         const registeredApps   = this.state.registeredApps;
         const checkedApps      = this.state.checkedApps;
         const availableModules = this.state.availableModules.map((name, index) => <option key={index}>{name}</option>);
         let   list = [];
 
-        for (var i = 0, c = registeredApps.length; i < c; i++)
-            {
+        for (var i = 0, c = registeredApps.length; i < c; i++) {
             const ix   = i;
             const info = registeredApps[i];
             const url  = info.url === undefined ? null : info.url;
@@ -248,23 +215,18 @@ class Hosting extends Component
             let   link;
             let   actionText = 'Load application';
 
-            if (url != null)
-                {
+            if (url != null) {
                 link       = <a href={url} target="_blank" rel="noopener noreferrer">run application</a>;
                 actionText = 'Unload application';
-                }
-            else if (info.error !== null)
-                {
+            }
+            else if (info.error !== null) {
                 link = <span style={{color: 'red'}}>{info.error}</span>;
-                }
-            else if (this.state.loadingIndex === ix)
-                {
+            }
+            else if (this.state.loadingIndex === ix) {
                 link = 'loading.'.padEnd(this.state.loadingTicks, '.');
-                }
-            else
-                {
+            } else {
                 link = "";
-                }
+            }
 
             list.push(
                 <tr key={ix}>
@@ -277,7 +239,7 @@ class Hosting extends Component
                     <td>{link}</td>
                 </tr>
                 );
-            }
+        }
 
         return (
             <div>
@@ -344,7 +306,7 @@ class Hosting extends Component
                 </ReactModal>
             </div>
             );
-        };
-    }
+    };
+}
 
 export default Hosting;

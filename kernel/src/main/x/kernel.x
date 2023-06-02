@@ -9,8 +9,7 @@
  * those interfaces coming from the systems services that are depended on; as with the OS
  * capabilities, the minimally required set of maximally restricted interfaces are injected.
  */
-module kernel.xqiz.it
-    {
+module kernel.xqiz.it {
     package crypto import crypto.xtclang.org;
     package jsondb import jsondb.xtclang.org;
     package oodb   import oodb.xtclang.org;
@@ -30,22 +29,18 @@ module kernel.xqiz.it
 
     import common.utils;
 
-    void run(String[] args=[])
-        {
+    void run(String[] args=[]) {
         @Inject Console          console;
         @Inject Directory        homeDir;
         @Inject ModuleRepository repository;
 
         String password;
-        if (args.size == 0)
-            {
+        if (args.size == 0) {
             console.print("Enter password:");
             password = console.readLine(suppressEcho=True);
-            }
-        else
-            {
+        } else {
             password = args[0];
-            }
+        }
 
         Directory platformDir = homeDir.dirFor("xqiz.it/platform");
         platformDir.ensure();
@@ -55,8 +50,7 @@ module kernel.xqiz.it
 
         ErrorLog errors = new ErrorLog();
 
-        try
-            {
+        try {
             // initialize the account manager
             console.print($"Starting the AccountManager..."); // inside the kernel for now
             AccountManager accountManager = new AccountManager();
@@ -68,21 +62,17 @@ module kernel.xqiz.it
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
             if (Container  container :=
-                    utils.createContainer(repository, hostModule, buildDir, True, errors))
-                {
+                    utils.createContainer(repository, hostModule, buildDir, True, errors)) {
                 hostManager = container.invoke("configure", Tuple:())[0].as(HostManager);
-                }
-            else
-                {
+            } else {
                 return;
-                }
+            }
 
             // create a container for the platformUI controller and configure it
             console.print($"Starting the platform UI controller...");
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
-            if (Container  container := utils.createContainer(repository, uiModule, buildDir, True, errors))
-                {
+            if (Container  container := utils.createContainer(repository, uiModule, buildDir, True, errors)) {
                 String hostName  = "admin.xqiz.it";
                 File   storeFile = platformDir.fileFor("certs.p12");
                 UInt16 httpPort  = 8080;
@@ -95,17 +85,13 @@ module kernel.xqiz.it
                     Tuple:(accountManager, hostManager, hostName, keystore, httpPort, httpsPort));
 
                 console.print($"Started the XtcPlatform at http://{hostName}:{httpPort}");
-                }
-            else
-                {
+            } else {
                 return;
-                }
+            }
 
             // TODO create and configure the account-, IO-, keyStore-manager, etc.
-            }
-        finally
-            {
+        } finally {
             errors.reportAll(msg -> console.print(msg));
-            }
         }
     }
+}

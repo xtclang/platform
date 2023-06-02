@@ -4,8 +4,7 @@ import common.model.ModuleInfo;
 /**
  * The account management API.
  */
-interface AccountManager
-    {
+interface AccountManager {
     /**
      * Retrieve an 'AccountInfo' for the specified name.
      *
@@ -39,4 +38,4 @@ interface AccountManager
      * Shutdown all account services.
      */
     void shutdown();
-    }
+}

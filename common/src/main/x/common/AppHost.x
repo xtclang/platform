@@ -5,8 +5,7 @@ import ecstasy.mgmt.Container;
  * A host for an application module.
  */
 class AppHost(String moduleName, Directory homeDir)
-        implements Closeable
-    {
+        implements Closeable {
     /**
      * The Container that hosts the module.
      */
@@ -27,8 +26,7 @@ class AppHost(String moduleName, Directory homeDir)
     // ----- Closeable -----------------------------------------------------------------------------
 
     @Override
-    void close(Exception? e = Null)
-        {
+    void close(Exception? e = Null) {
         container.kill();
-        }
     }
+}

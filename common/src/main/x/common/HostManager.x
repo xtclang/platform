@@ -6,8 +6,7 @@ import common.model.WebModuleInfo;
 /**
  * The Host Manager API.
  */
-interface HostManager
-    {
+interface HostManager {
     // ----- WebHost management ----------------------------------------------------------------------------------------
 
     /**
@@ -42,4 +41,4 @@ interface HostManager
      * Shutdown all hosted services.
      */
     void shutdown();
-    }
+}

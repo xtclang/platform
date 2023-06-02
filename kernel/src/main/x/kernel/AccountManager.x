@@ -18,8 +18,8 @@ import common.utils;
  * The module for basic hosting functionality.
  */
 service AccountManager
-        implements common.AccountManager
-    {
+        implements common.AccountManager {
+
     @Unassigned
     DbHost platformDbHost;
 
@@ -34,8 +34,7 @@ service AccountManager
      * @param buildDir    the directory to place auto-generated modules at  (e.g. "~/xqiz.it/platform/build")
      * @param errors      the error log
      */
-    void initDB(ModuleRepository repository, Directory dbDir, Directory buildDir, Log errors)
-        {
+    void initDB(ModuleRepository repository, Directory dbDir, Directory buildDir, Log errors) {
         import oodb.DBMap;
         import oodb.DBUser;
 
@@ -47,52 +46,42 @@ service AccountManager
 
         DBMap<AccountId, AccountInfo> accounts = dbConnection.accounts;
         DBMap<UserId, UserInfo>       users    = dbConnection.users;
-        if (accounts.empty)
-            {
+        if (accounts.empty) {
             UserInfo admin = new UserInfo(1, "admin", "admin@acme.com");
             users.put(1, admin);
             accounts.put(1, new AccountInfo(1, "acme", [], Map:[1 = Admin]));
-            }
-        }
-
-    @Override
-    conditional AccountInfo getAccount(String accountName)
-        {
-        return dbConnection.accounts.values.any(info -> info.name == accountName);
-        }
-
-    @Override
-    void addModule(String accountName, ModuleInfo moduleInfo)
-        {
-        using (val tx = dbConnection.createTransaction())
-            {
-            String appName = moduleInfo.name;
-            if (AccountInfo info := getAccount(accountName))
-                {
-                if (info.modules.contains(appName))
-                    {
-                    info = info.removeModule(appName);
-                    }
-                tx.accounts.put(info.id, info.addModule(moduleInfo));
-                }
-            }
-        }
-
-    @Override
-    void removeModule(String accountName, String appName)
-        {
-        using (val tx = dbConnection.createTransaction())
-            {
-            if (AccountInfo info := getAccount(accountName), info.modules.contains(appName))
-                {
-                tx.accounts.put(info.id, info.removeModule(appName));
-                }
-            }
-        }
-
-    @Override
-    void shutdown()
-        {
-        platformDbHost.closeDatabase();
         }
     }
+
+    @Override
+    conditional AccountInfo getAccount(String accountName) {
+        return dbConnection.accounts.values.any(info -> info.name == accountName);
+    }
+
+    @Override
+    void addModule(String accountName, ModuleInfo moduleInfo) {
+        using (val tx = dbConnection.createTransaction()) {
+            String appName = moduleInfo.name;
+            if (AccountInfo info := getAccount(accountName)) {
+                if (info.modules.contains(appName)) {
+                    info = info.removeModule(appName);
+                }
+                tx.accounts.put(info.id, info.addModule(moduleInfo));
+            }
+        }
+    }
+
+    @Override
+    void removeModule(String accountName, String appName) {
+        using (val tx = dbConnection.createTransaction()) {
+            if (AccountInfo info := getAccount(accountName), info.modules.contains(appName)) {
+                tx.accounts.put(info.id, info.removeModule(appName));
+            }
+        }
+    }
+
+    @Override
+    void shutdown() {
+        platformDbHost.closeDatabase();
+    }
+}

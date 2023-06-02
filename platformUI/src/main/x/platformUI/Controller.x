@@ -11,13 +11,12 @@ import web.*;
 import web.http.FormDataFile;
 
 @WebService("/host")
-service Controller()
-    {
-    construct()
-        {
+service Controller() {
+
+    construct() {
         accountManager = ControllerConfig.accountManager;
         hostManager    = ControllerConfig.hostManager;
-        }
+    }
 
     /**
      * The account manager.
@@ -43,156 +42,128 @@ service Controller()
     String accountName = "acme";
 
     @Get("userId")
-    String getUserId()
-      {
+    String getUserId() {
       return accountName;
-      }
+    }
 
     @Get("registeredApps")
-    ModuleInfo[] getRegistered()
-        {
-        if (AccountInfo info := accountManager.getAccount(accountName))
-            {
+    ModuleInfo[] getRegistered() {
+        if (AccountInfo info := accountManager.getAccount(accountName)) {
             return info.modules.values.toArray();
-            }
-        return [];
         }
+        return [];
+    }
 
     @Get("availableModules")
-    String[] getAvailable()
-      {
-      if (Directory libDir := getUserHomeDirectory(accountName).findDir("lib"))
-          {
+    String[] getAvailable() {
+      if (Directory libDir := getUserHomeDirectory(accountName).findDir("lib")) {
           return libDir.names()
                        .filter(name -> name.endsWith(".xtc"))
                        .map(name -> name[0 ..< name.size-4])
                        .toArray(Constant);
-          }
+        }
       return [];
-      }
+    }
 
     @Post("upload")
-    void uploadModule()
-        {
+    void uploadModule() {
         assert RequestIn request ?= this.request;
-        if (web.Body body ?= request.body)
-            {
+        if (web.Body body ?= request.body) {
             Directory libDir = getUserHomeDirectory(accountName).dirFor("lib").ensure();
 
-            for (FormDataFile fileData : http.extractFileData(body))
-                {
+            for (FormDataFile fileData : http.extractFileData(body)) {
                 File file = libDir.fileFor(fileData.fileName);
                 file.contents = fileData.contents;
-                }
             }
         }
+    }
 
     @Post("load")
-    json.Doc load(@QueryParam("app") String appName, @QueryParam String domain)
-        {
+    json.Doc load(@QueryParam("app") String appName, @QueryParam String domain) {
         // there is one and only one application per [sub] domain
         WebHost webHost;
         if (webHost := hostManager.getWebHost(domain)) {}
-        else
-            {
+        else {
             AccountInfo accountInfo;
-            if (!(accountInfo := accountManager.getAccount(accountName)))
-                {
+            if (!(accountInfo := accountManager.getAccount(accountName))) {
                 return [False, $"account {accountName} is missing"];
-                }
+            }
 
             WebModuleInfo webInfo;
-            if (ModuleInfo info := accountInfo.modules.get(appName))
-                {
+            if (ModuleInfo info := accountInfo.modules.get(appName)) {
                 assert webInfo := info.is(WebModuleInfo);
-                }
-            else
-                {
+            } else {
                 (String hostName, UInt16 httpPort, UInt16 httpsPort) = getAuthority(domain);
 
                 webInfo = new WebModuleInfo(appName, domain, hostName, httpPort, httpsPort);
-                }
+            }
 
             Directory userDir = getUserHomeDirectory(accountName);
             ErrorLog  errors  = new ErrorLog();
 
-            if (!(webHost := hostManager.ensureWebHost(userDir, webInfo, errors)))
-                {
+            if (!(webHost := hostManager.ensureWebHost(userDir, webInfo, errors))) {
                 return [False, errors.toString()];
-                }
-            accountManager.addModule(accountName, webInfo);
             }
-        return [True, $"http://{webHost.info.hostName}:{webHost.info.httpPort}"];
+            accountManager.addModule(accountName, webInfo);
         }
+        return [True, $"http://{webHost.info.hostName}:{webHost.info.httpPort}"];
+    }
 
     @Get("report/{domain}")
-    String report(String domain)
-        {
+    String report(String domain) {
         String response;
-        if (WebHost webHost := hostManager.getWebHost(domain))
-            {
+        if (WebHost webHost := hostManager.getWebHost(domain)) {
             Container container = webHost.container;
             response = $"{container.status} {container.statusIndicator}";
-            }
-        else
-            {
+        } else {
             response = "Not loaded";
-            }
-        return response;
         }
+        return response;
+    }
 
     @Post("unload/{domain}")
-    HttpStatus unload(String domain)
-        {
-        if (WebHost webHost := hostManager.getWebHost(domain))
-            {
+    HttpStatus unload(String domain) {
+        if (WebHost webHost := hostManager.getWebHost(domain)) {
             hostManager.removeWebHost(webHost);
             webHost.close();
 
             return HttpStatus.OK;
-            }
-        return HttpStatus.NotFound;
         }
+        return HttpStatus.NotFound;
+    }
 
     @Post("unregister")
-    HttpStatus unregister(@QueryParam("app") String appName, @QueryParam String domain)
-        {
+    HttpStatus unregister(@QueryParam("app") String appName, @QueryParam String domain) {
         unload(domain);
 
         accountManager.removeModule(accountName, appName);
         return HttpStatus.OK;
-        }
+    }
 
     @Put("sign-out")
-    HttpStatus signOut()
-        {
+    HttpStatus signOut() {
         session?.deauthenticate();
         return HttpStatus.OK;
-        }
+    }
 
     @Post("debug")
-    HttpStatus debug()
-        {
+    HttpStatus debug() {
         // temporary; TODO: remove
         assert:debug;
         return HttpStatus.OK;
-        }
+    }
 
     @Post("shutdown")
-    HttpStatus shutdown()
-        {
+    HttpStatus shutdown() {
         // TODO: only the admin can shutdown the host
-        try
-            {
+        try {
             hostManager.shutdown();
             accountManager.shutdown();
-            }
-        finally
-            {
+        } finally {
             callLater(ControllerConfig.shutdownServer);
-            }
-        return HttpStatus.OK;
         }
+        return HttpStatus.OK;
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------
@@ -200,22 +171,20 @@ service Controller()
     /**
      * Get a user directory for the specified account.
      */
-    private Directory getUserHomeDirectory(String account)
-        {
+    private Directory getUserHomeDirectory(String account) {
         // temporary hack
         @Inject Directory homeDir;
         Directory accountDir = homeDir.dirFor($"xqiz.it/users/{account}");
         accountDir.ensure();
         return accountDir;
-        }
+    }
 
     /**
      * Get the host name and ports for the specified domain.
      */
-    (String hostName, UInt16 httpPort, UInt16 httpsPort) getAuthority(String domain)
-        {
+    (String hostName, UInt16 httpPort, UInt16 httpsPort) getAuthority(String domain) {
         // TODO: the address must be in the database
         // TODO: ensure a DNS entry
         return $"{domain}.xqiz.it", 8080, 8090;
-        }
     }
+}

@@ -18,6 +18,10 @@ module platformUI.xqiz.it {
     import web.WebApp;
     import web.WebService;
 
+    import web.security.Authenticator;
+    import web.security.DigestAuthenticator;
+    import web.security.FixedRealm;
+
     /**
      * Configure the controller.
      */
@@ -65,5 +69,13 @@ module platformUI.xqiz.it {
             this.hostManager    = hostManager;
             this.shutdownServer = shutdownServer;
         }
+    }
+
+    /**
+     * WebApp.AuthenticatorFactory API.
+     */
+    Authenticator createAuthenticator() {
+        return new DigestAuthenticator(new FixedRealm("Platform",
+            ["acme"="password", "cvs"="password"]));
     }
 }

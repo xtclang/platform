@@ -11,6 +11,7 @@ import web.*;
 import web.http.FormDataFile;
 
 @WebService("/host")
+@LoginRequired
 service Controller() {
 
     construct() {
@@ -28,22 +29,16 @@ service Controller() {
      */
     private HostManager hostManager;
 
-// TODO GG: temporary hack: it should be a session attribute e.g.:
-//    Authenticator createAuthenticator()
-//        {
-//        return new DigestAuthenticator(new FixedRealm("Platform", ["acme"="password"]));
-//        }
-//
-//    private String accountName.get()
-//        {
-//        return session?.userId? : "";
-//        }
-
-    String accountName = "acme";
+    /**
+     * The current account name.
+     */
+    String accountName.get() {
+        return session?.userId? : "";
+    }
 
     @Get("userId")
     String getUserId() {
-      return accountName;
+        return accountName;
     }
 
     @Get("registeredApps")
@@ -147,15 +142,15 @@ service Controller() {
     }
 
     @Post("debug")
+    @LoginOptional // TODO: remove
     HttpStatus debug() {
-        // temporary; TODO: remove
         assert:debug;
         return HttpStatus.OK;
     }
 
     @Post("shutdown")
+    @LoginOptional // TODO: TEMPORARY: only the admin can shutdown the host
     HttpStatus shutdown() {
-        // TODO: only the admin can shutdown the host
         try {
             hostManager.shutdown();
             accountManager.shutdown();

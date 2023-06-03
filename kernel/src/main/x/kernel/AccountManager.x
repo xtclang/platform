@@ -46,10 +46,16 @@ service AccountManager
 
         DBMap<AccountId, AccountInfo> accounts = dbConnection.accounts;
         DBMap<UserId, UserInfo>       users    = dbConnection.users;
-        if (accounts.empty) {
+        if (!accounts.contains(1)) {
             UserInfo admin = new UserInfo(1, "admin", "admin@acme.com");
             users.put(1, admin);
             accounts.put(1, new AccountInfo(1, "acme", [], Map:[1 = Admin]));
+        }
+
+        if (!accounts.contains(2)) {
+            UserInfo admin = new UserInfo(2, "admin", "admin@cvs.com");
+            users.put(2, admin);
+            accounts.put(2, new AccountInfo(2, "cvs", [], Map:[2 = Admin]));
         }
     }
 

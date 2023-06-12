@@ -2,8 +2,6 @@ import common.AppHost;
 
 import oodb.RootSchema;
 
-import oodb.tools.ModuleGenerator;
-
 /**
  * An abstract host for a DB module.
  */

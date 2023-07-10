@@ -90,6 +90,8 @@ module kernel.xqiz.it {
             }
 
             // TODO create and configure the account-, IO-, keyStore-manager, etc.
+        } catch (Exception e) {
+            errors.add($"Error: Failed to start the XtcPlatform: {e.text}");
         } finally {
             errors.reportAll(msg -> console.print(msg));
         }

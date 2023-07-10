@@ -41,12 +41,7 @@ tasks.register("run") {
     dependsOn(build)
 
     doLast {
-        val libDir = "$rootDir/lib"
-
-        project.exec {
-            commandLine("xec",
-                        "-L", "$libDir",
-                        "$libDir/kernel.xtc")
-        }
+        println("Please run the platform directly using the following command:")
+        println("   xec -L lib/ lib/kernel.xtc [password]")
     }
 }

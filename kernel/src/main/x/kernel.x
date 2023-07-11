@@ -11,6 +11,7 @@
  */
 module kernel.xqiz.it {
     package crypto import crypto.xtclang.org;
+    package json   import json.xtclang.org;
     package jsondb import jsondb.xtclang.org;
     package oodb   import oodb.xtclang.org;
     package web    import web.xtclang.org;
@@ -73,16 +74,28 @@ module kernel.xqiz.it {
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container := utils.createContainer(repository, uiModule, buildDir, True, errors)) {
-                String hostName  = "admin.xqiz.it";
-                File   storeFile = platformDir.fileFor("certs.p12");
-                UInt16 httpPort  = 8080;
-                UInt16 httpsPort = 8090;
+                File storeFile  = platformDir.fileFor("certs.p12");
+                File configFile = platformDir.fileFor("admin.cfg");
+                if (!configFile.exists) {
+                    configFile.contents = #/cfg.json; // create a copy from the embedded resource
+                }
+
+                import json.*;
+
+                String jsonConfig = configFile.contents.unpackUtf8();
+                Doc    config     = new Parser(jsonConfig.toReader()).parseDoc();
+                assert config.is(Map<String, Doc>) as "Invalid config file";
+
+                String hostName  = config.getOrDefault("hostName",    "admin.xqiz.it").as(String);
+                String bindAddr  = config.getOrDefault("bindAddress", "admin.xqiz.it").as(String);
+                UInt16 httpPort  = config.getOrDefault("http",   80).as(IntLiteral).toUInt16();
+                UInt16 httpsPort = config.getOrDefault("https", 443).as(IntLiteral).toUInt16();
 
                 import crypto.KeyStore;
                 @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
 
                 container.invoke("configure",
-                    Tuple:(accountManager, hostManager, hostName, keystore, httpPort, httpsPort));
+                    Tuple:(accountManager, hostManager, hostName, bindAddr, httpPort, httpsPort, keystore));
 
                 console.print($"Started the XtcPlatform at http://{hostName}:{httpPort}");
             } else {
@@ -91,7 +104,7 @@ module kernel.xqiz.it {
 
             // TODO create and configure the account-, IO-, keyStore-manager, etc.
         } catch (Exception e) {
-            errors.add($"Error: Failed to start the XtcPlatform: {e.text}");
+            errors.add($"Error: Failed to start the XtcPlatform: {e}");
         } finally {
             errors.reportAll(msg -> console.print(msg));
         }

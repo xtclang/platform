@@ -33,6 +33,8 @@ package model {
     @Abstract
     const ModuleInfo(String name);
 
-    const WebModuleInfo(String name, String domain, String hostName, UInt16 httpPort, UInt16 httpsPort)
+    const WebModuleInfo(String name, String domain,
+                        String hostName, String bindAddr,
+                        UInt16 httpPort, UInt16 httpsPort)
         extends ModuleInfo(name);
 }

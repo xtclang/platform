@@ -1,0 +1,6 @@
+{
+"hostName":"admin.xqiz.it",
+"bindAddress":"admin.xqiz.it",
+"http":8080,
+"https":8090
+}

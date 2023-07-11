@@ -78,7 +78,7 @@ service HostManager
                     KeyStore keystore = getKeyStore(userDir);
 
                     Tuple result = container.invoke("createServer_",
-                        Tuple:(webInfo.hostName, keystore, webInfo.httpPort, webInfo.httpsPort));
+                        Tuple:(webInfo.hostName, webInfo.bindAddr, webInfo.httpPort, webInfo.httpsPort, keystore));
 
                     function void() shutdown = result[0].as(function void());
 

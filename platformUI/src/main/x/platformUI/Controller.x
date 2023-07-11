@@ -88,9 +88,9 @@ service Controller() {
             if (ModuleInfo info := accountInfo.modules.get(appName)) {
                 assert webInfo := info.is(WebModuleInfo);
             } else {
-                (String hostName, UInt16 httpPort, UInt16 httpsPort) = getAuthority(domain);
+                (String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort) = getAuthority(domain);
 
-                webInfo = new WebModuleInfo(appName, domain, hostName, httpPort, httpsPort);
+                webInfo = new WebModuleInfo(appName, domain, hostName, bindAddr, httpPort, httpsPort);
             }
 
             Directory userDir = getUserHomeDirectory(accountName);
@@ -177,9 +177,9 @@ service Controller() {
     /**
      * Get the host name and ports for the specified domain.
      */
-    (String hostName, UInt16 httpPort, UInt16 httpsPort) getAuthority(String domain) {
+    (String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort) getAuthority(String domain) {
         // TODO: the address must be in the database
         // TODO: ensure a DNS entry
-        return $"{domain}.xqiz.it", 8080, 8090;
+        return $"{domain}.xqiz.it", $"{domain}.xqiz.it", 8080, 8090;
     }
 }

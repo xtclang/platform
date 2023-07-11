@@ -26,9 +26,9 @@ module platformUI.xqiz.it {
      * Configure the controller.
      */
     void configure(AccountManager accountManager, HostManager hostManager,
-                   String hostName, KeyStore keystore, UInt16 httpPort, UInt16 httpsPort) {
+                   String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort, KeyStore keystore) {
         ControllerConfig.init(accountManager, hostManager,
-            xenia.createServer(this, hostName, keystore, httpPort, httpsPort));
+            xenia.createServer(this, hostName, bindAddr, httpPort, httpsPort, keystore));
     }
 
     /**

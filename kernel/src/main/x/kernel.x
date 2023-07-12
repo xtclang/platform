@@ -75,7 +75,7 @@ module kernel.xqiz.it {
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container := utils.createContainer(repository, uiModule, buildDir, True, errors)) {
                 File storeFile  = platformDir.fileFor("certs.p12");
-                File configFile = platformDir.fileFor("admin.cfg");
+                File configFile = platformDir.fileFor("cfg.json");
                 if (!configFile.exists) {
                     configFile.contents = #/cfg.json; // create a copy from the embedded resource
                 }

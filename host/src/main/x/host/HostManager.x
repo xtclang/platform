@@ -55,7 +55,8 @@ service HostManager
         ModuleRepository   repository = new LinkedRepository(baseRepos.freeze(True));
         ModuleTemplate     mainModule;
         try {
-            mainModule = repository.getResolvedModule(webInfo.name); // TODO GG: why do we need the resolved module?
+            // we need the resolved module to look up annotations
+            mainModule = repository.getResolvedModule(webInfo.name);
         } catch (Exception e) {
             errors.add($|Error: Failed to resolve the module: "{webInfo.name}" ({e.text})
                       );

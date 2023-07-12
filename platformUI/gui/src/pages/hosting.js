@@ -125,7 +125,13 @@ class Hosting extends Component {
                 console.log("uploading " + file.name);
                 }
 
-            fetch("host/upload", {body: formData, method: "post"});
+            fetch("host/upload", {body: formData, method: "post"})
+                .then(response => response.json())
+                .then(info => {
+                    for (var i = 0, c = info.length; i < c; i++) {
+                        console.log("stored module: " + info[i]);
+                    }
+                });
         }
         this.setState(state => ({showUpload: false}));
     }

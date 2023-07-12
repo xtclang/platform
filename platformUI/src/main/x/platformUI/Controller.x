@@ -1,5 +1,7 @@
 import ecstasy.mgmt.Container;
 
+import ecstasy.reflect.ModuleTemplate;
+
 import common.ErrorLog;
 import common.WebHost;
 
@@ -61,16 +63,37 @@ service Controller() {
     }
 
     @Post("upload")
-    void uploadModule() {
+    String[] uploadModule() {
         assert RequestIn request ?= this.request;
+
+        String[] results = [];
         if (web.Body body ?= request.body) {
             Directory libDir = getUserHomeDirectory(accountName).dirFor("lib").ensure();
+
+            @Inject Container.Linker linker;
 
             for (FormDataFile fileData : http.extractFileData(body)) {
                 File file = libDir.fileFor(fileData.fileName);
                 file.contents = fileData.contents;
+
+                try {
+                    ModuleTemplate template      = linker.loadFileTemplate(file).mainModule;
+                    String         qualifiedName = template.qualifiedName + ".xtc";
+                    if (qualifiedName != file.name) {
+                        if (file.renameTo(qualifiedName)) {
+                            results += $"Stored module: {template.qualifiedName}";
+                        } else {
+                            file.delete();
+                            results += $"Invalid or duplicate module name: {template.qualifiedName}";
+                        }
+                    }
+                } catch (Exception e) {
+                    file.delete();
+                    results += $"Invalid module file: {e.message}";
+                }
             }
         }
+       return results;
     }
 
     @Post("load")

@@ -161,6 +161,14 @@ class Hosting extends Component {
             var domain = this.domainInput.current.value;
             if (domain === "") {
                 domain = moduleName;
+                var dot = domain.indexOf(".");
+                if (dot >= 0) {
+                    if (dot == 0) {
+                        alert("Invalid domain");
+                        return;
+                    }
+                    domain = moduleName.substring(0, dot);
+                }
             }
 
             var checkedApps = this.state.checkedApps;
@@ -254,7 +262,7 @@ class Hosting extends Component {
                 &nbsp;&nbsp;<button onClick={this.signOut}>Sign out</button>
 
                 <p/>
-                <table>
+                <table border='1' cellpadding='10'>
                   <thead><tr>
                     <td><b></b></td>
                     <td><b>Module</b></td>

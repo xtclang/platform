@@ -1,6 +1,8 @@
 {
-"hostName":"admin.xqiz.it",
-"bindAddress":"admin.xqiz.it",
-"http":8080,
-"https":8090
+"hostName":"xtc-platform.xqiz.it",
+"bindAddress":"xtc-platform.xqiz.it",
+"httpPort":8080,
+"httpsPort":8090,
+"userPortLow":8100,
+"userPortHigh":8199
 }

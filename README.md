@@ -34,14 +34,11 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
 
 1. Make sure your "etc/hosts" file contains the following entries:
 
-       127.0.0.10 admin.xqiz.it
-       127.0.0.20 welcome.acme.user.xqiz.it
-       127.0.0.21 banking.acme.user.xqiz.it
+       127.0.0.10 xtc-platform.xqiz.it
 
 2. Allow the loopback addresses binding by running this script as an admin user: (this step needs to be repeated after reboot)
 
-        cd platform
-        sudo ./bin/allowLoopback.sh
+       sudo ifconfig lo0 alias 127.0.0.10
 
 3. Create "xqiz.it" subdirectory under the user home directory for the platform persistent data. The subdirectory "platform" will be used to keep the platform operational information and subdirectory "users" for hosted applications.
 
@@ -59,7 +56,7 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
 
 7. Open the hosting site in a browser: 
 
-    http://admin.xqiz.it:8080/
+    http://xtc-platform.xqiz.it:8080/
 
 8. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
 

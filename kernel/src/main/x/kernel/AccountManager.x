@@ -14,6 +14,9 @@ import common.model.WebModuleInfo;
 
 import common.utils;
 
+import oodb.DBMap;
+import oodb.DBUser;
+
 /**
  * The module for basic hosting functionality.
  */
@@ -35,15 +38,13 @@ service AccountManager
      * @param errors      the error log
      */
     void initDB(ModuleRepository repository, Directory dbDir, Directory buildDir, Log errors) {
-        import oodb.DBMap;
-        import oodb.DBUser;
-
         repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
         assert platformDbHost := utils.createDbHost(repository, dbDir, "platformDB.xqiz.it", "jsondb", errors);
 
         DBUser user = new oodb.model.User(1, "admin");
         dbConnection = platformDbHost.ensureDatabase()(user).as(platformDB.Connection);
 
+        // TEMPORARY: TODO remove after "add user" functionality is implemented
         DBMap<AccountId, AccountInfo> accounts = dbConnection.accounts;
         DBMap<UserId, UserInfo>       users    = dbConnection.users;
         if (!accounts.contains(1)) {
@@ -68,11 +69,15 @@ service AccountManager
     void addModule(String accountName, ModuleInfo moduleInfo) {
         using (val tx = dbConnection.createTransaction()) {
             String appName = moduleInfo.name;
-            if (AccountInfo info := getAccount(accountName)) {
-                if (info.modules.contains(appName)) {
-                    info = info.removeModule(appName);
+            if (AccountInfo accountInfo := getAccount(accountName)) {
+
+                assert !accountInfo.modules.contains(appName);
+                tx.accounts.put(accountInfo.id, accountInfo.addModule(moduleInfo));
+
+                // update the "allocatedPorts" table
+                if (moduleInfo.is(WebModuleInfo)) {
+                    dbConnection.allocatedPorts.put(moduleInfo.httpPort, accountInfo.id);
                 }
-                tx.accounts.put(info.id, info.addModule(moduleInfo));
             }
         }
     }
@@ -80,9 +85,30 @@ service AccountManager
     @Override
     void removeModule(String accountName, String appName) {
         using (val tx = dbConnection.createTransaction()) {
-            if (AccountInfo info := getAccount(accountName), info.modules.contains(appName)) {
-                tx.accounts.put(info.id, info.removeModule(appName));
+            if (AccountInfo accountInfo := getAccount(accountName),
+                ModuleInfo  moduleInfo  := accountInfo.modules.get(appName)) {
+
+                tx.accounts.put(accountInfo.id, accountInfo.removeModule(appName));
+
+                // update the "allocatedPorts" table
+                if (moduleInfo.is(WebModuleInfo)) {
+                    dbConnection.allocatedPorts.remove(moduleInfo.httpPort);
+                }
             }
+        }
+    }
+
+    @Override
+    conditional UInt16 allocatePort(Range<UInt16> range) {
+        using (val tx = dbConnection.createTransaction()) {
+            DBMap<UInt16, AccountId> allocatedPorts = dbConnection.allocatedPorts;
+
+            for (UInt16 port = range.lowerBound; port < range.upperBound; port += 2) {
+                if (!allocatedPorts.contains(port)) {
+                    return True, port;
+                }
+            }
+            return False;
         }
     }
 

@@ -36,5 +36,11 @@ package model {
     const WebModuleInfo(String name, String domain,
                         String hostName, String bindAddr,
                         UInt16 httpPort, UInt16 httpsPort)
-        extends ModuleInfo(name);
+        extends ModuleInfo(name) {
+
+        assert() {
+            // for now, the ports are consecutive and the http port is an even number
+            assert httpPort % 2 == 0 && httpsPort == httpPort + 1;
+        }
+    }
 }

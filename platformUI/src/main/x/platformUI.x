@@ -26,13 +26,15 @@ module platformUI.xqiz.it {
      * Configure the controller.
      */
     void configure(AccountManager accountManager, HostManager hostManager,
-                   String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort, KeyStore keystore) {
+                   String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort, KeyStore keystore,
+                   Range<UInt16> userPorts) {
         ControllerConfig.init(accountManager, hostManager,
-            xenia.createServer(this, hostName, bindAddr, httpPort, httpsPort, keystore));
+            xenia.createServer(this, hostName, bindAddr, httpPort, httpsPort, keystore),
+            hostName, bindAddr, userPorts);
     }
 
     /**
-     * The web site static content.
+     * The static content.
      */
     @WebService("/")
     service Content()
@@ -64,15 +66,33 @@ module platformUI.xqiz.it {
         @Unassigned
         function void() shutdownServer;
 
-        void init(AccountManager accountManager, HostManager hostManager, function void() shutdownServer) {
+        /**
+         * TEMPORARY: the host name, bind address and allowed port range to create user web servers.
+         */
+        @Unassigned
+        String hostName;
+
+        @Unassigned
+        String bindAddr;
+
+        @Unassigned
+        Range<UInt16> userPorts;
+
+        void init(AccountManager accountManager, HostManager hostManager,
+                 function void() shutdownServer,
+                 String hostName, String bindAddr, Range<UInt16> userPorts) {
             this.accountManager = accountManager;
             this.hostManager    = hostManager;
             this.shutdownServer = shutdownServer;
+            this.hostName       = hostName;
+            this.bindAddr       = bindAddr;
+            this.userPorts      = userPorts;
         }
     }
 
     /**
      * WebApp.AuthenticatorFactory API.
+     * TODO: replace with webauth.DBRealm
      */
     Authenticator createAuthenticator() {
         return new DigestAuthenticator(new FixedRealm("Platform",

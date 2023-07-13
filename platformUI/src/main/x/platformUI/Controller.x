@@ -108,12 +108,15 @@ service Controller() {
             }
 
             WebModuleInfo webInfo;
+            Boolean       newApp;
             if (ModuleInfo info := accountInfo.modules.get(appName)) {
                 assert webInfo := info.is(WebModuleInfo);
+                newApp = False;
             } else {
                 (String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort) = getAuthority(domain);
 
                 webInfo = new WebModuleInfo(appName, domain, hostName, bindAddr, httpPort, httpsPort);
+                newApp  = True;
             }
 
             Directory userDir = getUserHomeDirectory(accountName);
@@ -122,7 +125,10 @@ service Controller() {
             if (!(webHost := hostManager.ensureWebHost(userDir, webInfo, errors))) {
                 return [False, errors.toString()];
             }
-            accountManager.addModule(accountName, webInfo);
+
+            if (newApp) {
+                accountManager.addModule(accountName, webInfo);
+            }
         }
         return [True, $"http://{webHost.info.hostName}:{webHost.info.httpPort}"];
     }
@@ -201,8 +207,8 @@ service Controller() {
      * Get the host name and ports for the specified domain.
      */
     (String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort) getAuthority(String domain) {
-        // TODO: the address must be in the database
-        // TODO: ensure a DNS entry
-        return $"{domain}.xqiz.it", $"{domain}.xqiz.it", 8080, 8090;
+        assert UInt16 httpPort := accountManager.allocatePort(ControllerConfig.userPorts);
+
+        return ControllerConfig.hostName, ControllerConfig.bindAddr, httpPort, httpPort+1;
     }
 }

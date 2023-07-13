@@ -27,14 +27,17 @@ module kernel.xqiz.it {
 
     import common.ErrorLog;
     import common.HostManager;
-
     import common.utils;
+
+    import json.Doc;
+    import json.Parser;
 
     void run(String[] args=[]) {
         @Inject Console          console;
         @Inject Directory        homeDir;
         @Inject ModuleRepository repository;
 
+        // get the password
         String password;
         if (args.size == 0) {
             console.print("Enter password:");
@@ -43,14 +46,29 @@ module kernel.xqiz.it {
             password = args[0];
         }
 
+        // ensure necessary directories
         Directory platformDir = homeDir.dirFor("xqiz.it/platform");
         platformDir.ensure();
 
         Directory buildDir = platformDir.dirFor("build");
         buildDir.ensure();
 
-        ErrorLog errors = new ErrorLog();
+        // get the configuration
+        Map<String, Doc> config;
+        try {
+            File configFile = platformDir.fileFor("cfg.json");
+            if (!configFile.exists) {
+                configFile.contents = #/cfg.json; // create a copy from the embedded resource
+            }
 
+            String jsonConfig = configFile.contents.unpackUtf8();
+            config = new Parser(jsonConfig.toReader()).parseDoc().as(Map<String, Doc>);
+        } catch (Exception e) {
+            console.print($"Error: Invalid config file");
+            return;
+        }
+
+        ErrorLog errors = new ErrorLog();
         try {
             // initialize the account manager
             console.print($"Starting the AccountManager..."); // inside the kernel for now
@@ -74,28 +92,20 @@ module kernel.xqiz.it {
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container := utils.createContainer(repository, uiModule, buildDir, True, errors)) {
-                File storeFile  = platformDir.fileFor("certs.p12");
-                File configFile = platformDir.fileFor("cfg.json");
-                if (!configFile.exists) {
-                    configFile.contents = #/cfg.json; // create a copy from the embedded resource
-                }
+                String hostName  = config.getOrDefault("hostName",    "xtc-platform.xqiz.it").as(String);
+                String bindAddr  = config.getOrDefault("bindAddress", "xtc-platform.xqiz.it").as(String);
+                UInt16 httpPort  = config.getOrDefault("httpPort",     8080).as(IntLiteral).toUInt16();
+                UInt16 httpsPort = config.getOrDefault("httpsPort",    8090).as(IntLiteral).toUInt16();
+                UInt16 portLow   = config.getOrDefault("userPortLow",  8100).as(IntLiteral).toUInt16();
+                UInt16 portHigh  = config.getOrDefault("userPortHIgh", 8199).as(IntLiteral).toUInt16();
 
-                import json.*;
-
-                String jsonConfig = configFile.contents.unpackUtf8();
-                Doc    config     = new Parser(jsonConfig.toReader()).parseDoc();
-                assert config.is(Map<String, Doc>) as "Invalid config file";
-
-                String hostName  = config.getOrDefault("hostName",    "admin.xqiz.it").as(String);
-                String bindAddr  = config.getOrDefault("bindAddress", "admin.xqiz.it").as(String);
-                UInt16 httpPort  = config.getOrDefault("http",   80).as(IntLiteral).toUInt16();
-                UInt16 httpsPort = config.getOrDefault("https", 443).as(IntLiteral).toUInt16();
-
+                File storeFile = platformDir.fileFor("certs.p12");
                 import crypto.KeyStore;
                 @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
 
                 container.invoke("configure",
-                    Tuple:(accountManager, hostManager, hostName, bindAddr, httpPort, httpsPort, keystore));
+                    Tuple:(accountManager, hostManager, hostName, bindAddr,
+                           httpPort, httpsPort, keystore, portLow..portHigh));
 
                 console.print($"Started the XtcPlatform at http://{hostName}:{httpPort}");
             } else {

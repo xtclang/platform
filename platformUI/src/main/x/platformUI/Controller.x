@@ -53,13 +53,11 @@ service Controller() {
 
     @Get("availableModules")
     String[] getAvailable() {
-      if (Directory libDir := getUserHomeDirectory(accountName).findDir("lib")) {
-          return libDir.names()
-                       .filter(name -> name.endsWith(".xtc"))
-                       .map(name -> name[0 ..< name.size-4])
-                       .toArray(Constant);
-        }
-      return [];
+        Directory libDir = hostManager.ensureUserLibDirectory(accountName);
+        return libDir.names()
+                   .filter(name -> name.endsWith(".xtc"))
+                   .map(name -> name[0 ..< name.size-4])
+                   .toArray(Constant);
     }
 
     @Post("upload")
@@ -68,7 +66,7 @@ service Controller() {
 
         String[] results = [];
         if (web.Body body ?= request.body) {
-            Directory libDir = getUserHomeDirectory(accountName).dirFor("lib").ensure();
+            Directory libDir = hostManager.ensureUserLibDirectory(accountName);
 
             @Inject Container.Linker linker;
 
@@ -119,10 +117,8 @@ service Controller() {
                 newApp  = True;
             }
 
-            Directory userDir = getUserHomeDirectory(accountName);
-            ErrorLog  errors  = new ErrorLog();
-
-            if (!(webHost := hostManager.ensureWebHost(userDir, webInfo, errors))) {
+            ErrorLog errors = new ErrorLog();
+            if (!(webHost := hostManager.ensureWebHost(accountName, webInfo, errors))) {
                 return [False, errors.toString()];
             }
 
@@ -191,17 +187,6 @@ service Controller() {
 
 
     // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * Get a user directory for the specified account.
-     */
-    private Directory getUserHomeDirectory(String account) {
-        // temporary hack
-        @Inject Directory homeDir;
-        Directory accountDir = homeDir.dirFor($"xqiz.it/users/{account}");
-        accountDir.ensure();
-        return accountDir;
-    }
 
     /**
      * Get the host name and ports for the specified domain.

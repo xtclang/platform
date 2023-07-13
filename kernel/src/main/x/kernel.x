@@ -50,6 +50,9 @@ module kernel.xqiz.it {
         Directory platformDir = homeDir.dirFor("xqiz.it/platform");
         platformDir.ensure();
 
+        Directory usersDir = homeDir.dirFor("xqiz.it/users");
+        usersDir.ensure();
+
         Directory buildDir = platformDir.dirFor("build");
         buildDir.ensure();
 
@@ -78,11 +81,15 @@ module kernel.xqiz.it {
             // create a container for the platformUI controller and configure it
             console.print($"Starting the HostManager...");
 
+            File storeFile = platformDir.fileFor("certs.p12");
+            import crypto.KeyStore;
+            @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
+
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
             if (Container  container :=
                     utils.createContainer(repository, hostModule, buildDir, True, errors)) {
-                hostManager = container.invoke("configure", Tuple:())[0].as(HostManager);
+                hostManager = container.invoke("configure", Tuple:(usersDir, keystore))[0].as(HostManager);
             } else {
                 return;
             }
@@ -98,10 +105,6 @@ module kernel.xqiz.it {
                 UInt16 httpsPort = config.getOrDefault("httpsPort",    8090).as(IntLiteral).toUInt16();
                 UInt16 portLow   = config.getOrDefault("userPortLow",  8100).as(IntLiteral).toUInt16();
                 UInt16 portHigh  = config.getOrDefault("userPortHIgh", 8199).as(IntLiteral).toUInt16();
-
-                File storeFile = platformDir.fileFor("certs.p12");
-                import crypto.KeyStore;
-                @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
 
                 container.invoke("configure",
                     Tuple:(accountManager, hostManager, hostName, bindAddr,

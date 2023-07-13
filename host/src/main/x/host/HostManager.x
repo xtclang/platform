@@ -20,9 +20,19 @@ import crypto.KeyStore;
 /**
  * The module for basic hosting functionality.
  */
-service HostManager
+service HostManager(Directory usersDir, KeyStore keystore)
         implements common.HostManager {
     // ----- properties ------------------------------------------------------------------------------------------------
+
+    /**
+     * The "users" directory.
+     */
+    private Directory usersDir;
+
+    /**
+     * TEMPORARY: For now the platform keystore is shared by all web apps.
+     */
+    private KeyStore keystore;
 
     /**
      * Loaded WebHost objects keyed by the application domain name.
@@ -33,20 +43,27 @@ service HostManager
     // ----- common.HostManager API ------------------------------------------------------------------------------------
 
     @Override
+    Directory ensureUserLibDirectory(String accountName) {
+        import ecstasy.fs.DirectoryFileStore;
+
+        Directory userDir = ensureUserDirectory(accountName);
+
+        // make sure there is no way for them to get any higher that the "lib" directory
+        return new DirectoryFileStore(userDir.dirFor("lib").ensure()).root;
+    }
+
+    @Override
     conditional WebHost getWebHost(String domain) {
         return loaded.get(domain);
     }
 
     @Override
-    conditional WebHost ensureWebHost(Directory userDir, WebModuleInfo webInfo, Log errors) {
+    conditional WebHost ensureWebHost(String accountName, WebModuleInfo webInfo, Log errors) {
         import xenia.tools.ModuleGenerator;
 
-        Directory libDir;
-        if (!(libDir := userDir.findDir("lib"))) {
-            errors.add($"Error: \"{userDir}/lib\" directory not found");
-            return False;
-        }
+        Directory userDir = ensureUserDirectory(accountName);
 
+        Directory libDir   = userDir.dirFor("lib").ensure();
         Directory buildDir = userDir.dirFor("build").ensure();
 
         @Inject("repository") ModuleRepository coreRepo;
@@ -115,13 +132,17 @@ service HostManager
         }
     }
 
+
+    /**
+     * Ensure the user directory for the specified account.
+     */
+    private Directory ensureUserDirectory(String accountName) {
+        // TODO: validate/convert the name
+        return usersDir.dirFor(accountName).ensure();
+    }
+
     /**
      * Get the KeyStore.
      */
-    KeyStore getKeyStore(Directory userDir) {
-        // TODO: retrieve from the db
-        @Inject(opts=new KeyStore.Info(userDir.fileFor("certs.p12").contents, "password"))
-        KeyStore keystore;
-        return keystore;
-    }
+    private KeyStore getKeyStore(Directory userDir) = keystore;
 }

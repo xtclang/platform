@@ -78,10 +78,12 @@ service Controller() {
                     ModuleTemplate template      = linker.loadFileTemplate(file).mainModule;
                     String         qualifiedName = template.qualifiedName + ".xtc";
                     if (qualifiedName != file.name) {
+                        if (File fileOld := libDir.findFile(qualifiedName)) {
+                            fileOld.delete();
+                        }
                         if (file.renameTo(qualifiedName)) {
                             results += $"Stored module: {template.qualifiedName}";
                         } else {
-                            file.delete();
                             results += $"Invalid or duplicate module name: {template.qualifiedName}";
                         }
                     }

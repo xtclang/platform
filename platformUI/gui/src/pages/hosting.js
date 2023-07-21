@@ -129,7 +129,7 @@ class Hosting extends Component {
                 .then(response => response.json())
                 .then(info => {
                     for (var i = 0, c = info.length; i < c; i++) {
-                        console.log("stored module: " + info[i]);
+                        console.log(info[i]);
                     }
                 });
         }
@@ -222,26 +222,30 @@ class Hosting extends Component {
         let   list = [];
 
         for (var i = 0, c = registeredApps.length; i < c; i++) {
-            const ix   = i;
-            const info = registeredApps[i];
-            const url  = info.url === undefined ? null : info.url;
+            const ix     = i;
+            const info   = registeredApps[i];
+            const runUrl = info.url === undefined ? null : info.url;
 
-            let   link;
-            let   actionText = 'Load application';
+            let actionText = 'Load application';
+            let runText    = 'run application';
+            let run;
 
-            if (url != null) {
-                link       = <a href={url} target="_blank" rel="noopener noreferrer">run application</a>;
+            if (runUrl != null) {
+                run        = <a href={runUrl} target="_blank" rel="noopener noreferrer">{runText}</a>;
                 actionText = 'Unload application';
             }
-            else if (info.error !== null) {
-                link = <span style={{color: 'red'}}>{info.error}</span>;
+            else if (info.error != null) {
+                run = <span style={{color: 'red'}}>{info.error}</span>;
             }
             else if (this.state.loadingIndex === ix) {
-                link = 'loading.'.padEnd(this.state.loadingTicks, '.');
+                let ticks = (this.state.loadingTicks % 15).toString();
+                run = "loading." + '.'.repeat(ticks);
             } else {
-                link = "";
+                run = '';
             }
 
+            let logLink = "/host/report/" + info.domain;
+            let log = <a href={logLink} target="_blank" rel="noopener noreferrer">show log</a>;
             list.push(
                 <tr key={ix}>
                     <td><input id={'check-' + ix} type="checkbox" checked={checkedApps[ix]}
@@ -250,7 +254,8 @@ class Hosting extends Component {
                     <td>{info.domain}</td>
                     <td><input type="button" value={actionText}
                         onClick={() => this.action(ix)} /></td>
-                    <td>{link}</td>
+                    <td>{run}</td>
+                    <td>{log}</td>
                 </tr>
                 );
         }
@@ -264,11 +269,12 @@ class Hosting extends Component {
                 <p/>
                 <table border='1' cellpadding='10'>
                   <thead><tr>
-                    <td><b></b></td>
-                    <td><b>Module</b></td>
-                    <td><b>Domain</b></td>
-                    <td><b>Action</b></td>
-                    <td><b>URL</b></td>
+                    <td></td>
+                    <td>Module</td>
+                    <td>Domain</td>
+                    <td>Action</td>
+                    <td style={{width: '100pt'}}>Run</td>
+                    <td>Status</td>
                   </tr></thead>
                   <tbody>
                     {list}

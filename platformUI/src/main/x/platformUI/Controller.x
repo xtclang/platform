@@ -132,15 +132,15 @@ service Controller() {
     }
 
     @Get("report/{domain}")
+    @Produces(Text)
     String report(String domain) {
-        String response;
         if (WebHost webHost := hostManager.getWebHost(domain)) {
-            Container container = webHost.container;
-            response = $"{container.status} {container.statusIndicator}";
-        } else {
-            response = "Not loaded";
+            File consoleFile = webHost.homeDir.fileFor("console.log");
+            if (consoleFile.exists && consoleFile.size > 0) {
+                return consoleFile.contents.unpackUtf8();
+            }
         }
-        return response;
+        return "[empty]";
     }
 
     @Post("unload/{domain}")

@@ -48,10 +48,10 @@ class Hosting extends Component {
     }
 
     componentDidMount() {
-        fetch('host/userId')
+        fetch('/host/userId')
             .then(response => response.json())
             .then(name => this.setState(state => ({userId: name})));
-        fetch('host/registeredApps')
+        fetch('/host/registeredApps')
             .then(response => response.json())
             .then(infos => this.setState(state =>
                 ({registeredApps: infos, checkedApps: Array(infos.length).fill(false)})));
@@ -125,7 +125,7 @@ class Hosting extends Component {
                 console.log("uploading " + file.name);
                 }
 
-            fetch("host/upload", {body: formData, method: "post"})
+            fetch("/host/upload", {body: formData, method: "post"})
                 .then(response => response.json())
                 .then(info => {
                     for (var i = 0, c = info.length; i < c; i++) {
@@ -139,7 +139,7 @@ class Hosting extends Component {
     showAddModule() {
         this.setState(state => ({showAdd: true}));
 
-        fetch('host/availableModules')
+        fetch('/host/availableModules')
             .then(response => response.json())
             .then(data => this.setState(state => ({availableModules: data})));
     }

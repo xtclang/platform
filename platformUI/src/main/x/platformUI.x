@@ -52,6 +52,23 @@ module platformUI.xqiz.it {
         }
     }
 
+    @WebService("/old")
+    service OldUIContent()
+            incorporates StaticContent(path, /old_gui) {
+        import web.Get;
+        import web.ResponseOut;
+
+        @Get("{path}")
+        @Override
+        conditional ResponseOut getResource(String path) {
+            if (ResponseOut response := super(path)) {
+                return True, response;
+            }
+            return super(defaultPage);
+        }
+    }
+
+
     /**
      * The singleton service holding configuration info.
      */

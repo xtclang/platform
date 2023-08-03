@@ -10,7 +10,7 @@ import SignUp from './pages/sign-up';
 
 function App() {
   return (
-      <Router>
+      <Router basename={'/old'}>
       <Navbar />
       <Routes>
           <Route exact path='/' element={<Home />} />

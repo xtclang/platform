@@ -29,7 +29,7 @@
       <q-card-section>
         <q-list flat separator>
           <q-item
-            v-for="(currentModule, name) in hostingStore.modules"
+            v-for="(currentModule, name) in moduleStore.modules"
             :key="name"
           >
             <q-item-section avatar top>
@@ -139,7 +139,7 @@
                   dense
                   round
                   icon="published_with_changes"
-                  @click="hostingStore.resolveModule(name)"
+                  @click="moduleStore.resolveModule(name)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Resolve
@@ -151,14 +151,14 @@
                   flat
                   dense
                   round
-                  icon="web"
+                  icon="app_registration"
                   :disable="
                     !currentModule.isWebModule ||
                     currentModule.issues.length > 0
                   "
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
-                    Create web application
+                    Register application
                   </q-tooltip>
                 </q-btn>
                 <q-btn
@@ -198,14 +198,14 @@
             label="Automatically resolve uploaded modules"
           />
           <q-uploader
-            :url="hostingStore.uploadURL + '?resolve=' + resolveOnUpload"
+            :url="moduleStore.uploadURL + '?resolve=' + resolveOnUpload"
             label="Select '.xtc' file(s) to upload"
             multiple
             batch
             accept=".xtc"
             :form-fields="[{ name: 'resolve', value: resolveOnUpload }]"
             @uploading="$q.loading.show()"
-            @uploaded="hostingStore.updateModules()"
+            @uploaded="moduleStore.updateModules()"
             @failed="$q.loading.hide()"
           />
         </q-card-section>
@@ -217,7 +217,7 @@
 <script>
 import { defineComponent, onBeforeMount, ref, watch } from "vue";
 import { useUserStore } from "stores/user-store";
-import { useHostingStore } from "stores/hosting-store";
+import { useModuleStore } from "stores/module-store";
 import { useQuasar } from "quasar";
 
 export default defineComponent({
@@ -227,21 +227,21 @@ export default defineComponent({
     const $q = useQuasar();
 
     const userStore = useUserStore();
-    const hostingStore = useHostingStore();
+    const moduleStore = useModuleStore();
     const showUploadDialog = ref(false);
     const fileToUpload = ref(null);
     const resolveOnUpload = ref(false);
 
     onBeforeMount(() => {
       if (userStore.hasUser) {
-        hostingStore.updateModules();
+        moduleStore.updateModules();
       }
       if (process.env.DEV) {
         console.log(`DEV MODE: Add mock user`);
         userStore.user = "Mock User";
 
         console.log(`DEV MODE: Add mock data`);
-        hostingStore.modulesJSON = {
+        moduleStore.modulesJSON = {
           $type: "ListMap<String, common.model2.ModuleInfo>",
           Bank: {
             name: "Bank",
@@ -285,9 +285,9 @@ export default defineComponent({
         };
 
         console.log(`DEV MODE: enhance the mock data`);
-        hostingStore.enhance();
+        moduleStore.enhance();
 
-        console.log(hostingStore.modulesJSON);
+        console.log(moduleStore.modulesJSON);
       }
     });
 
@@ -295,7 +295,7 @@ export default defineComponent({
       () => userStore.user,
       () => {
         if (userStore.user != undefined) {
-          hostingStore.updateModules();
+          moduleStore.updateModules();
         }
       }
     );
@@ -307,13 +307,13 @@ export default defineComponent({
         cancel: true,
         persistent: true,
       }).onOk(() => {
-        hostingStore.deleteModule(name);
+        moduleStore.deleteModule(name);
       });
     }
 
     return {
       userStore,
-      hostingStore,
+      moduleStore,
       showUploadDialog,
       fileToUpload,
       resolveOnUpload,

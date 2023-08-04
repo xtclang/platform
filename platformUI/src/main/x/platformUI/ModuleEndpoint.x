@@ -18,9 +18,9 @@ import common.utils;
 /**
  * Dedicated service for hosting modules
  */
-@WebService("/hosting")
+@WebService("/module")
 @LoginRequired
-service Hosting() {
+service ModuleEndpoint() {
 
     construct() {
         accountManager = ControllerConfig.accountManager2;
@@ -49,7 +49,7 @@ service Hosting() {
      * Information comes from the AccountManager (the assumption is the Account manager maintains the
      * consistency between the DB and disk storage)
      */
-    @Get("availableModules")
+    @Get("all")
     Map<String, ModuleInfo> getAvailable() {
         AccountInfo accountInfo;
         if (!(accountInfo := accountManager.getAccount(accountName))) {
@@ -125,7 +125,7 @@ service Hosting() {
      *  - deletes the file (TODO delegate to the AccountManager)
      *  - update ModuleInfos for each module that depends on the removed module
      */
-    @Delete("module/{name}")
+    @Delete("/delete/{name}")
     HttpStatus deleteModule(String name) {
         AccountInfo accountInfo;
         if (!(accountInfo := accountManager.getAccount(accountName))) {
@@ -154,7 +154,7 @@ service Hosting() {
     /**
      * Handles a request to resolve a module
      */
-    @Post("resolve/{name}")
+    @Post("/resolve/{name}")
     HttpStatus resolve(String name) {
         Directory libDir = hostManager.ensureUserLibDirectory(accountName);
         @Inject Container.Linker linker;

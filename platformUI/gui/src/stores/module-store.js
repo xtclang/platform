@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
-import { apiHosting } from "boot/axios";
+import { apiModule } from "boot/axios";
 import { useQuasar } from "quasar";
 
-export const useHostingStore = defineStore('hosting', {
+export const useModuleStore = defineStore('module', {
   state: () => ({
     modulesJSON: [],
     modulesMap: {},
@@ -11,7 +11,7 @@ export const useHostingStore = defineStore('hosting', {
 
   getters: {
     modules: (state) => state.modulesJSON,
-    uploadURL: (state) => apiHosting.defaults.baseURL + "/upload",
+    uploadURL: (state) => apiModule.defaults.baseURL + "/upload",
   },
 
   actions: {
@@ -41,8 +41,8 @@ export const useHostingStore = defineStore('hosting', {
 
     updateModules() {
       this.$q.loading.show();
-      apiHosting
-        .get("/availableModules")
+      apiModule
+        .get("/all")
         .then((response) => {
           this.modulesJSON = response.data;
           this.enhance();
@@ -62,8 +62,8 @@ export const useHostingStore = defineStore('hosting', {
 
     deleteModule(moduleName) {
       this.$q.loading.show();
-      apiHosting
-        .delete("/module/" + moduleName)
+      apiModule
+        .delete("/delete/" + moduleName)
         .then(() => {
           this.updateModules();
         })
@@ -80,7 +80,7 @@ export const useHostingStore = defineStore('hosting', {
 
     resolveModule(moduleName) {
       this.$q.loading.show();
-      apiHosting
+      apiModule
         .post("/resolve/" + moduleName)
         .then(() => {
           this.updateModules();

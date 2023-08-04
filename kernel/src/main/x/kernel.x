@@ -19,6 +19,7 @@ module kernel.xqiz.it {
 
     package common     import common.xqiz.it;
     package platformDB import platformDB.xqiz.it;
+    package platformDB2 import platformDB2.xqiz.it;
 
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.ModuleRepository;
@@ -78,6 +79,11 @@ module kernel.xqiz.it {
             AccountManager accountManager = new AccountManager();
             accountManager.initDB(repository, platformDir, buildDir, errors);
 
+            // initialize the second account manager
+            console.print($"Starting the AccountManager2..."); // inside the kernel for now
+            AccountManager2 accountManager2 = new AccountManager2();
+            accountManager2.initDB(repository, platformDir, buildDir, errors);
+
             // create a container for the platformUI controller and configure it
             console.print($"Starting the HostManager...");
 
@@ -107,7 +113,7 @@ module kernel.xqiz.it {
                 UInt16 portHigh  = config.getOrDefault("userPortHIgh", 8199).as(IntLiteral).toUInt16();
 
                 container.invoke("configure",
-                    Tuple:(accountManager, hostManager, hostName, bindAddr,
+                    Tuple:(accountManager, accountManager2, hostManager, hostName, bindAddr,
                            httpPort, httpsPort, keystore, portLow..portHigh));
 
                 console.print($"Started the XtcPlatform at http://{hostName}:{httpPort}");

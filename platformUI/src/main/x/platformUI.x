@@ -10,6 +10,7 @@ module platformUI.xqiz.it {
     package xenia  import xenia.xtclang.org;
 
     import common.AccountManager;
+    import common.AccountManager2;
     import common.HostManager;
 
     import crypto.KeyStore;
@@ -27,10 +28,10 @@ module platformUI.xqiz.it {
     /**
      * Configure the controller.
      */
-    void configure(AccountManager accountManager, HostManager hostManager,
+    void configure(AccountManager accountManager, AccountManager2 accountManager2, HostManager hostManager,
                    String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort, KeyStore keystore,
                    Range<UInt16> userPorts) {
-        ControllerConfig.init(accountManager, hostManager,
+        ControllerConfig.init(accountManager, accountManager2, hostManager,
             xenia.createServer(this, hostName, bindAddr, httpPort, httpsPort, keystore),
             hostName, bindAddr, userPorts);
 
@@ -87,6 +88,9 @@ module platformUI.xqiz.it {
         AccountManager accountManager;
 
         @Unassigned
+        AccountManager2 accountManager2;
+
+        @Unassigned
         HostManager hostManager;
 
         @Unassigned
@@ -104,15 +108,16 @@ module platformUI.xqiz.it {
         @Unassigned
         Range<UInt16> userPorts;
 
-        void init(AccountManager accountManager, HostManager hostManager,
+        void init(AccountManager accountManager, AccountManager2 accountManager2, HostManager hostManager,
                  function void() shutdownServer,
                  String hostName, String bindAddr, Range<UInt16> userPorts) {
-            this.accountManager = accountManager;
-            this.hostManager    = hostManager;
-            this.shutdownServer = shutdownServer;
-            this.hostName       = hostName;
-            this.bindAddr       = bindAddr;
-            this.userPorts      = userPorts;
+            this.accountManager  = accountManager;
+            this.accountManager2 = accountManager2;
+            this.hostManager     = hostManager;
+            this.shutdownServer  = shutdownServer;
+            this.hostName        = hostName;
+            this.bindAddr        = bindAddr;
+            this.userPorts       = userPorts;
         }
     }
 

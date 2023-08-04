@@ -190,4 +190,21 @@ package utils {
     static Directory ensureHome(Directory userDir, String moduleName) {
         return userDir.dirFor($"host/{moduleName}").ensure();
     }
+
+    /**
+     * Convert String to Boolean
+     *
+     * @param s     the string to convert
+     *
+     * @return the True if "true" and False otherwise
+     */
+    static Boolean toBoolean (String s) {
+        switch (s) {
+            case "true":
+                return True;
+            default:
+                return False;
+        }
+    }
+
 }

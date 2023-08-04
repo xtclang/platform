@@ -86,10 +86,10 @@ service AccountManager2
     @Override
     void addWebApp(String accountName, WebAppInfo webAppInfo) {
         using (val tx = dbConnection.createTransaction()) {
-            String appName = webAppInfo.name;
+            String domain = webAppInfo.domain;
             if (AccountInfo accountInfo := getAccount(accountName)) {
 
-                assert !accountInfo.webApps.contains(appName);
+                assert !accountInfo.webApps.contains(domain);
                 tx.accounts.put(accountInfo.id, accountInfo.addWebApp(webAppInfo));
                 // update the "allocatedPorts" table
                 dbConnection.allocatedPorts.put(webAppInfo.httpPort, accountInfo.id);

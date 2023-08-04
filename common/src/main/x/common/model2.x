@@ -27,7 +27,7 @@ package model2 {
         }
 
         AccountInfo addWebApp(WebAppInfo info) {
-            return new AccountInfo(id, name, modules, webApps.put(info.name, info), users);
+            return new AccountInfo(id, name, modules, webApps.put(info.domain, info), users);
         }
 
         AccountInfo removeWebApp(String appName) {
@@ -51,7 +51,7 @@ package model2 {
     const DependentModule(String name, String qualifiedName, Boolean available);
 
     const WebAppInfo(
-        String name,
+        String moduleName,
         String domain,
         String hostName,
         String bindAddr,

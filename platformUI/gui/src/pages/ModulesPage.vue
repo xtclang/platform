@@ -29,8 +29,8 @@
       <q-card-section>
         <q-list flat separator>
           <q-item
-            v-for="currentModule in hostingStore.modules"
-            :key="currentModule.name"
+            v-for="(currentModule, name) in hostingStore.modules"
+            :key="name"
           >
             <q-item-section avatar top>
               <q-icon name="extension" color="brown-12" size="34px" />
@@ -48,16 +48,10 @@
             <q-item-section top>
               <q-expansion-item
                 expand-separator
-                :icon="hostingStore.modulesMap[currentModule.name].deps.icon"
-                :header-class="
-                  hostingStore.modulesMap[currentModule.name].deps.displayClass
-                "
-                :expand-icon-class="
-                  hostingStore.modulesMap[currentModule.name].deps.displayClass
-                "
-                :label="
-                  hostingStore.modulesMap[currentModule.name].deps.displayText
-                "
+                :icon="currentModule.displayInfo.deps.icon"
+                :header-class="currentModule.displayInfo.deps.displayClass"
+                :expand-icon-class="currentModule.displayInfo.deps.displayClass"
+                :label="currentModule.displayInfo.deps.displayText"
               >
                 <q-list dense flat separator class="rounded-borders">
                   <q-item
@@ -84,20 +78,31 @@
             </q-item-section>
 
             <q-item-section top>
+              <q-item v-if="!currentModule.displayInfo.issues.expandable">
+                <q-item-section avatar>
+                  <q-icon
+                    color="primary"
+                    :name="currentModule.displayInfo.issues.icon"
+                    :class="currentModule.displayInfo.issues.displayClass"
+                  />
+                </q-item-section>
+                <q-item-section
+                  :class="currentModule.displayInfo.issues.displayClass"
+                  >{{
+                    currentModule.displayInfo.issues.displayText
+                  }}</q-item-section
+                >
+              </q-item>
+
               <q-expansion-item
+                v-if="currentModule.displayInfo.issues.expandable"
                 expand-separator
-                :icon="hostingStore.modulesMap[currentModule.name].issues.icon"
-                :header-class="
-                  hostingStore.modulesMap[currentModule.name].issues
-                    .displayClass
-                "
+                :icon="currentModule.displayInfo.issues.icon"
+                :header-class="currentModule.displayInfo.issues.displayClass"
                 :expand-icon-class="
-                  hostingStore.modulesMap[currentModule.name].issues
-                    .displayClass
+                  currentModule.displayInfo.issues.displayClass
                 "
-                :label="
-                  hostingStore.modulesMap[currentModule.name].issues.displayText
-                "
+                :label="currentModule.displayInfo.issues.displayText"
               >
                 <q-list dense flat separator class="rounded-borders">
                   <q-item v-for="issue in currentModule.issues" :key="issue">
@@ -133,9 +138,23 @@
                   flat
                   dense
                   round
+                  icon="published_with_changes"
+                  @click="hostingStore.resolveModule(name)"
+                >
+                  <q-tooltip class="bg-amber-1 text-secondary text-bold">
+                    Resolve
+                  </q-tooltip>
+                </q-btn>
+                <q-btn
+                  class="gt-xs module-action"
+                  size="12px"
+                  flat
+                  dense
+                  round
                   icon="web"
                   :disable="
-                    !currentModule.isWebModule || currentModule.hasIssues
+                    !currentModule.isWebModule ||
+                    currentModule.issues.length > 0
                   "
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
@@ -149,7 +168,7 @@
                   dense
                   round
                   icon="delete"
-                  @click="deleteModule(currentModule.name)"
+                  @click="deleteModule(name)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Delete module
@@ -174,22 +193,21 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none">
+          <q-checkbox
+            v-model="resolveOnUpload"
+            label="Automatically resolve uploaded modules"
+          />
           <q-uploader
-            url="/host/upload"
+            :url="hostingStore.uploadURL + '?resolve=' + resolveOnUpload"
             label="Select '.xtc' file(s) to upload"
             multiple
+            batch
             accept=".xtc"
+            :form-fields="[{ name: 'resolve', value: resolveOnUpload }]"
             @uploading="$q.loading.show()"
             @uploaded="hostingStore.updateModules()"
             @failed="$q.loading.hide()"
           />
-
-          <!-- <q-input
-            dense
-            v-model="address"
-            autofocus
-            @keyup.enter="prompt = false"
-          /> -->
         </q-card-section>
       </q-card>
     </q-dialog>
@@ -212,16 +230,64 @@ export default defineComponent({
     const hostingStore = useHostingStore();
     const showUploadDialog = ref(false);
     const fileToUpload = ref(null);
+    const resolveOnUpload = ref(false);
 
     onBeforeMount(() => {
       if (userStore.hasUser) {
         hostingStore.updateModules();
       }
       if (process.env.DEV) {
-        console.log(`DEV MODE: Build the module map from the mock data`);
+        console.log(`DEV MODE: Add mock user`);
         userStore.user = "Mock User";
-        console.log(`DEV MODE: Build the module map from the mock data`);
-        hostingStore.buildMap();
+
+        console.log(`DEV MODE: Add mock data`);
+        hostingStore.modulesJSON = {
+          $type: "ListMap<String, common.model2.ModuleInfo>",
+          Bank: {
+            name: "Bank",
+            qualifiedName: "Bank",
+            isResolved: false,
+            isWebModule: false,
+            issues: [],
+            dependentModules: [
+              {
+                name: "ecstasy",
+                qualifiedName: "ecstasy.xtclang.org",
+                available: true,
+              },
+              {
+                name: "oodb",
+                qualifiedName: "oodb.xtclang.org",
+                available: true,
+              },
+            ],
+          },
+          BankStressTest: {
+            name: "BankStressTest",
+            qualifiedName: "BankStressTest",
+            isResolved: true,
+            isWebModule: true,
+            issues: [],
+            dependentModules: [
+              {
+                name: "web",
+                qualifiedName: "web.xtclang.org",
+                available: true,
+              },
+              { name: "Bank", qualifiedName: "Bank", available: true },
+              {
+                name: "ecstasy",
+                qualifiedName: "ecstasy.xtclang.org",
+                available: true,
+              },
+            ],
+          },
+        };
+
+        console.log(`DEV MODE: enhance the mock data`);
+        hostingStore.enhance();
+
+        console.log(hostingStore.modulesJSON);
       }
     });
 
@@ -250,6 +316,7 @@ export default defineComponent({
       hostingStore,
       showUploadDialog,
       fileToUpload,
+      resolveOnUpload,
       deleteModule,
     };
   },

@@ -7,7 +7,7 @@ import axios from 'axios'
 // good idea to move this instance creation inside of the
 // "export default () => {}" function below (which runs individually
 // for each client)
-const apiHost = axios.create({ baseURL: '/host' })
+const apiHosting = axios.create({ baseURL: '/hosting' })
 const apiUser = axios.create({ baseURL: '/user' })
 
 export default boot(({ app }) => {
@@ -17,8 +17,8 @@ export default boot(({ app }) => {
   // ^ ^ ^ this will allow you to use this.$axios (for Vue Options API form)
   //       so you won't necessarily have to import axios in each vue file
 
-  app.config.globalProperties.$apiHost = apiHost
-  // ^ ^ ^ this will allow you to use this.$apiHost (for Vue Options API form)
+  app.config.globalProperties.$apiHosting = apiHosting
+  // ^ ^ ^ this will allow you to use this.$apiHosting (for Vue Options API form)
   //       so you can easily perform requests against your app's API
 
   app.config.globalProperties.$apiUser = apiUser
@@ -26,4 +26,4 @@ export default boot(({ app }) => {
   //       so you can easily perform requests against your app's API
 })
 
-export { apiHost, apiUser }
+export { apiHosting, apiUser }

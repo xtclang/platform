@@ -112,22 +112,6 @@
                   </q-item>
                 </q-list>
               </q-expansion-item>
-              <!-- <div class="row">
-                <div class="col-1 text-right q-pr-md">
-                  <q-icon name="warning" color="red" size="sm" />
-                </div>
-                <div class="col-11">
-                  <q-item-label
-                    class="text-red"
-                    caption
-                    lines="1"
-                    v-for="issue in currentModule.issues"
-                    :key="issue"
-                  >
-                    {{ issue }}
-                  </q-item-label>
-                </div>
-              </div> -->
             </q-item-section>
 
             <q-item-section side>
@@ -156,6 +140,7 @@
                     !currentModule.isWebModule ||
                     currentModule.issues.length > 0
                   "
+                  @click="webAppDialog = { show: true, moduleName: name }"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Register application
@@ -211,6 +196,43 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <q-dialog v-model="webAppDialog.show" persistent>
+      <q-card style="min-width: 350px">
+        <q-bar class="bg-primary">
+          <q-space />
+          <q-btn class="text-white" dense flat icon="close" v-close-popup />
+        </q-bar>
+
+        <q-card-section>
+          <div class="text-h6">New web application</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-input v-model="webAppDialog.moduleName" hint="Module" readonly>
+            <template v-slot:prepend>
+              <q-icon name="extension" />
+            </template>
+          </q-input>
+
+          <q-input v-model="webAppDialog.domain" hint="Domain" autofocus>
+            <template v-slot:prepend>
+              <q-icon name="web_asset" />
+            </template>
+          </q-input>
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            flat
+            label="Register"
+            v-close-popup
+            @click="registerWebApp()"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -218,6 +240,7 @@
 import { defineComponent, onBeforeMount, ref, watch } from "vue";
 import { useUserStore } from "stores/user-store";
 import { useModuleStore } from "stores/module-store";
+import { useWebAppStore } from "stores/webapp-store";
 import { useQuasar } from "quasar";
 
 export default defineComponent({
@@ -228,7 +251,9 @@ export default defineComponent({
 
     const userStore = useUserStore();
     const moduleStore = useModuleStore();
+    const webAppStore = useWebAppStore();
     const showUploadDialog = ref(false);
+    const webAppDialog = ref({ show: false, moduleName: undefined });
     const fileToUpload = ref(null);
     const resolveOnUpload = ref(false);
 
@@ -300,6 +325,14 @@ export default defineComponent({
       }
     );
 
+    function registerWebApp() {
+      webAppStore.registerWebApp(
+        webAppDialog.value.domain,
+        webAppDialog.value.moduleName,
+        false
+      );
+    }
+
     function deleteModule(name) {
       $q.dialog({
         title: "Confirm",
@@ -314,9 +347,12 @@ export default defineComponent({
     return {
       userStore,
       moduleStore,
+      webAppStore,
       showUploadDialog,
+      webAppDialog,
       fileToUpload,
       resolveOnUpload,
+      registerWebApp,
       deleteModule,
     };
   },

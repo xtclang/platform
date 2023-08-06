@@ -261,59 +261,6 @@ export default defineComponent({
       if (userStore.hasUser) {
         moduleStore.updateModules();
       }
-      if (process.env.DEV) {
-        console.log(`DEV MODE: Add mock user`);
-        userStore.user = "Mock User";
-
-        console.log(`DEV MODE: Add mock data`);
-        moduleStore.modulesJSON = {
-          $type: "ListMap<String, common.model2.ModuleInfo>",
-          Bank: {
-            name: "Bank",
-            qualifiedName: "Bank",
-            isResolved: false,
-            isWebModule: false,
-            issues: [],
-            dependentModules: [
-              {
-                name: "ecstasy",
-                qualifiedName: "ecstasy.xtclang.org",
-                available: true,
-              },
-              {
-                name: "oodb",
-                qualifiedName: "oodb.xtclang.org",
-                available: true,
-              },
-            ],
-          },
-          BankStressTest: {
-            name: "BankStressTest",
-            qualifiedName: "BankStressTest",
-            isResolved: true,
-            isWebModule: true,
-            issues: [],
-            dependentModules: [
-              {
-                name: "web",
-                qualifiedName: "web.xtclang.org",
-                available: true,
-              },
-              { name: "Bank", qualifiedName: "Bank", available: true },
-              {
-                name: "ecstasy",
-                qualifiedName: "ecstasy.xtclang.org",
-                available: true,
-              },
-            ],
-          },
-        };
-
-        console.log(`DEV MODE: enhance the mock data`);
-        moduleStore.enhance();
-
-        console.log(moduleStore.modulesJSON);
-      }
     });
 
     watch(

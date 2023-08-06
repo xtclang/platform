@@ -184,7 +184,7 @@ import { ref, onMounted } from "vue";
 import { useUserStore } from "stores/user-store";
 
 export default {
-  name: "GoogleNewsLayout",
+  name: "MainLayout",
 
   setup() {
     const leftDrawerOpen = ref(false);

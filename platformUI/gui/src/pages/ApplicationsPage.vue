@@ -137,35 +137,10 @@ export default defineComponent({
 
     const userStore = useUserStore();
     const webAppStore = useWebAppStore();
-    const showUploadDialog = ref(false);
-    const fileToUpload = ref(null);
-    const resolveOnUpload = ref(false);
 
     onBeforeMount(() => {
       if (userStore.hasUser) {
         webAppStore.updateWebApps();
-      }
-      if (process.env.DEV) {
-        console.log(`DEV MODE: Add mock user`);
-        userStore.user = "Mock User";
-
-        console.log(`DEV MODE: Add mock data`);
-        webAppStore.webAppsJSON = {
-          $type: "ListMap<String, common.model2.WebAppInfo>",
-          welcome: {
-            moduleName: "welcome.examples.org",
-            domain: "welcome",
-            hostName: "xtc-platform.xqiz.it",
-            bindAddr: "xtc-platform.xqiz.it",
-            httpPort: 8100,
-            httpsPort: 8101,
-          },
-        };
-
-        console.log(`DEV MODE: enhance the mock data`);
-        webAppStore.enhance();
-
-        console.log(webAppStore.webAppsJSON);
       }
     });
 

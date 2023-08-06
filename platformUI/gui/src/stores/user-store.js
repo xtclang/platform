@@ -14,62 +14,75 @@ export const useUserStore = defineStore('user', {
 
   actions: {
     updateUser() {
-      // const $q = useQuasar();
-      apiUser
-        .get("/id")
-        .then((response) => {
-          if (response.status === 200) {
-            this.user = response.data;
-          } else {
-            this.user = null;
-          }
+      if (process.env.DEV) {
+        // do nothing in dev mode
+      } else {
+        apiUser
+          .get("/id")
+          .then((response) => {
+            if (response.status === 200) {
+              this.user = response.data;
+            } else {
+              this.user = null;
+            }
 
-        })
-        .catch(() => {
-          this.$q.notify({
-            color: "negative",
-            position: "top",
-            message: "Could not fetch user information",
-            icon: "report_problem",
+          })
+          .catch(() => {
+            this.$q.notify({
+              color: "negative",
+              position: "top",
+              message: "Could not fetch user information",
+              icon: "report_problem",
+            });
           });
-        });
+      }
     },
 
     logIn() {
-      apiUser
-        .get("/login")
-        .then((response) => {
-          this.user = response.data;
-        })
-        .catch(() => {
-          this.$q.notify({
-            color: "negative",
-            position: "top",
-            message: "Login failed",
-            icon: "report_problem",
+      if (process.env.DEV) {
+        console.log(`DEV MODE: Adding mock user data`);
+        this.user = "Mock User";
+      } else {
+        apiUser
+          .get("/login")
+          .then((response) => {
+            this.user = response.data;
+          })
+          .catch(() => {
+            this.$q.notify({
+              color: "negative",
+              position: "top",
+              message: "Login failed",
+              icon: "report_problem",
+            });
           });
-        });
+      }
     },
 
     logOut() {
-      apiUser
-        .put("/logout", {}, {
-          auth: {
-            username: "___",
-            password: "___"
-          }
-        })
-        .then((response) => {
-          this.user = null;
-        })
-        .catch(() => {
-          this.$q.notify({
-            color: "negative",
-            position: "top",
-            message: "Logout failed",
-            icon: "report_problem",
+      if (process.env.DEV) {
+        console.log(`DEV MODE: Removing mock user data`);
+        this.user = undefined;
+      } else {
+        apiUser
+          .put("/logout", {}, {
+            auth: {
+              username: "___",
+              password: "___"
+            }
+          })
+          .then((response) => {
+            this.user = null;
+          })
+          .catch(() => {
+            this.$q.notify({
+              color: "negative",
+              position: "top",
+              message: "Logout failed",
+              icon: "report_problem",
+            });
           });
-        });
+      }
     },
   },
 });

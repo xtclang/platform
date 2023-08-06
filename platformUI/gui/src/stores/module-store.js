@@ -100,7 +100,8 @@ export const useModuleStore = defineStore('module', {
             this.modulesJSON = response.data;
             this.enhance();
           })
-          .catch(() => {
+          .catch((error) => {
+            console.log(error.toJSON());
             this.$q.notify({
               color: "negative",
               position: "top",
@@ -129,7 +130,8 @@ export const useModuleStore = defineStore('module', {
           .then(() => {
             this.updateModules();
           })
-          .catch(() => {
+          .catch((error) => {
+            console.log(error.toJSON());
             this.$q.loading.hide();
             this.$q.notify({
               color: "negative",
@@ -156,7 +158,8 @@ export const useModuleStore = defineStore('module', {
           .then(() => {
             this.updateModules();
           })
-          .catch(() => {
+          .catch((error) => {
+            console.log(error.toJSON());
             this.$q.loading.hide();
             this.$q.notify({
               color: "negative",

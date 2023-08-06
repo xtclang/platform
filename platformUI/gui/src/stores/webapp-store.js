@@ -47,7 +47,8 @@ export const useWebAppStore = defineStore('webApp', {
             this.webAppsJSON = response.data;
             this.enhance();
           })
-          .catch(() => {
+          .catch((error) => {
+            console.log(error.toJSON());
             this.$q.notify({
               color: "negative",
               position: "top",
@@ -75,9 +76,10 @@ export const useWebAppStore = defineStore('webApp', {
         apiWebApp
           .post(`/register/${domain}/${moduleName}`)
           .then((response) => {
-            if (update) this.updateWebApp()
+            if (update) this.updateWebApps()
           })
-          .catch(() => {
+          .catch((error) => {
+            console.log(error.toJSON());
             this.$q.notify({
               color: "negative",
               position: "top",

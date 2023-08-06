@@ -27,7 +27,8 @@ export const useUserStore = defineStore('user', {
             }
 
           })
-          .catch(() => {
+          .catch((error) => {
+            console.log(error.toJSON());
             this.$q.notify({
               color: "negative",
               position: "top",
@@ -48,7 +49,8 @@ export const useUserStore = defineStore('user', {
           .then((response) => {
             this.user = response.data;
           })
-          .catch(() => {
+          .catch((error) => {
+            console.log(error.toJSON());
             this.$q.notify({
               color: "negative",
               position: "top",
@@ -74,7 +76,8 @@ export const useUserStore = defineStore('user', {
           .then((response) => {
             this.user = null;
           })
-          .catch(() => {
+          .catch((error) => {
+            console.log(error.toJSON());
             this.$q.notify({
               color: "negative",
               position: "top",

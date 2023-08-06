@@ -17,7 +17,7 @@
             round
             dense
             icon="app_registration"
-            @click="showUploadDialog = true"
+            @click="showAddRegistrationDialog()"
           >
             <q-tooltip class="bg-secondary text-bold">
               Register new application!
@@ -108,7 +108,7 @@
                   dense
                   round
                   icon="delete"
-                  @click="deleteModule(name)"
+                  @click="unregisterWebApp(domain)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Unregister
@@ -120,12 +120,54 @@
         </q-list>
       </q-card-section>
     </q-card>
+
+    <q-dialog v-model="newAppDialog.show" persistent>
+      <q-card style="min-width: 350px">
+        <q-bar class="bg-primary">
+          <q-space />
+          <q-btn class="text-white" dense flat icon="close" v-close-popup />
+        </q-bar>
+
+        <q-card-section>
+          <div class="text-h6">New web application</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-select
+            v-model="newAppDialog.moduleName"
+            :options="moduleStore.moduleNames"
+            label="Module"
+          >
+            <template v-slot:prepend>
+              <q-icon name="extension" />
+            </template>
+          </q-select>
+
+          <q-input v-model="newAppDialog.domain" label="Domain" autofocus>
+            <template v-slot:prepend>
+              <q-icon name="web_asset" />
+            </template>
+          </q-input>
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            flat
+            label="Register"
+            v-close-popup
+            @click="registerWebApp()"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script>
 import { defineComponent, onBeforeMount, ref, watch } from "vue";
 import { useUserStore } from "stores/user-store";
+import { useModuleStore } from "stores/module-store";
 import { useWebAppStore } from "stores/webapp-store";
 import { useQuasar } from "quasar";
 
@@ -136,13 +178,42 @@ export default defineComponent({
     const $q = useQuasar();
 
     const userStore = useUserStore();
+    const moduleStore = useModuleStore();
     const webAppStore = useWebAppStore();
+    const newAppDialog = ref({ show: false });
 
     onBeforeMount(() => {
       if (userStore.hasUser) {
         webAppStore.updateWebApps();
       }
     });
+
+    function showAddRegistrationDialog() {
+      moduleStore.updateModules();
+      newAppDialog.value.show = true;
+    }
+
+    function registerWebApp() {
+      webAppStore.registerWebApp(
+        newAppDialog.value.domain,
+        newAppDialog.value.moduleName,
+        true
+      );
+    }
+
+    function unregisterWebApp(domain) {
+      $q.dialog({
+        title: "Confirm",
+        message:
+          "Are you sure you want to remove the web application `" +
+          domain +
+          "`?",
+        cancel: true,
+        persistent: true,
+      }).onOk(() => {
+        webAppStore.unregisterWebApp(domain);
+      });
+    }
 
     watch(
       () => userStore.user,
@@ -155,7 +226,12 @@ export default defineComponent({
 
     return {
       userStore,
+      moduleStore,
       webAppStore,
+      newAppDialog,
+      showAddRegistrationDialog,
+      registerWebApp,
+      unregisterWebApp,
     };
   },
 });

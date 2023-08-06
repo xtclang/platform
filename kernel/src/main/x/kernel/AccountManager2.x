@@ -105,7 +105,7 @@ service AccountManager2
                 WebAppInfo webAppInfo := accountInfo.webApps.get(appName)
                 ) {
 
-                tx.accounts.put(accountInfo.id, accountInfo.removeModule(appName));
+                tx.accounts.put(accountInfo.id, accountInfo.removeWebApp(appName));
                 // update the "allocatedPorts" table
                 dbConnection.allocatedPorts.remove(webAppInfo.httpPort);
             }

@@ -94,6 +94,28 @@ service WebAppEndpoint() {
         return HttpStatus.OK;
     }
 
+    /**
+     * Handles a request to unregister a domain
+     */
+    @Delete("/unregister/{domain}")
+    HttpStatus deleteModule(String domain) {
+        AccountInfo accountInfo;
+        if (!(accountInfo := accountManager.getAccount(accountName))) {
+            return HttpStatus.Unauthorized;
+        }
+
+        Boolean domainRegistered = accountInfo.webApps.values.iterator()
+            .map(webappInfo -> webappInfo.domain)
+            .untilAny(appDomain -> appDomain == domain);
+
+        if (!domainRegistered) {
+            return HttpStatus.NotFound;
+        }
+
+        accountManager.removeWebApp(accountName, domain);
+        return HttpStatus.OK;
+    }
+
 
     // ----- helpers -------------------------------------------------------------------------------
 

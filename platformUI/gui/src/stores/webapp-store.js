@@ -93,6 +93,32 @@ export const useWebAppStore = defineStore('webApp', {
       }
     },
 
-
+    unregisterWebApp(domain) {
+      if (process.env.DEV) {
+        this.$q.notify({
+          color: "info",
+          position: "top",
+          message: "Operation not available in dev mode",
+          icon: "info",
+        });
+      } else {
+        this.$q.loading.show();
+        apiWebApp
+          .delete(`/unregister/${domain}`)
+          .then(() => {
+            this.updateWebApps()
+          })
+          .catch((error) => {
+            console.log(error.toJSON());
+            this.$q.loading.hide();
+            this.$q.notify({
+              color: "negative",
+              position: "top",
+              message: "Could not remove the web application",
+              icon: "report_problem",
+            });
+          });
+      }
+    },
   },
 });

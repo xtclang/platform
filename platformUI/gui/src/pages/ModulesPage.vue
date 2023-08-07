@@ -11,8 +11,16 @@
       v-if="userStore.hasUser"
     >
       <q-card-section>
-        <q-toolbar class="text-primary">
+        <q-toolbar class="text-primary q-gutter-md">
           <q-toolbar-title> Installed modules </q-toolbar-title>
+          <q-btn
+            round
+            dense
+            icon="refresh"
+            @click="moduleStore.updateModules()"
+          >
+            <q-tooltip class="bg-secondary text-bold"> Refresh </q-tooltip>
+          </q-btn>
           <q-btn
             round
             dense

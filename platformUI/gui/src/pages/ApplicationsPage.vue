@@ -11,8 +11,16 @@
       v-if="userStore.hasUser"
     >
       <q-card-section>
-        <q-toolbar class="text-primary">
+        <q-toolbar class="text-primary q-gutter-md">
           <q-toolbar-title> Registered applications </q-toolbar-title>
+          <q-btn
+            round
+            dense
+            icon="refresh"
+            @click="webAppStore.updateWebApps()"
+          >
+            <q-tooltip class="bg-secondary text-bold"> Refresh </q-tooltip>
+          </q-btn>
           <q-btn
             round
             dense
@@ -20,7 +28,7 @@
             @click="showAddRegistrationDialog()"
           >
             <q-tooltip class="bg-secondary text-bold">
-              Register new application!
+              Register new application
             </q-tooltip>
           </q-btn>
         </q-toolbar>
@@ -38,18 +46,11 @@
                   <q-icon name="web" color="brown-12" size="lg" />
                 </q-item-section>
                 <q-item-section>
-                  {{ domain }}
-                </q-item-section>
-              </q-item>
-            </q-item-section>
-
-            <q-item-section>
-              <q-item>
-                <q-item-section avatar>
-                  <q-icon name="extension" color="brown-12" size="lg" />
-                </q-item-section>
-                <q-item-section>
-                  {{ currentWebApp.moduleName }}
+                  <q-item-label>{{ domain }}</q-item-label>
+                  <q-item-label caption>
+                    <q-icon name="extension" color="brown-12" size="xs" />
+                    <span class="q-ml-xs">{{ currentWebApp.moduleName }}</span>
+                  </q-item-label>
                 </q-item-section>
               </q-item>
             </q-item-section>
@@ -63,10 +64,10 @@
                       color="primary"
                       icon="lock_open"
                       align="left"
-                      :label="
-                        currentWebApp.hostName + ':' + currentWebApp.httpPort
-                      "
                       class="text-lowercase"
+                      :label="`${currentWebApp.hostName}:${currentWebApp.httpPort}`"
+                      :href="`http://${currentWebApp.hostName}:${currentWebApp.httpPort}`"
+                      :target="domain"
                     />
                   </q-item-section>
                 </q-item>
@@ -77,25 +78,56 @@
                       color="primary"
                       icon="https"
                       align="left"
-                      :label="
-                        currentWebApp.hostName + ':' + currentWebApp.httpsPort
-                      "
                       class="text-lowercase"
+                      :label="`${currentWebApp.hostName}:${currentWebApp.httpsPort}`"
+                      :href="`https://${currentWebApp.hostName}:${currentWebApp.httpPort}`"
+                      :target="domain"
                     />
                   </q-item-section>
                 </q-item>
               </q-list>
             </q-item-section>
 
+            <q-item-section>
+              <q-item>
+                <q-item-section avatar>
+                  <q-icon
+                    :name="currentWebApp.displayInfo.icon"
+                    :color="currentWebApp.displayInfo.displayColor"
+                    size="lg"
+                  />
+                </q-item-section>
+                <q-item-section>
+                  {{ currentWebApp.displayInfo.displayText }}
+                </q-item-section>
+              </q-item>
+            </q-item-section>
+
             <q-item-section side>
               <div class="text-primary q-gutter-xs" style="min-width: 20%">
                 <q-btn
-                  class="gt-xs module-action"
+                  v-if="currentWebApp.active"
+                  class="gt-xs module-action text-negative"
+                  size="12px"
+                  flat
+                  dense
+                  round
+                  icon="stop_circle"
+                  @click="webAppStore.stopWebApp(domain)"
+                >
+                  <q-tooltip class="bg-amber-1 text-secondary text-bold">
+                    Stop
+                  </q-tooltip>
+                </q-btn>
+                <q-btn
+                  v-if="!currentWebApp.active"
+                  class="gt-xs module-action text-positive"
                   size="12px"
                   flat
                   dense
                   round
                   icon="play_circle"
+                  @click="webAppStore.startWebApp(domain)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Start
@@ -135,7 +167,7 @@
         <q-card-section class="q-pt-none">
           <q-select
             v-model="newAppDialog.moduleName"
-            :options="moduleStore.moduleNames"
+            :options="moduleStore.webModuleNames"
             label="Module"
           >
             <template v-slot:prepend>

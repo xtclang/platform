@@ -16,6 +16,18 @@ export const useWebAppStore = defineStore('webApp', {
 
     enhance() {
       delete this.webApps['$type']
+
+      for (const [name, webApp] of Object.entries(this.webApps)) {
+        webApp.displayInfo = webApp.active ? {
+          displayText: "Active",
+          displayColor: "positive",
+          icon: "cloud_done",
+        } : {
+          displayText: "Inactive",
+          displayColor: "negative",
+          icon: "cloud_off",
+        };
+      }
     },
 
     updateWebApps() {
@@ -26,13 +38,23 @@ export const useWebAppStore = defineStore('webApp', {
         console.log(`DEV MODE: Adding mock webapp data`);
         this.webAppsJSON = {
           $type: "ListMap<String, common.model2.WebAppInfo>",
-          welcome: {
-            moduleName: "welcome.examples.org",
-            domain: "welcome",
-            hostName: "xtc-platform.xqiz.it",
-            bindAddr: "xtc-platform.xqiz.it",
-            httpPort: 8100,
-            httpsPort: 8101,
+          "mock1.mydomain.com": {
+            "moduleName": "mockmodule1.my.org",
+            "domain": "mock1.mydomain.com",
+            "hostName": "xtc-platform.xqiz.it",
+            "bindAddr": "xtc-platform.xqiz.it",
+            "httpPort": 8102,
+            "httpsPort": 8103,
+            "active": true,
+          },
+          "mock2.mydomain.com": {
+            "moduleName": "mockmodule2.my.org",
+            "domain": "mock2.mydomain.com",
+            "hostName": "xtc-platform.xqiz.it",
+            "bindAddr": "xtc-platform.xqiz.it",
+            "httpPort": 8102,
+            "httpsPort": 8103,
+            "active": false,
           },
         };
         this.enhance();
@@ -120,5 +142,63 @@ export const useWebAppStore = defineStore('webApp', {
           });
       }
     },
+
+    startWebApp(domain) {
+      if (process.env.DEV) {
+        this.$q.notify({
+          color: "info",
+          position: "top",
+          message: "Operation not available in dev mode",
+          icon: "info",
+        });
+      } else {
+        this.$q.loading.show();
+        apiWebApp
+          .post(`/start/${domain}`)
+          .then(() => {
+            this.updateWebApps()
+          })
+          .catch((error) => {
+            console.log(error.toJSON());
+            this.$q.loading.hide();
+            this.$q.notify({
+              color: "negative",
+              position: "top",
+              message: "Could not start the web application",
+              icon: "report_problem",
+            });
+          });
+      }
+    },
+
+    stopWebApp(domain) {
+      if (process.env.DEV) {
+        this.$q.notify({
+          color: "info",
+          position: "top",
+          message: "Operation not available in dev mode",
+          icon: "info",
+        });
+      } else {
+        this.$q.loading.show();
+        apiWebApp
+          .post(`/stop/${domain}`)
+          .then(() => {
+            this.updateWebApps()
+          })
+          .catch((error) => {
+            console.log(error.toJSON());
+            this.$q.loading.hide();
+            this.$q.notify({
+              color: "negative",
+              position: "top",
+              message: "Could not stop the web application",
+              icon: "report_problem",
+            });
+          });
+      }
+    },
+
   },
+
 });

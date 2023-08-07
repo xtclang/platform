@@ -12,6 +12,11 @@ export const useModuleStore = defineStore('module', {
   getters: {
     modules: (state) => state.modulesJSON,
     moduleNames: (state) => Object.keys(state.modulesJSON),
+    webModuleNames: (state) => {
+      return Object.values(state.modulesJSON)
+        .filter(m => m.isWebModule)
+        .map(m => m.qualifiedName)
+    },
     uploadURL: (state) => apiModule.defaults.baseURL + "/upload",
   },
 

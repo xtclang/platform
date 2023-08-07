@@ -34,29 +34,33 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
 
 1. Make sure your "etc/hosts" file contains the following entries:
 
-       127.0.0.10 xtc-platform.xqiz.it
+        127.0.0.10 xtc-platform.xqiz.it
 
 2. Allow the loopback addresses binding by running this script as an admin user: (this step needs to be repeated after reboot)
 
-       sudo ifconfig lo0 alias 127.0.0.10
+        sudo ifconfig lo0 alias 127.0.0.10
 
 3. Create "xqiz.it" subdirectory under the user home directory for the platform persistent data. The subdirectory "platform" will be used to keep the platform operational information and subdirectory "users" for hosted applications.
 
 4. Create a self-signed certificate for the platform web server. For example:
    
-       keytool -genkeypair -alias platform -keyalg RSA -keysize 2048 -validity 365 -dname "OU=Platform, O=[your name], C=US" -keystore ~/xqiz.it/platform/certs.p12 -storetype PKCS12 -storepass [password]
+        keytool -genkeypair -alias platform -keyalg RSA -keysize 2048 -validity 365 -dname "OU=Platform, O=[your name], C=US" -keystore ~/xqiz.it/platform/certs.p12 -storetype PKCS12 -storepass [password]
 
 5. Add a symmetric key to encode the cookies:
 
         keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/certs.p12 -storetype PKCS12 -storepass [password]
 
-6. Start the platform services using the gradle command (from within the "platform" directory):
+6. Build the platform services using the gradle command (from within the "platform" directory):
 
-       gradle run
+        gradle build
 
-7. Open the hosting site in a browser: 
+7. Start the platform using the command (from within the "platform" directory):
 
-    http://xtc-platform.xqiz.it:8080/
+        xec -L lib/ lib/kernel.xtc [password]
+
+9. Open the hosting site in a browser: 
+
+        https://xtc-platform.xqiz.it:8090/
 
 8. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
 

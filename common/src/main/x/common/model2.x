@@ -30,8 +30,23 @@ package model2 {
             return new AccountInfo(id, name, modules, webApps.put(info.domain, info), users);
         }
 
-        AccountInfo removeWebApp(String appName) {
-            return new AccountInfo(id, name, modules, webApps.remove(appName), users);
+        AccountInfo removeWebApp(String domain) {
+            return new AccountInfo(id, name, modules, webApps.remove(domain), users);
+        }
+
+        AccountInfo updateWebAppStatus(String domain, Boolean active) {
+            assert WebAppInfo currentInfo := webApps.get(domain);
+            WebAppInfo newInfo = new WebAppInfo (
+                currentInfo.moduleName,
+                currentInfo.domain,
+                currentInfo.hostName,
+                currentInfo.bindAddr,
+                currentInfo.httpPort,
+                currentInfo.httpsPort,
+                active
+            );
+            assert Map<String, WebAppInfo> newWebApps := webApps.replace(domain, currentInfo, newInfo);
+            return new AccountInfo(id, name, modules, newWebApps, users);
         }
     }
 
@@ -56,7 +71,8 @@ package model2 {
         String hostName,
         String bindAddr,
         UInt16 httpPort,
-        UInt16 httpsPort
+        UInt16 httpsPort,
+        Boolean active
     ) {
         assert() {
             // for now, the ports are consecutive and the http port is an even number
@@ -64,6 +80,12 @@ package model2 {
         }
     }
 
+    enum WebAppOperationResult {
+        OK,
+        NotFound,
+        Conflict,
+        Error
+    }
 
 
 }

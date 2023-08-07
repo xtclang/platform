@@ -1,6 +1,8 @@
 import common.model2.AccountInfo;
 import common.model2.ModuleInfo;
 import common.model2.WebAppInfo;
+import common.model2.WebAppOperationResult;
+
 
 /**
  * The account management API.
@@ -41,12 +43,28 @@ interface AccountManager2 {
     void addWebApp(String accountName, WebAppInfo webAppInfo);
 
     /**
-     * Remove the specified module from the account.
+     * Remove the specified web application from the account.
      *
      * @param accountName  the account name
      * @param webAppName   the web application name
      */
     void removeWebApp(String accountName, String webAppName);
+
+    /**
+     * Start the specified web application from the account.
+     *
+     * @param accountName  the account name
+     * @param domain       the domain of the web application
+     */
+    (WebAppOperationResult, String) startWebApp(String accountName, String domain);
+
+    /**
+     * Stop the specified web application from the account.
+     *
+     * @param accountName  the account name
+     * @param domain       the domain of the web application
+     */
+    (WebAppOperationResult, String) stopWebApp(String accountName, String domain);
 
     /**
      * Obtain an available HTTP port within the specified range. The returned value will always be

@@ -7,12 +7,15 @@ import ecstasy.reflect.ModuleTemplate;
 
 import web.*;
 import web.http.FormDataFile;
+import web.responses.SimpleResponse;
 
 import common.model2.AccountInfo;
 import common.model2.ModuleInfo;
 import common.model2.WebAppInfo;
 import common.model2.DependentModule;
+import common.model2.WebAppOperationResult;
 
+import common.ErrorLog;
 import common.utils;
 
 /**
@@ -89,7 +92,7 @@ service WebAppEndpoint() {
         (String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort) = getAuthority(domain);
         accountManager.addWebApp(
                         accountName,
-                        new WebAppInfo(moduleName, domain, hostName, bindAddr, httpPort, httpsPort)
+                        new WebAppInfo(moduleName, domain, hostName, bindAddr, httpPort, httpsPort, False)
                     );
         return HttpStatus.OK;
     }
@@ -98,7 +101,7 @@ service WebAppEndpoint() {
      * Handles a request to unregister a domain
      */
     @Delete("/unregister/{domain}")
-    HttpStatus deleteModule(String domain) {
+    HttpStatus unregister(String domain) {
         AccountInfo accountInfo;
         if (!(accountInfo := accountManager.getAccount(accountName))) {
             return HttpStatus.Unauthorized;
@@ -116,8 +119,88 @@ service WebAppEndpoint() {
         return HttpStatus.OK;
     }
 
+    /**
+     * Handles a request to unregister a domain
+     */
+    @Post("/start/{domain}")
+    SimpleResponse startWebApp(String domain) {
+
+        @Inject Console console;
+        console.print ("Got start request for " + domain);
+
+        ErrorLog errorLog = new ErrorLog();
+        (WebAppOperationResult result, String message) = accountManager.startWebApp(accountName, domain);
+
+        console.print ("Result: " + result);
+        console.print ("Message: " + message);
+
+        return toSimpleResponse (result, message);
+    }
+
+    /**
+     * Handles a request to unregister a domain
+     */
+    @Post("/stop/{domain}")
+    SimpleResponse stopWebApp(String domain) {
+
+        @Inject Console console;
+        console.print ("Got stop request for " + domain);
+
+        ErrorLog errorLog = new ErrorLog();
+        (WebAppOperationResult result, String message) = accountManager.stopWebApp(accountName, domain);
+
+        return toSimpleResponse (result, message);
+    }
+
 
     // ----- helpers -------------------------------------------------------------------------------
+
+
+    SimpleResponse toSimpleResponse (WebAppOperationResult result, String message) {
+        @Inject Console console;
+        console.print ($"Result: {result}");
+        console.print ($"Message: {message}");
+
+        /*
+         * This is not working and I have no idea why!
+         * No matter what `result` is, it always goes to `default`
+         */
+//        switch (result) {
+//            case OK:
+//                console.print (" --- OK");
+//                return new SimpleResponse(OK);
+//            case NotFound:
+//                console.print (" --- NotFound");
+//                return new SimpleResponse(NotFound, Null, message.utf8());
+//            case Conflict:
+//                console.print (" --- Conflict");
+//                return new SimpleResponse(Conflict, Null, message.utf8());
+//            case Error:
+//                console.print (" --- Error");
+//                return new SimpleResponse(InternalServerError, Null, message.utf8());
+//            default :
+//                console.print (" --- default");
+//                return new SimpleResponse(InternalServerError, Null, message.utf8());
+//        }
+
+        if (result == OK) {
+            console.print (" --- OK");
+            return new SimpleResponse(OK, Null, message.utf8());
+        }
+        if (result == NotFound) {
+            console.print (" --- NotFound");
+            return new SimpleResponse(NotFound, Null, message.utf8());
+        }
+        if (result == Conflict) {
+            console.print (" --- Conflict");
+            return new SimpleResponse(Conflict, Null, message.utf8());
+        }
+
+        console.print (" --- Error");
+        return new SimpleResponse(InternalServerError, Null, message.utf8());
+
+
+    }
 
     /**
      * Get the host name and ports for the specified domain.

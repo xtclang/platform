@@ -4,6 +4,8 @@ import ecstasy.mgmt.DirRepository;
 import ecstasy.mgmt.LinkedRepository;
 
 import common.DbHost;
+import common.WebHost2;
+import common.HostManager2;
 
 import common.model2.AccountId;
 import common.model2.AccountInfo;
@@ -11,11 +13,13 @@ import common.model2.ModuleInfo;
 import common.model2.UserId;
 import common.model2.UserInfo;
 import common.model2.WebAppInfo;
+import common.model2.WebAppOperationResult;
 
 import common.utils;
 
 import oodb.DBMap;
 import oodb.DBUser;
+
 
 /**
  * The module for basic hosting functionality.
@@ -29,15 +33,19 @@ service AccountManager2
     @Unassigned
     platformDB2.Connection dbConnection;
 
+    @Unassigned
+    common.HostManager2 hostManager;
+
     /**
-     * Initialize the DB connection.
+     * Initialize the service.
      *
      * @param repository  the core [ModuleRepository]
      * @param dbDir       the directory for the platform database (e.g. "~/xqiz.it/platform/")
      * @param buildDir    the directory to place auto-generated modules at  (e.g. "~/xqiz.it/platform/build")
      * @param errors      the error log
      */
-    void initDB(ModuleRepository repository, Directory dbDir, Directory buildDir, Log errors) {
+    void init(ModuleRepository repository, Directory dbDir, Directory buildDir, HostManager2 hostManager, Log errors) {
+        this.hostManager = hostManager;
         repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
         assert platformDbHost := utils.createDbHost(repository, dbDir, "platformDB2.xqiz.it", "jsondb", errors);
 
@@ -95,6 +103,83 @@ service AccountManager2
                 dbConnection.allocatedPorts.put(webAppInfo.httpPort, accountInfo.id);
             }
         }
+    }
+
+    @Override
+    (WebAppOperationResult, String) startWebApp(String accountName, String domain) {
+
+        @Inject Console console;
+        console.print ($"Account manager trying to start app for {domain}");
+
+
+        AccountInfo accountInfo;
+        if (!(accountInfo := getAccount(accountName))) {
+            return WebAppOperationResult.NotFound, $"Account '{accountName}' is missing";
+        }
+
+        WebAppInfo webAppInfo;
+        if (!(webAppInfo := accountInfo.webApps.get(domain))) {
+            return WebAppOperationResult.NotFound, $"No application registered for '{domain}' domain";
+        }
+
+        WebHost2 webHost;
+        if (webHost := hostManager.getWebHost(domain)) {
+            if (!webAppInfo.active) {
+                console.print ($"Host found for {domain} but domain is marked as inactive. Fixing it.");
+                using (val tx = dbConnection.createTransaction()) {
+                    tx.accounts.put(accountInfo.id, accountInfo.updateWebAppStatus(domain, True));
+                }
+            }
+            return WebAppOperationResult.Conflict, $"The application is already running";
+        }
+
+        ErrorLog errors = new ErrorLog();
+        if (!(webHost := hostManager.ensureWebHost(accountName, webAppInfo, errors))) {
+            return WebAppOperationResult.Error, errors.toString();
+        }
+
+        using (val tx = dbConnection.createTransaction()) {
+            tx.accounts.put(accountInfo.id, accountInfo.updateWebAppStatus(domain, True));
+        }
+
+        return WebAppOperationResult.OK, "";
+
+    }
+
+    @Override
+    (WebAppOperationResult, String) stopWebApp(String accountName, String domain) {
+        @Inject Console console;
+        console.print ($"Account manager trying to stop app for {domain}");
+
+        AccountInfo accountInfo;
+        if (!(accountInfo := getAccount(accountName))) {
+            return WebAppOperationResult.NotFound, $"Account '{accountName}' is missing";
+        }
+
+        WebAppInfo webAppInfo;
+        if (!(webAppInfo := accountInfo.webApps.get(domain))) {
+            return WebAppOperationResult.NotFound, $"No application registered for '{domain}' domain";
+        }
+
+        WebHost2 webHost;
+        if (!(webHost := hostManager.getWebHost(domain))) {
+            if (webAppInfo.active) {
+                console.print ($"No host for {domain} but domain is marked as active. Fixing it.");
+                using (val tx = dbConnection.createTransaction()) {
+                    tx.accounts.put(accountInfo.id, accountInfo.updateWebAppStatus(domain, False));
+                }
+            }
+            return WebAppOperationResult.Conflict, $"The application is not running";
+        }
+
+        hostManager.removeWebHost(webHost);
+        webHost.close();
+
+        using (val tx = dbConnection.createTransaction()) {
+            tx.accounts.put(accountInfo.id, accountInfo.updateWebAppStatus(domain, False));
+        }
+
+        return WebAppOperationResult.OK, "";
     }
 
     @Override

@@ -13,4 +13,10 @@ module host.xqiz.it {
         HostManager mgr = new HostManager(usersDir, keystore);
         return &mgr.maskAs(common.HostManager);
     }
+
+    common.HostManager2 configure2(Directory usersDir, crypto.KeyStore keystore) {
+        HostManager2 mgr = new HostManager2(usersDir, keystore);
+        return &mgr.maskAs(common.HostManager2);
+    }
+
 }

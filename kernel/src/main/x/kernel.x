@@ -17,8 +17,8 @@ module kernel.xqiz.it {
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 
-    package common     import common.xqiz.it;
-    package platformDB import platformDB.xqiz.it;
+    package common      import common.xqiz.it;
+    package platformDB  import platformDB.xqiz.it;
     package platformDB2 import platformDB2.xqiz.it;
 
     import ecstasy.mgmt.Container;
@@ -28,6 +28,7 @@ module kernel.xqiz.it {
 
     import common.ErrorLog;
     import common.HostManager;
+    import common.HostManager2;
     import common.utils;
 
     import json.Doc;
@@ -79,11 +80,6 @@ module kernel.xqiz.it {
             AccountManager accountManager = new AccountManager();
             accountManager.initDB(repository, platformDir, buildDir, errors);
 
-            // initialize the second account manager
-            console.print($"Starting the AccountManager2..."); // inside the kernel for now
-            AccountManager2 accountManager2 = new AccountManager2();
-            accountManager2.initDB(repository, platformDir, buildDir, errors);
-
             // create a container for the platformUI controller and configure it
             console.print($"Starting the HostManager...");
 
@@ -93,12 +89,21 @@ module kernel.xqiz.it {
 
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
+            HostManager2   hostManager2;
             if (Container  container :=
                     utils.createContainer(repository, hostModule, buildDir, True, errors)) {
                 hostManager = container.invoke("configure", Tuple:(usersDir, keystore))[0].as(HostManager);
+                hostManager2 = container.invoke("configure2", Tuple:(usersDir, keystore))[0].as(HostManager2);
             } else {
                 return;
             }
+
+            // initialize the second account manager
+            // after the HostManager so w can pass a reference
+            console.print($"Starting the AccountManager2..."); // inside the kernel for now
+            AccountManager2 accountManager2 = new AccountManager2();
+            accountManager2.init(repository, platformDir, buildDir, hostManager2, errors);
+
 
             // create a container for the platformUI controller and configure it
             console.print($"Starting the platform UI controller...");

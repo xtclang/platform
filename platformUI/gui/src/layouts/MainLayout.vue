@@ -83,9 +83,9 @@
             expand-separator
             icon="memory"
             label="Hosting"
-            header-class="bg-amber-1"
+            header-class="bg-brown-1 text-primary"
           >
-            <q-list padding class="text-grey-8">
+            <q-list padding>
               <q-item
                 class="GNL__drawer-item"
                 v-ripple
@@ -109,9 +109,9 @@
             expand-separator
             icon="summarize"
             label="Reports"
-            header-class="bg-amber-1"
+            header-class="bg-brown-1 text-primary"
           >
-            <q-list padding class="text-grey-8">
+            <q-list padding>
               <q-item
                 class="GNL__drawer-item"
                 v-ripple
@@ -233,8 +233,12 @@ export default {
       userStore,
 
       links1: [
-        { icon: "extension", text: "Modules", location: "/modules" },
-        { icon: "web_asset", text: "Applications", location: "/applications" },
+        { icon: "extension", text: "Modules", location: { name: "modules" } },
+        {
+          icon: "web_asset",
+          text: "Applications",
+          location: { name: "applications" },
+        },
       ],
       links2: [
         { icon: "space_dashboard", text: "Dashboard 1" },
@@ -254,6 +258,9 @@ export default {
 </script>
 
 <style lang="sass">
+
+.q-router-link--exact-active
+  background-color: $amber-1
 
 .GNL
 

@@ -50,11 +50,11 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
 
         keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/certs.p12 -storetype PKCS12 -storepass [password]
    
-6. Make sure you have the latest [gradle](https://gradle.org/) and [xdk-latest](https://github.com/xtclang/xvm#readme) installed
+6. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed
    
-7. Make sure all necessary "node" modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
+7. Make sure all necessary *node* modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
    
-        node install
+        npm install
  
 8. Build the platform services using the gradle command (from within the "platform" directory):
 

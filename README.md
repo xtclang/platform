@@ -30,7 +30,7 @@ The project is organized as a number of sub-projects, with the important ones to
   
 ## Steps to test the PAAS functionality:
 
-Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every time after an OS reboot. Steps 3-7 need to be done just once.
+Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every time after an OS reboot. Steps 3-8 need to be done just once.
 
 1. Make sure your "etc/hosts" file contains the following entries:
 
@@ -51,27 +51,31 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
         keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/certs.p12 -storetype PKCS12 -storepass [password]
    
 6. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed
-   
-7. Make sure all necessary *node* modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
+
+7. Increase the heap size for "xec" to 4GB by editing the content of "[homebrew-root]/Cellar/xdk-latest/[xdk-version]/libexec/bin/xec.cfg" file to:
+
+        opts=-Xmx4g
+
+8. Make sure all necessary *node* modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
    
         npm install
  
-8. Build the platform services using the gradle command (from within the "platform" directory):
+9. Build the platform services using the gradle command (from within the "platform" directory):
 
-        gradle build
+         gradle build
 
-9. Start the platform using the command (from within the "platform" directory):
+10. Start the platform using the command (from within the "platform" directory):
 
-        xec -L lib/ lib/kernel.xtc [password]
+         xec -L lib/ lib/kernel.xtc [password]
 
-10. Open the hosting site in a browser: 
+11. Open the hosting site in a browser: 
 
          https://xtc-platform.xqiz.it:8090/
 
-11. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
+12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
 
-12. Click "AddModule" and specify an application module and the domain ("welcome", or "banking").
+13. Click "AddModule" and specify an application module and the domain ("welcome", or "banking").
 
-13. Click "Load application" - after a couple of seconds a URL should appear.
+14. Click "Load application" - after a couple of seconds a URL should appear.
 
-14. Click on the URL to launch your application web page.
+15. Click on the URL to launch your application web page.

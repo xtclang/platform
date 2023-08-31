@@ -14,6 +14,8 @@ module platformUI.xqiz.it {
 
     import crypto.KeyStore;
 
+    import json.Schema;
+
     import web.StaticContent;
     import web.WebApp;
     import web.WebService;
@@ -31,6 +33,12 @@ module platformUI.xqiz.it {
         ControllerConfig.init(accountManager, hostManager,
             xenia.createServer(this, hostName, bindAddr, httpPort, httpsPort, keystore),
             hostName, bindAddr, userPorts);
+
+        this.registry_.jsonSchema = new Schema(
+                enableReflection = True,
+                enableMetadata   = True,
+                enablePointers   = False,
+                randomAccess     = True);
     }
 
     /**

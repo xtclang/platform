@@ -63,11 +63,11 @@ val buildGui = tasks.register("buildGui") {
 val copyContent = tasks.register("copyContent") {
 
     val guiDir   = "$projectDir/gui"
-    val guiBuild = "$guiDir/build"
+    val guiBuild = "$guiDir/dist/spa"
 
     project.exec {
         workingDir(guiDir)
-        commandLine("npm", "run", "build")
+        commandLine("yarn", "--ignore-engines", "quasar", "build")
     }
 
     doLast {

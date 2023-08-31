@@ -10,7 +10,7 @@ import ecstasy.text.Log;
 import common.AppHost;
 import common.WebHost;
 
-import common.model.WebModuleInfo;
+import common.model.WebAppInfo;
 
 import common.utils;
 
@@ -20,7 +20,7 @@ import crypto.KeyStore;
 /**
  * The module for basic hosting functionality.
  */
-service HostManager(Directory usersDir, KeyStore keystore)
+service HostManager (Directory usersDir, KeyStore keystore)
         implements common.HostManager {
     // ----- properties ------------------------------------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ service HostManager(Directory usersDir, KeyStore keystore)
     }
 
     @Override
-    conditional WebHost ensureWebHost(String accountName, WebModuleInfo webInfo, Log errors) {
+    conditional WebHost ensureWebHost(String accountName, WebAppInfo webAppInfo, Log errors) {
         import xenia.tools.ModuleGenerator;
 
         Directory userDir = ensureUserDirectory(accountName);
@@ -73,9 +73,9 @@ service HostManager(Directory usersDir, KeyStore keystore)
         ModuleTemplate     mainModule;
         try {
             // we need the resolved module to look up annotations
-            mainModule = repository.getResolvedModule(webInfo.name);
+            mainModule = repository.getResolvedModule(webAppInfo.moduleName);
         } catch (Exception e) {
-            errors.add($|Error: Failed to resolve the module: "{webInfo.name}" ({e.text})
+            errors.add($|Error: Failed to resolve the module: "{webAppInfo.moduleName}" ({e.text})
                       );
             return False;
         }
@@ -96,12 +96,13 @@ service HostManager(Directory usersDir, KeyStore keystore)
                     KeyStore keystore = getKeyStore(userDir);
 
                     Tuple result = container.invoke("createServer_",
-                        Tuple:(webInfo.hostName, webInfo.bindAddr, webInfo.httpPort, webInfo.httpsPort, keystore));
+                        Tuple:(webAppInfo.hostName, webAppInfo.bindAddr,
+                               webAppInfo.httpPort, webAppInfo.httpsPort, keystore));
 
                     function void() shutdown = result[0].as(function void());
 
-                    WebHost webHost = new WebHost(container, webInfo, appHomeDir, shutdown, dependents);
-                    loaded.put(webInfo.domain, webHost);
+                    WebHost webHost = new WebHost(container, webAppInfo, appHomeDir, shutdown, dependents);
+                    loaded.put(webAppInfo.domain, webHost);
 
                     File consoleFile = appHomeDir.fileFor("console.log");
                     consoleFile.append(errors.toString().utf8());

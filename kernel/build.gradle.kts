@@ -8,8 +8,8 @@ tasks.register("build") {
     group       = "Build"
     description = "Build this module"
 
-    dependsOn(project(":common")    .tasks["build"])
-    dependsOn(project(":platformDB").tasks["build"])
+    dependsOn(project(":common")     .tasks["build"])
+    dependsOn(project(":platformDB") .tasks["build"])
 
     doLast {
         val src = fileTree("${projectDir}/src").getFiles().stream().

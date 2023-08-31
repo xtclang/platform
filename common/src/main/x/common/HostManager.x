@@ -1,6 +1,6 @@
 import ecstasy.text.Log;
 
-import common.model.WebModuleInfo;
+import common.model.WebAppInfo;
 
 
 /**
@@ -25,14 +25,14 @@ interface HostManager {
     /**
      * Create a 'WebHost' for the specified application module.
      *
-     * @param account  the account name
-     * @param webInfo  the web module info
-     * @param errors   the error log
+     * @param account     the account name
+     * @param webAppInfo  the web application info
+     * @param errors      the error log
      *
      * @return True iff the WebHost was successfully created
      * @return (optional) the WebHost for the newly loaded Container
      */
-    conditional WebHost ensureWebHost(String accountName, WebModuleInfo webInfo, Log errors);
+    conditional WebHost ensureWebHost(String accountName, WebAppInfo webAppInfo, Log errors);
 
     /**
      * Remove the specified WebHost.

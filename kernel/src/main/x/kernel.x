@@ -17,8 +17,8 @@ module kernel.xqiz.it {
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 
-    package common     import common.xqiz.it;
-    package platformDB import platformDB.xqiz.it;
+    package common      import common.xqiz.it;
+    package platformDB  import platformDB.xqiz.it;
 
     import ecstasy.mgmt.Container;
     import ecstasy.mgmt.ModuleRepository;
@@ -76,7 +76,7 @@ module kernel.xqiz.it {
             // initialize the account manager
             console.print($"Starting the AccountManager..."); // inside the kernel for now
             AccountManager accountManager = new AccountManager();
-            accountManager.initDB(repository, platformDir, buildDir, errors);
+            accountManager.init(repository, platformDir, buildDir, errors);
 
             // create a container for the platformUI controller and configure it
             console.print($"Starting the HostManager...");

@@ -13,7 +13,7 @@ import web.http.FormDataFile;
 import web.responses.SimpleResponse;
 
 /*
- * Dedicated service for user management
+ * Dedicated service for user management.
  */
 @WebService("/user")
 service User() {

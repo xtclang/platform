@@ -5,7 +5,6 @@ import common.WebHost;
 import web.*;
 
 @WebService("/host")
-@LoginRequired
 service Controller() {
 
     construct() {
@@ -22,12 +21,6 @@ service Controller() {
      * The host manager.
      */
     private HostManager hostManager;
-
-    @Put("sign-out")
-    HttpStatus signOut() {
-        session?.deauthenticate();
-        return HttpStatus.OK;
-    }
 
     @Post("debug")
     @LoginOptional // TODO: remove

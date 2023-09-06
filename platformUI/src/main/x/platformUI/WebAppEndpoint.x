@@ -18,7 +18,7 @@ import web.http.FormDataFile;
 import web.responses.SimpleResponse;
 
 /**
- * Dedicated service for operations on WebApps
+ * Dedicated service for operations on WebApps.
  */
 @WebService("/webapp")
 @LoginRequired

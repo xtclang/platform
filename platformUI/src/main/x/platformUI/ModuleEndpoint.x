@@ -16,7 +16,7 @@ import common.model.DependentModule;
 import common.utils;
 
 /**
- * Dedicated service for hosting modules
+ * Dedicated service for hosting modules.
  */
 @WebService("/module")
 @LoginRequired

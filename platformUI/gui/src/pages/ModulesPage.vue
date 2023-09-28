@@ -193,10 +193,9 @@
             multiple
             batch
             accept=".xtc"
-            :form-fields="[{ name: 'resolve', value: resolveOnUpload }]"
             @uploading="$q.loading.show()"
-            @uploaded="moduleStore.updateModules()"
-            @failed="$q.loading.hide()"
+            @uploaded="onUploaded"
+            @failed="$q.loading.hide();"
           />
         </q-card-section>
       </q-card>
@@ -277,6 +276,23 @@ export default defineComponent({
       }
     );
 
+    function onUploaded(info) {
+      const xhr      = info.xhr; // XMLHttpRequest
+      const response = JSON.parse(xhr.response);
+      if (response.length > 0) {
+        var message = "";
+        response.forEach(msg =>
+            message += '<p>' + msg + '</p>');
+        $q.dialog({
+          title: "Module Upload",
+          html: true,
+          message: message,
+        });
+      }
+      showUploadDialog.value=false;
+      moduleStore.updateModules();
+    }
+
     function registerWebApp() {
       webAppStore.registerWebApp(
         webAppDialog.value.deployment,
@@ -309,6 +325,7 @@ export default defineComponent({
       webAppDialog,
       fileToUpload,
       resolveOnUpload,
+      onUploaded,
       registerWebApp,
       deleteModule,
       simpleName,

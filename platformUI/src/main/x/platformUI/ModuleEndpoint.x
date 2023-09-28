@@ -63,9 +63,6 @@ service ModuleEndpoint() {
      *  - builds ModuleInfo for each module
      *  - attempt to resolve module(s) if resolveParam == True
      *  - stores the ModuleInfo(s) in the Account
-     *
-     * TODO decide if the resolveParam should be a query parameter or in the body.
-     *      currently it's unclear how to get a non-file entry from the body
      */
     @Post("upload")
     String[] uploadModule(@QueryParam("resolve") String resolveParam) {
@@ -93,9 +90,11 @@ service ModuleEndpoint() {
                             fileOld.delete();
                         }
                         if (file.renameTo(qualifiedName)) {
-                            results += $"Stored module: {template.qualifiedName}";
+                            results += $|Stored "{fileData.fileName}" module as: "{template.qualifiedName}"
+                                       ;
                         } else {
-                            results += $"Invalid or duplicate module name: {template.qualifiedName}";
+                            results += $|Invalid or duplicate module name: {template.qualifiedName}"
+                                       ;
                         }
                     }
 
@@ -108,7 +107,7 @@ service ModuleEndpoint() {
 
                 } catch (Exception e) {
                     file.delete();
-                    results += $"Invalid module file: {e.message}";
+                    results += $"Invalid module file {fileData.fileName.quoted()}: {e.message}";
                 }
             }
         }

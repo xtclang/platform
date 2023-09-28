@@ -47,14 +47,10 @@ module kernel.xqiz.it {
         }
 
         // ensure necessary directories
-        Directory platformDir = homeDir.dirFor("xqiz.it/platform");
-        platformDir.ensure();
-
-        Directory usersDir = homeDir.dirFor("xqiz.it/users");
-        usersDir.ensure();
-
-        Directory buildDir = platformDir.dirFor("build");
-        buildDir.ensure();
+        Directory platformDir = homeDir.dirFor("xqiz.it/platform").ensure();
+        Directory usersDir    = homeDir.dirFor("xqiz.it/users").ensure();
+        Directory buildDir    = platformDir.dirFor("build").ensure();
+        Directory hostDir     = platformDir.dirFor("host").ensure();
 
         // get the configuration
         Map<String, Doc> config;
@@ -76,7 +72,7 @@ module kernel.xqiz.it {
             // initialize the account manager
             console.print($"Starting the AccountManager..."); // inside the kernel for now
             AccountManager accountManager = new AccountManager();
-            accountManager.init(repository, platformDir, buildDir, errors);
+            accountManager.init(repository, hostDir, buildDir, errors);
 
             // create a container for the platformUI controller and configure it
             console.print($"Starting the HostManager...");
@@ -88,7 +84,7 @@ module kernel.xqiz.it {
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
             if (Container  container :=
-                    utils.createContainer(repository, hostModule, buildDir, True, errors)) {
+                    utils.createContainer(repository, hostModule, hostDir, buildDir, True, errors)) {
                 hostManager = container.invoke("configure", Tuple:(usersDir, keystore))[0].as(HostManager);
             } else {
                 return;
@@ -98,7 +94,7 @@ module kernel.xqiz.it {
             console.print($"Starting the platform UI controller...");
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
-            if (Container  container := utils.createContainer(repository, uiModule, buildDir, True, errors)) {
+            if (Container  container := utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
                 String hostName  = config.getOrDefault("hostName",    "xtc-platform.xqiz.it").as(String);
                 String bindAddr  = config.getOrDefault("bindAddress", "xtc-platform.xqiz.it").as(String);
                 UInt16 httpPort  = config.getOrDefault("httpPort",     8080).as(IntLiteral).toUInt16();

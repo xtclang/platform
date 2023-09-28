@@ -37,33 +37,32 @@
       <q-card-section>
         <q-list flat separator>
           <q-item
-            v-for="(currentModule, name) in moduleStore.modules"
-            :key="name"
+            v-for="module in moduleStore.modules"
+            :key="module.name"
           >
             <q-item-section avatar top>
               <q-icon name="extension" color="brown-12" size="34px" />
             </q-item-section>
 
             <q-item-section top class="col-3 gt-sm">
-              <q-item-label caption v-if="currentModule.isWebModule">
+              <q-item-label caption v-if="module.isWebModule">
                 <q-badge color="secondary">WebApp</q-badge>
               </q-item-label>
-              <q-item-label class="q-mt-sm">
-                {{ currentModule.name }}
-              </q-item-label>
+              <q-item-label class="q-mt-sm"> {{ simpleName(module.name) }} </q-item-label>
+              <q-item-label caption> {{ module.name }} </q-item-label>
             </q-item-section>
 
             <q-item-section top>
               <q-expansion-item
                 expand-separator
-                :icon="currentModule.displayInfo.deps.icon"
-                :header-class="currentModule.displayInfo.deps.displayClass"
-                :expand-icon-class="currentModule.displayInfo.deps.displayClass"
-                :label="currentModule.displayInfo.deps.displayText"
+                :icon="module.displayInfo.deps.icon"
+                :header-class="module.displayInfo.deps.displayClass"
+                :expand-icon-class="module.displayInfo.deps.displayClass"
+                :label="module.displayInfo.deps.displayText"
               >
                 <q-list dense flat separator class="rounded-borders">
                   <q-item
-                    v-for="dep in currentModule.dependentModules"
+                    v-for="dep in module.dependents"
                     :key="dep.name"
                   >
                     <q-item-section avatar>
@@ -75,10 +74,8 @@
                     </q-item-section>
 
                     <q-item-section>
-                      <q-item-label>{{ dep.name }}</q-item-label>
-                      <q-item-label caption>{{
-                        dep.qualifiedName
-                      }}</q-item-label>
+                      <q-item-label>{{ simpleName(dep.name) }}</q-item-label>
+                      <q-item-label caption>{{ dep.name }}</q-item-label>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -86,34 +83,34 @@
             </q-item-section>
 
             <q-item-section top>
-              <q-item v-if="!currentModule.displayInfo.issues.expandable">
+              <q-item v-if="!module.displayInfo.issues.expandable">
                 <q-item-section avatar>
                   <q-icon
                     color="primary"
-                    :name="currentModule.displayInfo.issues.icon"
-                    :class="currentModule.displayInfo.issues.displayClass"
+                    :name="module.displayInfo.issues.icon"
+                    :class="module.displayInfo.issues.displayClass"
                   />
                 </q-item-section>
                 <q-item-section
-                  :class="currentModule.displayInfo.issues.displayClass"
+                  :class="module.displayInfo.issues.displayClass"
                   >{{
-                    currentModule.displayInfo.issues.displayText
+                    module.displayInfo.issues.displayText
                   }}</q-item-section
                 >
               </q-item>
 
               <q-expansion-item
-                v-if="currentModule.displayInfo.issues.expandable"
+                v-if="module.displayInfo.issues.expandable"
                 expand-separator
-                :icon="currentModule.displayInfo.issues.icon"
-                :header-class="currentModule.displayInfo.issues.displayClass"
+                :icon="module.displayInfo.issues.icon"
+                :header-class="module.displayInfo.issues.displayClass"
                 :expand-icon-class="
-                  currentModule.displayInfo.issues.displayClass
+                  module.displayInfo.issues.displayClass
                 "
-                :label="currentModule.displayInfo.issues.displayText"
+                :label="module.displayInfo.issues.displayText"
               >
                 <q-list dense flat separator class="rounded-borders">
-                  <q-item v-for="issue in currentModule.issues" :key="issue">
+                  <q-item v-for="issue in module.issues" :key="issue">
                     <q-item-section>
                       <q-item-label>{{ issue }}</q-item-label>
                     </q-item-section>
@@ -131,7 +128,7 @@
                   dense
                   round
                   icon="published_with_changes"
-                  @click="moduleStore.resolveModule(name)"
+                  @click="moduleStore.resolveModule(module.name)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Resolve
@@ -145,10 +142,10 @@
                   round
                   icon="app_registration"
                   :disable="
-                    !currentModule.isWebModule ||
-                    currentModule.issues.length > 0
+                    !module.isWebModule ||
+                    module.issues.length > 0
                   "
-                  @click="webAppDialog = { show: true, moduleName: name }"
+                  @click="webAppDialog = { show: true, moduleName: module.name }"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Register application
@@ -161,7 +158,7 @@
                   dense
                   round
                   icon="delete"
-                  @click="deleteModule(name)"
+                  @click="deleteModule(module.name)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Delete module
@@ -174,7 +171,7 @@
       </q-card-section>
     </q-card>
 
-    <q-dialog v-model="showUploadDialog" persistent>
+    <q-dialog v-model="showUploadDialog">
       <q-card style="min-width: 350px">
         <q-bar class="bg-primary">
           <q-space />
@@ -205,7 +202,7 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="webAppDialog.show" persistent>
+    <q-dialog v-model="webAppDialog.show">
       <q-card style="min-width: 350px">
         <q-bar class="bg-primary">
           <q-space />
@@ -223,7 +220,7 @@
             </template>
           </q-input>
 
-          <q-input v-model="webAppDialog.domain" hint="Domain" autofocus>
+          <q-input v-model="webAppDialog.deployment" hint="Deployment" autofocus>
             <template v-slot:prepend>
               <q-icon name="web_asset" />
             </template>
@@ -282,7 +279,7 @@ export default defineComponent({
 
     function registerWebApp() {
       webAppStore.registerWebApp(
-        webAppDialog.value.domain,
+        webAppDialog.value.deployment,
         webAppDialog.value.moduleName,
         false
       );
@@ -299,6 +296,11 @@ export default defineComponent({
       });
     }
 
+    function simpleName(name) {
+      const ix = name.indexOf('.');
+      return ix == -1 ? name : name.substring(0, ix);
+    }
+
     return {
       userStore,
       moduleStore,
@@ -309,6 +311,7 @@ export default defineComponent({
       resolveOnUpload,
       registerWebApp,
       deleteModule,
+      simpleName,
     };
   },
 });

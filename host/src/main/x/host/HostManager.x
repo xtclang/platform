@@ -4,6 +4,7 @@ import ecstasy.mgmt.LinkedRepository;
 import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.ModuleTemplate;
+import ecstasy.reflect.TypeTemplate;
 
 import ecstasy.text.Log;
 
@@ -35,7 +36,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
     private KeyStore keystore;
 
     /**
-     * Loaded WebHost objects keyed by the application domain name.
+     * Loaded WebHost objects keyed by the deployment name.
      */
     Map<String, WebHost> loaded = new HashMap();
 
@@ -53,8 +54,8 @@ service HostManager (Directory usersDir, KeyStore keystore)
     }
 
     @Override
-    conditional WebHost getWebHost(String domain) {
-        return loaded.get(domain);
+    conditional WebHost getWebHost(String deployment) {
+        return loaded.get(deployment);
     }
 
     @Override
@@ -65,6 +66,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
         Directory libDir   = userDir.dirFor("lib").ensure();
         Directory buildDir = userDir.dirFor("build").ensure();
+        Directory hostDir  = userDir.dirFor("host").ensure();
 
         @Inject("repository") ModuleRepository coreRepo;
 
@@ -82,17 +84,18 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
         String moduleName = mainModule.qualifiedName;
         try {
-            if (!mainModule.findAnnotation("web.WebApp")) {
+            TypeTemplate webAppTemplate = web.WebApp.as(Type).template;
+            if (!mainModule.type.isA(webAppTemplate)) {
                 errors.add($"Module \"{moduleName}\" is not a WebApp");
                 return False;
             }
 
             ModuleGenerator generator = new ModuleGenerator(moduleName);
             if (ModuleTemplate hostTemplate := generator.ensureWebModule(repository, buildDir, errors)) {
-                Directory appHomeDir = utils.ensureHome(userDir, mainModule.qualifiedName);
+                Directory appHomeDir = hostDir.dirFor(webAppInfo.deployment).ensure();
 
                 if ((Container container, AppHost[] dependents) :=
-                        utils.createContainer(repository, hostTemplate, appHomeDir, False, errors)) {
+                        utils.createContainer(repository, hostTemplate, appHomeDir, buildDir, False, errors)) {
                     KeyStore keystore = getKeyStore(userDir);
 
                     Tuple result = container.invoke("createServer_",
@@ -102,7 +105,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
                     function void() shutdown = result[0].as(function void());
 
                     WebHost webHost = new WebHost(container, webAppInfo, appHomeDir, shutdown, dependents);
-                    loaded.put(webAppInfo.domain, webHost);
+                    loaded.put(webAppInfo.deployment, webHost);
 
                     File consoleFile = appHomeDir.fileFor("console.log");
                     consoleFile.append(errors.toString().utf8());
@@ -123,7 +126,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
     @Override
     void removeWebHost(WebHost webHost) {
-        loaded.remove(webHost.info.domain);
+        loaded.remove(webHost.info.deployment);
     }
 
     @Override

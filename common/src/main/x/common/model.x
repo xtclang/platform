@@ -5,8 +5,8 @@ package model {
     enum UserRole {Admin, Developer, Observer}
 
     const AccountInfo(AccountId id, String name,
-                      Map<String, ModuleInfo> modules = [],
-                      Map<String, WebAppInfo> webApps = [],
+                      Map<String, ModuleInfo> modules = [], // keyed by the fully qualified name
+                      Map<String, WebAppInfo> webApps = [], // keyed by the deployment name
                       Map<UserId, UserRole>   users   = []
                       ) {
 
@@ -27,11 +27,11 @@ package model {
         }
 
         AccountInfo addOrUpdateWebApp(WebAppInfo info) {
-            return new AccountInfo(id, name, modules, webApps.put(info.domain, info), users);
+            return new AccountInfo(id, name, modules, webApps.put(info.deployment, info), users);
         }
 
-        AccountInfo removeWebApp(String domain) {
-            return new AccountInfo(id, name, modules, webApps.remove(domain), users);
+        AccountInfo removeWebApp(String deployment) {
+            return new AccountInfo(id, name, modules, webApps.remove(deployment), users);
         }
     }
 
@@ -40,19 +40,20 @@ package model {
     const UserInfo(UserId id, String name, String email);
 
     const ModuleInfo(
-        String            name,
-        String            qualifiedName,
+        String            name,       // qualified
         Boolean           isResolved,
         Boolean           isWebModule,
         String[]          issues,
-        DependentModule[] dependentModules
+        DependentModule[] dependents
     );
 
-    const DependentModule(String name, String qualifiedName, Boolean available);
+    const DependentModule(
+        String  name,      // qualified
+        Boolean available);
 
     const WebAppInfo(
-        String  moduleName,
-        String  domain,
+        String  deployment, // the same module could be deployed multiple times
+        String  moduleName, // qualified
         String  hostName,
         String  bindAddr,
         UInt16  httpPort,
@@ -65,7 +66,8 @@ package model {
         }
 
         WebAppInfo updateStatus(Boolean active) {
-            return new WebAppInfo(moduleName, domain, hostName, bindAddr, httpPort, httpsPort, active);
+            return new WebAppInfo(deployment, moduleName,
+                                  hostName, bindAddr, httpPort, httpsPort, active);
         }
     }
 }

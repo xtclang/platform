@@ -4,6 +4,7 @@ import ecstasy.mgmt.DirRepository;
 import ecstasy.mgmt.LinkedRepository;
 
 import ecstasy.reflect.ModuleTemplate;
+import ecstasy.reflect.TypeTemplate;
 
 import web.*;
 import web.http.FormDataFile;
@@ -12,8 +13,6 @@ import common.model.AccountInfo;
 import common.model.ModuleInfo;
 import common.model.WebAppInfo;
 import common.model.DependentModule;
-
-import common.utils;
 
 /**
  * Dedicated service for hosting modules.
@@ -166,69 +165,61 @@ service ModuleEndpoint() {
         }
     }
 
-
     /**
      * Iterates over modules that depend on `name` and rebuilds their ModuleInfos
      */
     private void updateDependant(Directory libDir, String name, Boolean resolve) {
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return ;
-        }
-
-        for (ModuleInfo moduleInfo : accountInfo.modules.values) {
-            for (DependentModule dependent : moduleInfo.dependentModules) {
-                if (dependent.qualifiedName == name) {
-                    accountManager.addOrUpdateModule(
-                        accountName,
-                        buildModuleInfo(libDir, moduleInfo.name, resolve)
-                    );
-                    break;
+        if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
+            for (ModuleInfo moduleInfo : accountInfo.modules.values) {
+                for (DependentModule dependent : moduleInfo.dependents) {
+                    if (dependent.name == name) {
+                        accountManager.addOrUpdateModule(
+                            accountName, buildModuleInfo(libDir, moduleInfo.name, resolve));
+                        break;
+                    }
                 }
             }
         }
     }
 
     /**
-     * Generates ModuleInfo for `name` module.
-     * If `resolve == True` also attempts to resolve the module.
+     * Generates ModuleInfo for the specified module.
+     *
+     * @param resolve  pass `True` to resolve the module
      */
     private ModuleInfo buildModuleInfo(Directory libDir, String moduleName, Boolean resolve) {
-        String[] issues=[];
-        Boolean isResolved = False;
-        Boolean isWebModule = False;
-        DependentModule[] dependentModules = [];
+        Boolean           isResolved  = False;
+        Boolean           isWebModule = False;
+        String[]          issues      = [];
+        DependentModule[] dependents  = [];
 
         // get dependent modules
         @Inject("repository") ModuleRepository coreRepo;
         ModuleRepository accountRepo =
             new LinkedRepository([coreRepo, new DirRepository(libDir)].freeze(True));
 
-        if (ModuleTemplate mod := accountRepo.getModule(moduleName)) {
-            for ((String depName, String depQualifiedName) : mod.moduleNamesByPath) {
-                dependentModules +=
-                    new DependentModule(depName, depQualifiedName, accountRepo.getModule(depQualifiedName));
+        if (ModuleTemplate moduleTemplate := accountRepo.getModule(moduleName)) {
+            for ((_, String dependentName) : moduleTemplate.moduleNamesByPath) {
+                // everything depends on Ecstasy module; don't show it
+                if (dependentName != TypeSystem.MackKernel) {
+                    dependents +=
+                        new DependentModule(dependentName, accountRepo.getModule(dependentName));
+                }
             }
         }
 
         // resolve the module
         if (resolve) {
             try {
-                ModuleTemplate mod = accountRepo.getResolvedModule(moduleName);
-                isResolved = True;
-                isWebModule = mod.findAnnotation("web.WebApp");
+                TypeTemplate   webAppTemplate = WebApp.as(Type).template;
+                ModuleTemplate moduleTemplate = accountRepo.getResolvedModule(moduleName);
+                isResolved  = True;
+                isWebModule = moduleTemplate.type.isA(webAppTemplate);
             } catch (Exception e) {
                 issues += e.text?;
             }
         }
 
-        return new ModuleInfo(
-            moduleName,
-            moduleName,
-            isResolved,
-            isWebModule,
-            issues,
-            dependentModules
-        );
+        return new ModuleInfo(moduleName, isResolved, isWebModule, issues, dependents);
     }
 }

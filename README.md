@@ -74,7 +74,7 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
 
 12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
 
-13. Click "AddModule" and specify an application module and the domain ("welcome", or "banking").
+13. Click "AddModule" and specify an application module and the deployment name (e.g. "welcome", or "banking").
 
 14. Click "Load application" - after a couple of seconds a URL should appear.
 

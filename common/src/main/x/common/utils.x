@@ -10,16 +10,18 @@ import ecstasy.reflect.TypeTemplate;
 
 import ecstasy.text.Log;
 
-
+/**
+ * The package for helper functions.
+ */
 package utils {
-    // ----- helper methods ------------------------------------------------------------------------
-
     /**
      * Create a Container for the specified template.
      *
      * @param repository  the [ModuleRepository] to load the module(s) from
      * @param template    the [ModuleTemplate] for the "main" module
-     * @param appHomeDir  the "home" directory for the module (e.g. "~/xqiz.it/users/acme/host/shopping)"
+     * @param appHomeDir  the "home" directory for the deployment (could be multiple for a module)
+     *                    (e.g. "~/xqiz.it/users/acme/host/banking)"
+     * @param buildDir    the directory for auto-generated modules (e.g. "~/xqiz.it/users/acme/build")
      * @param platform    True iff the loading module is one of the "core" platform modules
      *
      * @return True iff the container has been loaded successfully
@@ -29,7 +31,7 @@ package utils {
      */
     static conditional (Container, AppHost[]) createContainer(
                     ModuleRepository repository, ModuleTemplate template, Directory appHomeDir,
-                    Boolean platform, Log errors) {
+                    Directory buildDir, Boolean platform, Log errors) {
         DbHost[] dbHosts;
         Injector injector;
 
@@ -38,10 +40,8 @@ package utils {
             dbHosts = new DbHost[];
 
             for ((String dbPath, String dbModuleName) : dbNames) {
-                Directory userDir = appHomeDir.parent?.parent? : assert;
-                DbHost    dbHost;
-
-                if (!(dbHost := createDbHost(repository, userDir, dbModuleName, "jsondb", errors))) {
+                DbHost dbHost;
+                if (!(dbHost := createDbHost(repository, dbModuleName, "jsondb", appHomeDir, buildDir, errors))) {
                     return False;
                 }
                 dbHosts += dbHost;
@@ -87,17 +87,20 @@ package utils {
      * Create a DbHost for the specified db module.
      *
      * @param repository    the [ModuleRepository] to load the module(s) from
-     * @param userDir       the user `Directory` (e.g. "~/xqiz.it/users/acme/")
      * @param dbModuleName  the name of `Database` module (fully qualified)
      * @param dbImpl        the database implementation name (currently always "jsondb")
+     * @param appHomeDir    the application deployment directory (e.g. "~/xqiz.it/users/acme/host/banking")
+     * @param buildDir      the directory for auto-generated modules (e.g. "~/xqiz.it/users/acme/build")
      *
+     * @return True if the DbHost was successfully created; False otherwise (the errors are logged)
      * @return (optional) the DbHost
      */
     static conditional DbHost createDbHost(
-            ModuleRepository repository, Directory userDir, String dbModuleName, String dbImpl, Log errors) {
+            ModuleRepository repository, String dbModuleName, String dbImpl,
+            Directory appHomeDir, Directory buildDir, Log errors) {
         import jsondb.tools.ModuleGenerator;
 
-        Directory       dbHomeDir = ensureHome(userDir, dbModuleName);
+        Directory       dbHomeDir = appHomeDir.dirFor(dbModuleName).ensure();
         DbHost          dbHost;
         ModuleTemplate  dbModuleTemplate;
         ModuleGenerator generator;
@@ -113,8 +116,6 @@ package utils {
             errors.add($"Error: Unknown db implementation: {dbImpl}");
             return False;
         }
-
-        Directory buildDir = userDir.dirFor("build").ensure();
 
         if (!(dbModuleTemplate := generator.ensureDBModule(repository, buildDir, errors))) {
             errors.add($"Error: Failed to create a DB host for : {dbModuleName}");
@@ -177,17 +178,5 @@ package utils {
                 return super(type, name);
             }
         };
-    }
-
-    /**
-     * Ensure a home directory for the specified module.
-     *
-     * @param userDir     the user 'Directory' (e.g. "~/xqiz.it/users/acme/")
-     * @param moduleName  the application module name
-     *
-     * @return the "home" directory for the module (e.g. "~/xqiz.it/users/acme/host/welcome)"
-     */
-    static Directory ensureHome(Directory userDir, String moduleName) {
-        return userDir.dirFor($"host/{moduleName}").ensure();
     }
 }

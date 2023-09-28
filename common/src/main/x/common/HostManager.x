@@ -15,12 +15,12 @@ interface HostManager {
     Directory ensureUserLibDirectory(String accountName);
 
     /**
-     * Retrieve a 'WebHost' for the specified domain.
+     * Retrieve a 'WebHost' for the specified deployment.
      *
-     * @return True iff there is a WebHost for the specified domain
+     * @return True iff there is a WebHost for the specified deployment
      * @return (optional) the WebHost
      */
-    conditional WebHost getWebHost(String domain);
+    conditional WebHost getWebHost(String deployment);
 
     /**
      * Create a 'WebHost' for the specified application module.

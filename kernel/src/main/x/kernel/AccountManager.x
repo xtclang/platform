@@ -35,13 +35,14 @@ service AccountManager
      * Initialize the service.
      *
      * @param repository  the core [ModuleRepository]
-     * @param dbDir       the directory for the platform database (e.g. "~/xqiz.it/platform/")
+     * @param homeDir     the platform home directory (e.g. "~/xqiz.it/platform/host")
      * @param buildDir    the directory to place auto-generated modules at  (e.g. "~/xqiz.it/platform/build")
      * @param errors      the error log
      */
-    void init(ModuleRepository repository, Directory dbDir, Directory buildDir, Log errors) {
+    void init(ModuleRepository repository, Directory homeDir, Directory buildDir, Log errors) {
         repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
-        assert platformDbHost := utils.createDbHost(repository, dbDir, "platformDB.xqiz.it", "jsondb", errors);
+        assert platformDbHost := utils.createDbHost(repository, "platformDB.xqiz.it", "jsondb",
+                                                    homeDir, buildDir, errors);
 
         DBUser user = new oodb.model.User(1, "admin");
         dbConnection = platformDbHost.ensureDatabase()(user).as(platformDB.Connection);
@@ -88,10 +89,8 @@ service AccountManager
     @Override
     void addOrUpdateWebApp(String accountName, WebAppInfo webAppInfo) {
         using (val tx = dbConnection.createTransaction()) {
-            String domain = webAppInfo.domain;
             if (AccountInfo accountInfo := getAccount(accountName)) {
-
-                if (!accountInfo.webApps.contains(domain)) {
+                if (!accountInfo.webApps.contains(webAppInfo.deployment)) {
                     // update the "allocatedPorts" table
                     tx.allocatedPorts.put(webAppInfo.httpPort, accountInfo.id);
                 }
@@ -103,10 +102,8 @@ service AccountManager
     @Override
     void removeWebApp(String accountName, String appName) {
         using (val tx = dbConnection.createTransaction()) {
-            if (
-                AccountInfo accountInfo := getAccount(accountName),
-                WebAppInfo webAppInfo := accountInfo.webApps.get(appName)
-                ) {
+            if (AccountInfo accountInfo := getAccount(accountName),
+                WebAppInfo  webAppInfo  := accountInfo.webApps.get(appName)) {
 
                 tx.accounts.put(accountInfo.id, accountInfo.removeWebApp(appName));
                 // update the "allocatedPorts" table

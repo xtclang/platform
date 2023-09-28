@@ -10,14 +10,14 @@ export const useModuleStore = defineStore('module', {
   }),
 
   getters: {
-    modules: (state) => state.modulesJSON,
-    moduleNames: (state) => Object.keys(state.modulesJSON),
+    uploadURL     : ()      => apiModule.defaults.baseURL + "/upload",
+    modules       : (state) => state.modulesJSON,
+    moduleNames   : (state) => Object.keys(state.modulesJSON),
     webModuleNames: (state) => {
       return Object.values(state.modulesJSON)
         .filter(m => m.isWebModule)
-        .map(m => m.qualifiedName)
+        .map(m => m.name)
     },
-    uploadURL: (state) => apiModule.defaults.baseURL + "/upload",
   },
 
   actions: {
@@ -25,7 +25,7 @@ export const useModuleStore = defineStore('module', {
     enhance() {
       delete this.modules['$type']
       for (const [name, module] of Object.entries(this.modules)) {
-        var hasMissing = module.dependentModules.some(
+        var hasMissing = module.dependents.some(
           (dependentModule) => !dependentModule.available
         );
         var hasIssues = (module.issues != undefined && module.issues.length > 0);
@@ -52,44 +52,23 @@ export const useModuleStore = defineStore('module', {
          */
         console.log(`DEV MODE: Adding mock modules data`);
         this.modulesJSON = {
-          $type: "ListMap<String, common.model.ModuleInfo>",
-          Bank: {
-            name: "Bank",
-            qualifiedName: "Bank",
+          "bank.examples.org": {
+            name: "bank.examples.org",
             isResolved: false,
             isWebModule: false,
             issues: [],
-            dependentModules: [
-              {
-                name: "ecstasy",
-                qualifiedName: "ecstasy.xtclang.org",
-                available: true,
-              },
-              {
-                name: "oodb",
-                qualifiedName: "oodb.xtclang.org",
-                available: true,
-              },
+            dependents: [
+              { name: "oodb.xtclang.org", available: true},
             ],
           },
-          BankStressTest: {
-            name: "BankStressTest",
-            qualifiedName: "BankStressTest",
+          "bankStressTest.examples.org": {
+            name: "bankStressTest.examples.org",
             isResolved: true,
             isWebModule: true,
             issues: [],
-            dependentModules: [
-              {
-                name: "web",
-                qualifiedName: "web.xtclang.org",
-                available: true,
-              },
-              { name: "Bank", qualifiedName: "Bank", available: true },
-              {
-                name: "ecstasy",
-                qualifiedName: "ecstasy.xtclang.org",
-                available: true,
-              },
+            dependents: [
+              { name: "web.xtclang.org", available: true},
+              { name: "bank.examples.org", available: true },
             ],
           },
         };
@@ -175,7 +154,6 @@ export const useModuleStore = defineStore('module', {
             });
           });
       }
-    }
-
+    },
   },
 });

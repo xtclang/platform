@@ -153,7 +153,7 @@
       </q-card-section>
     </q-card>
 
-    <q-dialog v-model="newAppDialog.show" persistent>
+    <q-dialog v-model="newAppDialog.show">
       <q-card style="min-width: 350px">
         <q-bar class="bg-primary">
           <q-space />
@@ -175,7 +175,7 @@
             </template>
           </q-select>
 
-          <q-input v-model="newAppDialog.domain" label="Domain" autofocus>
+          <q-input v-model="newAppDialog.domain" label="Deployment" autofocus>
             <template v-slot:prepend>
               <q-icon name="web_asset" />
             </template>

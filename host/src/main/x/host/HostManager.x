@@ -62,8 +62,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
     conditional WebHost ensureWebHost(String accountName, WebAppInfo webAppInfo, Log errors) {
         import xenia.tools.ModuleGenerator;
 
-        Directory userDir = ensureUserDirectory(accountName);
-
+        Directory userDir  = ensureUserDirectory(accountName);
         Directory libDir   = userDir.dirFor("lib").ensure();
         Directory buildDir = userDir.dirFor("build").ensure();
         Directory hostDir  = userDir.dirFor("host").ensure();

@@ -82,18 +82,13 @@ service WebAppEndpoint() {
      * Handles a request to unregister a deployment.
      */
     @Delete("/unregister/{deployment}")
-    HttpStatus unregister(String deployment) {
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return HttpStatus.Unauthorized;
+    SimpleResponse unregister(String deployment) {
+        SimpleResponse response = stopWebApp(deployment);
+        if (response.status == OK) {
+            accountManager.removeWebApp(accountName, deployment);
         }
 
-        if (!accountInfo.webApps.contains(deployment)) {
-            return HttpStatus.NotFound;
-        }
-
-        accountManager.removeWebApp(accountName, deployment);
-        return HttpStatus.OK;
+        return response;
     }
 
     /**

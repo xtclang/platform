@@ -127,7 +127,6 @@ service ModuleEndpoint() {
             return HttpStatus.Unauthorized;
         }
         if (WebAppInfo info := accountInfo.webApps.get(name)) {
-            // TODO remove the app as well
             return HttpStatus.Conflict;
         } else {
             accountManager.removeModule(accountName, name);

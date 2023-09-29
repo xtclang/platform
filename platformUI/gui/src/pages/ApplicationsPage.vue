@@ -37,8 +37,8 @@
       <q-card-section>
         <q-list flat separator>
           <q-item
-            v-for="(currentWebApp, domain) in webAppStore.webApps"
-            :key="domain"
+            v-for="(currentWebApp, deployment) in webAppStore.webApps"
+            :key="deployment"
           >
             <q-item-section>
               <q-item>
@@ -46,7 +46,7 @@
                   <q-icon name="web" color="brown-12" size="lg" />
                 </q-item-section>
                 <q-item-section>
-                  <q-item-label>{{ domain }}</q-item-label>
+                  <q-item-label>{{ deployment }}</q-item-label>
                   <q-item-label caption>
                     <q-icon name="extension" color="brown-12" size="xs" />
                     <span class="q-ml-xs">{{ currentWebApp.moduleName }}</span>
@@ -67,7 +67,7 @@
                       class="text-lowercase"
                       :label="`${currentWebApp.hostName}:${currentWebApp.httpPort}`"
                       :href="`http://${currentWebApp.hostName}:${currentWebApp.httpPort}`"
-                      :target="domain"
+                      :target="deployment"
                     />
                   </q-item-section>
                 </q-item>
@@ -81,7 +81,7 @@
                       class="text-lowercase"
                       :label="`${currentWebApp.hostName}:${currentWebApp.httpsPort}`"
                       :href="`https://${currentWebApp.hostName}:${currentWebApp.httpsPort}`"
-                      :target="domain"
+                      :target="deployment"
                     />
                   </q-item-section>
                 </q-item>
@@ -113,7 +113,7 @@
                   dense
                   round
                   icon="stop_circle"
-                  @click="webAppStore.stopWebApp(domain)"
+                  @click="webAppStore.stopWebApp(deployment)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Stop
@@ -127,7 +127,7 @@
                   dense
                   round
                   icon="play_circle"
-                  @click="webAppStore.startWebApp(domain)"
+                  @click="webAppStore.startWebApp(deployment)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Start
@@ -140,7 +140,7 @@
                   dense
                   round
                   icon="delete"
-                  @click="unregisterWebApp(domain)"
+                  @click="unregisterWebApp(deployment)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
                     Unregister
@@ -175,7 +175,7 @@
             </template>
           </q-select>
 
-          <q-input v-model="newAppDialog.domain" label="Deployment" autofocus>
+          <q-input v-model="newAppDialog.deployment" label="Deployment" autofocus>
             <template v-slot:prepend>
               <q-icon name="web_asset" />
             </template>
@@ -227,23 +227,23 @@ export default defineComponent({
 
     function registerWebApp() {
       webAppStore.registerWebApp(
-        newAppDialog.value.domain,
+        newAppDialog.value.deployment,
         newAppDialog.value.moduleName,
         true
       );
     }
 
-    function unregisterWebApp(domain) {
+    function unregisterWebApp(deployment) {
       $q.dialog({
         title: "Confirm",
+        html: true,
         message:
-          "Are you sure you want to remove the web application `" +
-          domain +
-          "`?",
+          "Are you sure you want to remove application `" + deployment + "`?<p/><p/>" +
+          "<b>Note:</b>All the files, configuration settings and databases for this deployment will be deleted. " +
+          "This operation cannot be undone.",
         cancel: true,
-        persistent: true,
       }).onOk(() => {
-        webAppStore.unregisterWebApp(domain);
+        webAppStore.unregisterWebApp(deployment);
       });
     }
 

@@ -38,18 +38,18 @@ export const useWebAppStore = defineStore('webApp', {
         console.log(`DEV MODE: Adding mock webapp data`);
         this.webAppsJSON = {
           $type: "ListMap<String, common.model.WebAppInfo>",
-          "mock1.mydomain.com": {
-            "moduleName": "mockmodule1.my.org",
-            "domain": "mock1.mydomain.com",
+          "bank1": {
+            "deployment": "bank1",
+            "moduleName": "bankStressTest.examples.org",
             "hostName": "xtc-platform.xqiz.it",
             "bindAddr": "xtc-platform.xqiz.it",
-            "httpPort": 8102,
-            "httpsPort": 8103,
+            "httpPort": 8100,
+            "httpsPort": 8101,
             "active": true,
           },
-          "mock2.mydomain.com": {
-            "moduleName": "mockmodule2.my.org",
-            "domain": "mock2.mydomain.com",
+          "bank2": {
+            "deployment": "bank2",
+            "moduleName": "bankStressTest.examples.org",
             "hostName": "xtc-platform.xqiz.it",
             "bindAddr": "xtc-platform.xqiz.it",
             "httpPort": 8102,
@@ -84,8 +84,7 @@ export const useWebAppStore = defineStore('webApp', {
       }
     },
 
-
-    registerWebApp(domain, moduleName, update) {
+    registerWebApp(deployment, moduleName, update) {
       if (process.env.DEV) {
         this.$q.notify({
           color: "info",
@@ -96,9 +95,11 @@ export const useWebAppStore = defineStore('webApp', {
       } else {
         this.$q.loading.show();
         apiWebApp
-          .post(`/register/${domain}/${moduleName}`)
+          .post(`/register/${deployment}/${moduleName}`)
           .then((response) => {
-            if (update) this.updateWebApps()
+            if (update) {
+              this.updateWebApps()
+            }
           })
           .catch((error) => {
             console.log(error.toJSON());
@@ -115,7 +116,7 @@ export const useWebAppStore = defineStore('webApp', {
       }
     },
 
-    unregisterWebApp(domain) {
+    unregisterWebApp(deployment) {
       if (process.env.DEV) {
         this.$q.notify({
           color: "info",
@@ -126,7 +127,7 @@ export const useWebAppStore = defineStore('webApp', {
       } else {
         this.$q.loading.show();
         apiWebApp
-          .delete(`/unregister/${domain}`)
+          .delete(`/unregister/${deployment}`)
           .then(() => {
             this.updateWebApps()
           })
@@ -143,7 +144,7 @@ export const useWebAppStore = defineStore('webApp', {
       }
     },
 
-    startWebApp(domain) {
+    startWebApp(deployment) {
       if (process.env.DEV) {
         this.$q.notify({
           color: "info",
@@ -154,7 +155,7 @@ export const useWebAppStore = defineStore('webApp', {
       } else {
         this.$q.loading.show();
         apiWebApp
-          .post(`/start/${domain}`)
+          .post(`/start/${deployment}`)
           .then(() => {
             this.updateWebApps()
           })
@@ -171,7 +172,7 @@ export const useWebAppStore = defineStore('webApp', {
       }
     },
 
-    stopWebApp(domain) {
+    stopWebApp(deployment) {
       if (process.env.DEV) {
         this.$q.notify({
           color: "info",
@@ -182,7 +183,7 @@ export const useWebAppStore = defineStore('webApp', {
       } else {
         this.$q.loading.show();
         apiWebApp
-          .post(`/stop/${domain}`)
+          .post(`/stop/${deployment}`)
           .then(() => {
             this.updateWebApps()
           })

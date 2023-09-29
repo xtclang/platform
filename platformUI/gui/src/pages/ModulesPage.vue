@@ -41,7 +41,8 @@
             :key="module.name"
           >
             <q-item-section avatar top>
-              <q-icon name="extension" color="brown-12" size="34px" />
+              <q-icon v-if="module.isWebModule" name="web"       color="brown-12" size="34px"/>
+              <q-icon v-else                    name="extension" color="brown-12" size="34px"/>
             </q-item-section>
 
             <q-item-section top class="col-3 gt-sm">
@@ -306,7 +307,6 @@ export default defineComponent({
         title: "Confirm",
         message: "Are you sure you want to delete module `" + name + "`?",
         cancel: true,
-        persistent: true,
       }).onOk(() => {
         moduleStore.deleteModule(name);
       });

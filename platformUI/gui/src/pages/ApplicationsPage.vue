@@ -14,17 +14,13 @@
         <q-toolbar class="text-primary q-gutter-md">
           <q-toolbar-title> Registered applications </q-toolbar-title>
           <q-btn
-            round
-            dense
-            icon="refresh"
+            round dense icon="refresh"
             @click="webAppStore.updateWebApps()"
           >
             <q-tooltip class="bg-secondary text-bold"> Refresh </q-tooltip>
           </q-btn>
           <q-btn
-            round
-            dense
-            icon="app_registration"
+            round dense icon="app_registration"
             @click="showAddRegistrationDialog()"
           >
             <q-tooltip class="bg-secondary text-bold">
@@ -60,10 +56,7 @@
                 <q-item>
                   <q-item-section>
                     <q-btn
-                      flat
-                      color="primary"
-                      icon="lock_open"
-                      align="left"
+                      flat color="primary" icon="lock_open" align="left"
                       class="text-lowercase"
                       :label="`${currentWebApp.hostName}:${currentWebApp.httpPort}`"
                       :href="`http://${currentWebApp.hostName}:${currentWebApp.httpPort}`"
@@ -74,10 +67,7 @@
                 <q-item>
                   <q-item-section>
                     <q-btn
-                      flat
-                      color="primary"
-                      icon="https"
-                      align="left"
+                      flat color="primary" icon="https" align="left"
                       class="text-lowercase"
                       :label="`${currentWebApp.hostName}:${currentWebApp.httpsPort}`"
                       :href="`https://${currentWebApp.hostName}:${currentWebApp.httpsPort}`"
@@ -108,11 +98,7 @@
                 <q-btn
                   v-if="currentWebApp.active"
                   class="gt-xs module-action text-negative"
-                  size="12px"
-                  flat
-                  dense
-                  round
-                  icon="stop_circle"
+                  size="12px" flat dense round icon="stop_circle"
                   @click="webAppStore.stopWebApp(deployment)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
@@ -122,11 +108,7 @@
                 <q-btn
                   v-if="!currentWebApp.active"
                   class="gt-xs module-action text-positive"
-                  size="12px"
-                  flat
-                  dense
-                  round
-                  icon="play_circle"
+                  size="12px" flat dense round icon="play_circle"
                   @click="webAppStore.startWebApp(deployment)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
@@ -135,11 +117,7 @@
                 </q-btn>
                 <q-btn
                   class="gt-xs module-action"
-                  size="12px"
-                  flat
-                  dense
-                  round
-                  icon="delete"
+                  size="12px" flat dense round icon="delete"
                   @click="unregisterWebApp(deployment)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">

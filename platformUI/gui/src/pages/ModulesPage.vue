@@ -14,17 +14,13 @@
         <q-toolbar class="text-primary q-gutter-md">
           <q-toolbar-title> Installed modules </q-toolbar-title>
           <q-btn
-            round
-            dense
-            icon="refresh"
+            round dense icon="refresh"
             @click="moduleStore.updateModules()"
           >
             <q-tooltip class="bg-secondary text-bold"> Refresh </q-tooltip>
           </q-btn>
           <q-btn
-            round
-            dense
-            icon="cloud_upload"
+            round dense icon="cloud_upload"
             @click="showUploadDialog = true"
           >
             <q-tooltip class="bg-secondary text-bold">
@@ -100,22 +96,18 @@
                   />
                 </q-item-section>
                 <q-item-section
-                  :class="module.displayInfo.issues.displayClass"
-                  >{{
-                    module.displayInfo.issues.displayText
-                  }}</q-item-section
-                >
+                  :class="module.displayInfo.issues.displayClass">
+                    {{ module.displayInfo.issues.displayText }}
+                </q-item-section>
               </q-item>
 
               <q-expansion-item
                 v-if="module.displayInfo.issues.expandable"
                 expand-separator
-                :icon="module.displayInfo.issues.icon"
-                :header-class="module.displayInfo.issues.displayClass"
-                :expand-icon-class="
-                  module.displayInfo.issues.displayClass
-                "
-                :label="module.displayInfo.issues.displayText"
+                :icon             ="module.displayInfo.issues.icon"
+                :header-class     ="module.displayInfo.issues.displayClass"
+                :expand-icon-class="module.displayInfo.issues.displayClass"
+                :label            ="module.displayInfo.issues.displayText"
               >
                 <q-list dense flat separator class="rounded-borders">
                   <q-item v-for="issue in module.issues" :key="issue">
@@ -131,11 +123,7 @@
               <div class="text-primary q-gutter-xs" style="min-width: 20%">
                 <q-btn
                   class="gt-xs module-action"
-                  size="12px"
-                  flat
-                  dense
-                  round
-                  icon="published_with_changes"
+                  size="12px" flat dense round icon="published_with_changes"
                   @click="moduleStore.resolveModule(module.name)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
@@ -144,15 +132,8 @@
                 </q-btn>
                 <q-btn
                   class="gt-xs module-action"
-                  size="12px"
-                  flat
-                  dense
-                  round
-                  icon="app_registration"
-                  :disable="
-                    module.moduleType!='Web' ||
-                    module.issues.length > 0
-                  "
+                  size="12px" flat dense round icon="app_registration"
+                  :disable="module.moduleType!='Web' || module.issues.length > 0"
                   @click="webAppDialog = { show: true, moduleName: module.name }"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
@@ -161,11 +142,7 @@
                 </q-btn>
                 <q-btn
                   class="gt-xs module-action"
-                  size="12px"
-                  flat
-                  dense
-                  round
-                  icon="delete"
+                  size="12px" flat dense round icon="delete"
                   @click="deleteModule(module.name)"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">
@@ -203,7 +180,7 @@
             accept=".xtc"
             @uploading="$q.loading.show()"
             @uploaded="onUploaded"
-            @failed="$q.loading.hide();"
+            @failed="$q.loading.hide()"
           />
         </q-card-section>
       </q-card>
@@ -235,13 +212,8 @@
         </q-card-section>
 
         <q-card-actions align="right" class="text-primary">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn
-            flat
-            label="Register"
-            v-close-popup
-            @click="registerWebApp()"
-          />
+          <q-btn flat label="Cancel"   v-close-popup />
+          <q-btn flat label="Register" v-close-popup @click="registerWebApp()" />
         </q-card-actions>
       </q-card>
     </q-dialog>

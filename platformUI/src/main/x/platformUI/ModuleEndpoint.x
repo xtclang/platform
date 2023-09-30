@@ -11,8 +11,11 @@ import web.http.FormDataFile;
 
 import common.model.AccountInfo;
 import common.model.ModuleInfo;
+import common.model.ModuleType;
 import common.model.WebAppInfo;
 import common.model.DependentModule;
+
+import common.utils;
 
 /**
  * Dedicated service for hosting modules.
@@ -187,7 +190,7 @@ service ModuleEndpoint() {
      */
     private ModuleInfo buildModuleInfo(Directory libDir, String moduleName, Boolean resolve) {
         Boolean           isResolved  = False;
-        Boolean           isWebModule = False;
+        ModuleType        moduleType  = Generic;
         String[]          issues      = [];
         DependentModule[] dependents  = [];
 
@@ -209,15 +212,19 @@ service ModuleEndpoint() {
         // resolve the module
         if (resolve) {
             try {
-                TypeTemplate   webAppTemplate = WebApp.as(Type).template;
-                ModuleTemplate moduleTemplate = accountRepo.getResolvedModule(moduleName);
+                ModuleTemplate template = accountRepo.getResolvedModule(moduleName);
                 isResolved  = True;
-                isWebModule = moduleTemplate.type.isA(webAppTemplate);
+
+                if (utils.isWebModule(template)) {
+                    moduleType = Web;
+                } else if (utils.isDbModule(template)) {
+                    moduleType = Db;
+                }
             } catch (Exception e) {
                 issues += e.text?;
             }
         }
 
-        return new ModuleInfo(moduleName, isResolved, isWebModule, issues, dependents);
+        return new ModuleInfo(moduleName, isResolved, moduleType, issues, dependents);
     }
 }

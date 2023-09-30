@@ -68,14 +68,13 @@ package utils {
     static Map<String, String> detectDatabases(ModuleTemplate template) {
         import ClassTemplate.Contribution;
 
-        FileTemplate        fileTemplate   = template.parent;
-        TypeTemplate        dbTypeTemplate = oodb.Database.as(Type).template;
-        Map<String, String> dbNames        = new HashMap();
+        FileTemplate        fileTemplate = template.parent;
+        Map<String, String> dbNames      = new HashMap();
 
         for ((String name, String dependsOn) : template.moduleNamesByPath) {
             if (dependsOn != TypeSystem.MackKernel) {
                 assert ModuleTemplate depModule := fileTemplate.getModule(dependsOn);
-                if (depModule.type.isA(dbTypeTemplate)) {
+                if (isDbModule(depModule)) {
                     dbNames.put(name, dependsOn);
                 }
             }
@@ -178,5 +177,21 @@ package utils {
                 return super(type, name);
             }
         };
+    }
+
+    /**
+     * @return True iff the specified ModuleTemplate represents a WebApp module
+     */
+    static Boolean isWebModule(ModuleTemplate template) {
+        TypeTemplate webAppTemplate = web.WebApp.as(Type).template;
+        return template.type.isA(webAppTemplate);
+    }
+
+    /**
+     * @return True iff the specified ModuleTemplate represents a Database module
+     */
+    static Boolean isDbModule(ModuleTemplate template) {
+        TypeTemplate databaseTemplate = oodb.Database.as(Type).template;
+        return template.type.isA(databaseTemplate);
     }
 }

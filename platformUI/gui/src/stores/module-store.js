@@ -1,8 +1,8 @@
-import { defineStore } from 'pinia';
+import { defineStore } from "pinia";
 import { apiModule } from "boot/axios";
 import { useQuasar } from "quasar";
 
-export const useModuleStore = defineStore('module', {
+export const useModuleStore = defineStore("module", {
   state: () => ({
     modulesJSON: [],
     modulesMap: {},
@@ -15,7 +15,7 @@ export const useModuleStore = defineStore('module', {
     moduleNames   : (state) => Object.keys(state.modulesJSON),
     webModuleNames: (state) => {
       return Object.values(state.modulesJSON)
-        .filter(m => m.isWebModule)
+        .filter(m => m.moduleType=="Web")
         .map(m => m.name)
     },
   },
@@ -23,14 +23,15 @@ export const useModuleStore = defineStore('module', {
   actions: {
 
     enhance() {
-      delete this.modules['$type']
-      for (const [name, module] of Object.entries(this.modules)) {
+      delete this.modules["$type"] // remove the metadata
+
+      for (const module of Object.values(this.modules)) {
         var hasMissing = module.dependents.some(
           (dependentModule) => !dependentModule.available
         );
         var hasIssues = (module.issues != undefined && module.issues.length > 0);
-        this.modules[name].displayInfo = {
-          deps: {
+        module.displayInfo = {
+          dependents: {
             "icon": hasMissing ? "warning" : "verified",
             "displayClass": hasMissing ? "text-negative" : "text-positive",
             "displayText": hasMissing ? "Missing dependencies" : "All dependencies available",
@@ -55,7 +56,7 @@ export const useModuleStore = defineStore('module', {
           "bank.examples.org": {
             name: "bank.examples.org",
             isResolved: false,
-            isWebModule: false,
+            moduleType: "Db",
             issues: [],
             dependents: [
               { name: "oodb.xtclang.org", available: true},
@@ -64,7 +65,7 @@ export const useModuleStore = defineStore('module', {
           "bankStressTest.examples.org": {
             name: "bankStressTest.examples.org",
             isResolved: true,
-            isWebModule: true,
+            moduleType: "Web",
             issues: [],
             dependents: [
               { name: "web.xtclang.org", available: true},

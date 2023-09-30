@@ -1,8 +1,8 @@
-import { defineStore } from 'pinia';
+import { defineStore } from "pinia";
 import { apiWebApp } from "boot/axios";
 import { useQuasar } from "quasar";
 
-export const useWebAppStore = defineStore('webApp', {
+export const useWebAppStore = defineStore("webApp", {
   state: () => ({
     webAppsJSON: {},
     $q: useQuasar()
@@ -15,9 +15,9 @@ export const useWebAppStore = defineStore('webApp', {
   actions: {
 
     enhance() {
-      delete this.webApps['$type']
+      delete this.webApps["$type"] // remove the metadata
 
-      for (const [name, webApp] of Object.entries(this.webApps)) {
+      for (const webApp of Object.values(this.webApps)) {
         webApp.displayInfo = webApp.active ? {
           displayText: "Active",
           displayColor: "positive",
@@ -37,7 +37,6 @@ export const useWebAppStore = defineStore('webApp', {
          */
         console.log(`DEV MODE: Adding mock webapp data`);
         this.webAppsJSON = {
-          $type: "ListMap<String, common.model.WebAppInfo>",
           "bank1": {
             "deployment": "bank1",
             "moduleName": "bankStressTest.examples.org",

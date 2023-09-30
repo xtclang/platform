@@ -41,13 +41,20 @@
             :key="module.name"
           >
             <q-item-section avatar top>
-              <q-icon v-if="module.isWebModule" name="web"       color="brown-12" size="34px"/>
-              <q-icon v-else                    name="extension" color="brown-12" size="34px"/>
+              <q-icon v-if     ="module.moduleType=='Web'" name="wysiwyg"
+                color="brown-12" size="34px"/>
+              <q-icon v-else-if="module.moduleType=='Db'"  name="fa-solid fa-database"
+                color="brown-12" size="34px"/>
+              <q-icon v-else                               name="extension"
+                color="brown-12" size="34px"/>
             </q-item-section>
 
             <q-item-section top class="col-3 gt-sm">
-              <q-item-label caption v-if="module.isWebModule">
+              <q-item-label caption v-if="module.moduleType=='Web'">
                 <q-badge color="secondary">WebApp</q-badge>
+              </q-item-label>
+              <q-item-label caption v-else-if="module.moduleType=='Db'">
+                <q-badge color="secondary">Database</q-badge>
               </q-item-label>
               <q-item-label class="q-mt-sm"> {{ simpleName(module.name) }} </q-item-label>
               <q-item-label caption> {{ module.name }} </q-item-label>
@@ -56,10 +63,10 @@
             <q-item-section top>
               <q-expansion-item
                 expand-separator
-                :icon="module.displayInfo.deps.icon"
-                :header-class="module.displayInfo.deps.displayClass"
-                :expand-icon-class="module.displayInfo.deps.displayClass"
-                :label="module.displayInfo.deps.displayText"
+                :icon="module.displayInfo.dependents.icon"
+                :header-class="module.displayInfo.dependents.displayClass"
+                :expand-icon-class="module.displayInfo.dependents.displayClass"
+                :label="module.displayInfo.dependents.displayText"
               >
                 <q-list dense flat separator class="rounded-borders">
                   <q-item
@@ -143,7 +150,7 @@
                   round
                   icon="app_registration"
                   :disable="
-                    !module.isWebModule ||
+                    module.moduleType!='Web' ||
                     module.issues.length > 0
                   "
                   @click="webAppDialog = { show: true, moduleName: module.name }"

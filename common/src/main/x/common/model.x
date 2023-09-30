@@ -39,10 +39,11 @@ package model {
 
     const UserInfo(UserId id, String name, String email);
 
+    enum ModuleType default(Generic) {Generic, Web, Db}
     const ModuleInfo(
         String            name,       // qualified
         Boolean           isResolved,
-        Boolean           isWebModule,
+        ModuleType        moduleType,
         String[]          issues,
         DependentModule[] dependents
     );

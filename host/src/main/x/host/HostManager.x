@@ -83,8 +83,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
         String moduleName = mainModule.qualifiedName;
         try {
-            TypeTemplate webAppTemplate = web.WebApp.as(Type).template;
-            if (!mainModule.type.isA(webAppTemplate)) {
+            if (!utils.isWebModule(mainModule)) {
                 errors.add($"Module \"{moduleName}\" is not a WebApp");
                 return False;
             }

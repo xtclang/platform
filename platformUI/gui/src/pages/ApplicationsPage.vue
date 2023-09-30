@@ -43,7 +43,7 @@
             <q-item-section>
               <q-item>
                 <q-item-section avatar>
-                  <q-icon name="web" color="brown-12" size="lg" />
+                  <q-icon name="wysiwyg" color="brown-12" size="lg" />
                 </q-item-section>
                 <q-item-section>
                   <q-item-label>{{ deployment }}</q-item-label>

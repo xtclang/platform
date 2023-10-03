@@ -36,8 +36,7 @@
           <q-btn
             class="bg-secondary"
             flat
-            v-if="!userStore.hasUser"
-            @click="userStore.logIn()"
+            v-if="!userStore.hasUser" @click="showSignInDialog"
           >
             Log in
           </q-btn>
@@ -176,68 +175,90 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+
+    <q-dialog v-model="signInDialog">
+      <div class="column">
+        <div class="row">
+          <h5 class="text-bold text-white q-my-md">Ecstasy Cloud</h5>
+        </div>
+        <div class="row">
+          <q-card square bordered class="q-pa-lg shadow-1">
+            <q-card-section>
+              <q-form class="q-gutter-md">
+                <q-input square filled clearable autofocus v-model="account" label="account"
+                   @keyup.enter="signIn"/>
+                <q-input square filled clearable v-model="password" type="password" label="password"
+                   @keyup.enter="signIn" />
+              </q-form>
+            </q-card-section>
+            <q-card-actions class="q-px-md">
+              <q-btn unelevated color="secondary" size="lg" class="full-width" label="Login"
+                @click="signIn" @keyup.enter="signIn"/>
+            </q-card-actions>
+            <q-card-section class="text-center q-pa-none">
+              <p>Not registered? Create an Account</p>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+    </q-dialog>
   </q-layout>
 </template>
 
 <script>
 import { ref, onMounted } from "vue";
 import { useUserStore } from "stores/user-store";
+import { useQuasar } from "quasar";
 
 export default {
   name: "MainLayout",
 
   setup() {
+    const $q = useQuasar();
+
     const leftDrawerOpen = ref(false);
-    const search = ref("");
-    const showAdvanced = ref(false);
-    const showDateOptions = ref(false);
-    const exactPhrase = ref("");
-    const hasWords = ref("");
-    const excludeWords = ref("");
-    const byWebsite = ref("");
-    const byDate = ref("Any time");
-
+    const signInDialog = ref(false);
     const userStore = useUserStore();
-
-    function onClear() {
-      exactPhrase.value = "";
-      hasWords.value = "";
-      excludeWords.value = "";
-      byWebsite.value = "";
-      byDate.value = "Any time";
-    }
-
-    function changeDate(option) {
-      byDate.value = option;
-      showDateOptions.value = false;
-    }
+    const account = ref("");
+    const password = ref("");
 
     function toggleLeftDrawer() {
       leftDrawerOpen.value = !leftDrawerOpen.value;
     }
 
+    function showSignInDialog() {
+      account.value = "";
+      password.value = "";
+      signInDialog.value = true;
+    }
+
+    function hideSignInDialog() {
+      signInDialog.value = false;
+      account.value = "";
+      password.value = "";
+    }
+
+    function signIn() {
+      userStore.logIn(account.value, password.value, hideSignInDialog);
+    }
+
     onMounted(() => {
       userStore.updateUser();
-    });
+    })
 
     return {
       leftDrawerOpen,
-      search,
-      showAdvanced,
-      showDateOptions,
-      exactPhrase,
-      hasWords,
-      excludeWords,
-      byWebsite,
-      byDate,
       userStore,
+      toggleLeftDrawer,
+      signInDialog,
+      showSignInDialog,
+      signIn,
+      account,
+      password,
 
       links1: [
-        { icon: "extension", text: "Modules", location: { name: "modules" } },
-        {
-          icon: "web_asset",
-          text: "Applications",
-          location: { name: "applications" },
+        { icon: "extension", text: "Modules",      location: { name: "modules" } },
+        { icon: "web_asset", text: "Applications", location: { name: "applications" },
         },
       ],
       links2: [
@@ -248,10 +269,6 @@ export default {
         { icon: "", text: "Send feedback" },
         { icon: "open_in_new", text: "Help" },
       ],
-
-      onClear,
-      changeDate,
-      toggleLeftDrawer,
     };
   },
 };

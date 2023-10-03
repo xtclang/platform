@@ -12,15 +12,17 @@ import web.*;
 import web.http.FormDataFile;
 import web.responses.SimpleResponse;
 
+import web.security.Realm;
+
 /*
  * Dedicated service for user management.
  */
 @WebService("/user")
-service User() {
-
+service User {
     construct() {
         accountManager = ControllerConfig.accountManager;
         hostManager    = ControllerConfig.hostManager;
+        realm          = ControllerConfig.realm;
     }
 
     /**
@@ -34,6 +36,11 @@ service User() {
     private HostManager hostManager;
 
     /**
+     * The Realm used for authentication.
+     */
+    private Realm realm;
+
+    /**
      * The current account name.
      */
     String accountName.get() {
@@ -41,31 +48,35 @@ service User() {
     }
 
     /*
-     * Returns the current user id or `NoContent`
+     * Returns the SimpleResponse with the current user id or `NoContent`.
      */
     @Get("id")
     SimpleResponse getUserId() {
         return accountName == ""
-            ? new SimpleResponse(HttpStatus.NoContent)
-            : new SimpleResponse(HttpStatus.OK, Null, accountName.utf8());
+            ? new SimpleResponse(NoContent)
+            : new SimpleResponse(OK, Null, accountName.utf8());
     }
 
     /*
-     * Used to trigger (digest) authentication request from the GUI
+     * Log in the specified user.
      */
-    @Get("login")
-    @LoginRequired
-    String login() {
-        return accountName;
+    @Get("login/{user}/{password}")
+    @HttpsRequired
+    SimpleResponse login(Session session, String user, String password) {
+        if (realm.authenticate(user, password)) {
+            session.authenticate(user);
+            return getUserId();
+        }
+        return new SimpleResponse(Unauthorized);
     }
 
     /*
      * Logs out the current user
      */
     @Put("logout")
+    @HttpsRequired
     HttpStatus signOut() {
         session?.deauthenticate();
         return HttpStatus.NoContent;
     }
-
 }

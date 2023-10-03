@@ -20,9 +20,8 @@ module platformUI.xqiz.it {
     import web.WebApp;
     import web.WebService;
 
-    import web.security.Authenticator;
-    import web.security.DigestAuthenticator;
     import web.security.FixedRealm;
+    import web.security.Realm;
 
     /**
      * Configure the controller.
@@ -96,14 +95,10 @@ module platformUI.xqiz.it {
             this.bindAddr       = bindAddr;
             this.userPorts      = userPorts;
         }
-    }
 
-    /**
-     * WebApp.AuthenticatorFactory API.
-     * TODO: replace with webauth.DBRealm
-     */
-    Authenticator createAuthenticator() {
-        return new DigestAuthenticator(new FixedRealm("Platform",
-            ["acme"="password", "cvs"="password"]));
+      /**
+       * TODO: replace with webauth.DBRealm
+       */
+      Realm realm = new FixedRealm("Platform", ["acme"="password", "cvs"="password"]);
     }
 }

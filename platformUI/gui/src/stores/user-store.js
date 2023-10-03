@@ -25,7 +25,6 @@ export const useUserStore = defineStore('user', {
             } else {
               this.user = null;
             }
-
           })
           .catch((error) => {
             console.log(error.toJSON());
@@ -39,26 +38,42 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    logIn() {
+    logIn(account, password, closeDialog) {
       if (process.env.DEV) {
-        console.log(`DEV MODE: Adding mock user data`);
-        this.user = "Mock User";
+        if (account == "mock") {
+          console.log(`DEV MODE: Adding mock account ` + account);
+          this.user = "Mock User";
+          closeDialog();
+        } else {
+          this.$q.notify({
+            color: "negative", position: "top",
+            message: "Login failed",
+            icon: "report_problem",
+          });
+        }
       } else {
         apiUser
-          .get("/login")
+          .get("/login/" + account + "/" + password)
           .then((response) => {
-            this.user = response.data;
+            if (response.status === 200) {
+              this.user = response.data;
+            } else {
+              this.user = null;
+            }
           })
-          .catch((error) => {
-            console.log(error.toJSON());
-            this.$q.notify({
-              color: "negative",
-              position: "top",
-              message: "Login failed",
-              icon: "report_problem",
-            });
+          .catch((error) => { console.log(error.toJSON()); })
+          .finally(() => {
+            if (this.user == null) {
+              this.$q.notify({
+                color: "negative", position: "top",
+                message: "Login failed",
+                icon: "report_problem",
+              });
+            } else {
+              closeDialog();
+            }
           });
-      }
+        };
     },
 
     logOut() {

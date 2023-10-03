@@ -142,31 +142,6 @@
                 /></q-item-label>
               </q-item-section>
             </q-item>
-
-            <div class="q-mt-md">
-              <div class="flex flex-center q-gutter-xs">
-                <a
-                  class="GNL__drawer-footer-link"
-                  href="javascript:void(0)"
-                  aria-label="Privacy"
-                  >Privacy</a
-                >
-                <span> · </span>
-                <a
-                  class="GNL__drawer-footer-link"
-                  href="javascript:void(0)"
-                  aria-label="Terms"
-                  >Terms</a
-                >
-                <span> · </span>
-                <a
-                  class="GNL__drawer-footer-link"
-                  href="javascript:void(0)"
-                  aria-label="About"
-                  >About Google</a
-                >
-              </div>
-            </div>
           </q-list>
         </q-list>
       </q-scroll-area>

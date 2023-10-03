@@ -1,8 +1,8 @@
 {
-  "name": "gui",
+  "name": "platform-gui",
   "version": "0.0.1",
-  "description": "GUI",
-  "productName": "GUI",
+  "description": "Ecstasy cloud platform",
+  "productName": "Ecstasy Cloud",
   "author": "Milen Dyankov <milendyankov@gmail.com>",
   "private": true,
   "scripts": {

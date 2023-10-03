@@ -1,6 +1,5 @@
-# GUI (gui)
+# Ecstasy Cloud Platform (gui)
 
-GUI
 
 ## Install the dependencies
 ```bash

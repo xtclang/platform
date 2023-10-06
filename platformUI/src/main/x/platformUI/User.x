@@ -48,7 +48,7 @@ service User {
     }
 
     /*
-     * Returns the SimpleResponse with the current user id or `NoContent`.
+     * Return the SimpleResponse with the current user id or `NoContent`.
      */
     @Get("id")
     SimpleResponse getUserId() {
@@ -71,7 +71,7 @@ service User {
     }
 
     /*
-     * Logs out the current user
+     * Log out the current user.
      */
     @Put("logout")
     @HttpsRequired

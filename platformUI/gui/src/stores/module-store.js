@@ -26,12 +26,12 @@ export const useModuleStore = defineStore("module", {
       delete this.modules["$type"] // remove the metadata
 
       for (const module of Object.values(this.modules)) {
-        var hasMissing = module.dependents.some(
-          (dependentModule) => !dependentModule.available
+        var hasMissing = module.dependencies.some(
+          (requiredModule) => !requiredModule.available
         );
         var hasIssues = (module.issues != undefined && module.issues.length > 0);
         module.displayInfo = {
-          dependents: {
+          dependencies: {
             "icon": hasMissing ? "warning" : "verified",
             "displayClass": hasMissing ? "text-negative" : "text-positive",
             "displayText": hasMissing ? "Missing dependencies" : "All dependencies available",
@@ -58,7 +58,7 @@ export const useModuleStore = defineStore("module", {
             isResolved: false,
             moduleType: "Db",
             issues: [],
-            dependents: [
+            dependencies: [
               { name: "oodb.xtclang.org", available: true},
             ],
           },
@@ -67,7 +67,7 @@ export const useModuleStore = defineStore("module", {
             isResolved: true,
             moduleType: "Web",
             issues: [],
-            dependents: [
+            dependencies: [
               { name: "web.xtclang.org", available: true},
               { name: "bank.examples.org", available: true },
             ],

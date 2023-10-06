@@ -36,9 +36,9 @@ service HostManager (Directory usersDir, KeyStore keystore)
     private KeyStore keystore;
 
     /**
-     * Loaded WebHost objects keyed by the deployment name.
+     * Active WebHosts keyed by the deployment name.
      */
-    Map<String, WebHost> loaded = new HashMap();
+    private Map<String, WebHost> activeWebHosts = new HashMap();
 
 
     // ----- common.HostManager API ------------------------------------------------------------------------------------
@@ -55,12 +55,16 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
     @Override
     conditional WebHost getWebHost(String deployment) {
-        return loaded.get(deployment);
+        return activeWebHosts.get(deployment);
     }
 
     @Override
-    conditional WebHost ensureWebHost(String accountName, WebAppInfo webAppInfo, Log errors) {
-        import xenia.tools.ModuleGenerator;
+    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, Log errors) {
+        if (activeWebHosts.contains(webAppInfo.deployment)) {
+                errors.add($|Deployment "{webAppInfo.deployment}" is already active
+                          );
+            return False;
+        }
 
         Directory userDir  = ensureUserDirectory(accountName);
         Directory libDir   = userDir.dirFor("lib").ensure();
@@ -88,11 +92,13 @@ service HostManager (Directory usersDir, KeyStore keystore)
                 return False;
             }
 
+            import xenia.tools.ModuleGenerator;
+
             ModuleGenerator generator = new ModuleGenerator(moduleName);
             if (ModuleTemplate hostTemplate := generator.ensureWebModule(repository, buildDir, errors)) {
                 Directory appHomeDir = hostDir.dirFor(webAppInfo.deployment).ensure();
 
-                if ((Container container, AppHost[] dependents) :=
+                if ((Container container, AppHost[] dependencies) :=
                         utils.createContainer(repository, hostTemplate, appHomeDir, buildDir, False, errors)) {
                     KeyStore keystore = getKeyStore(userDir);
 
@@ -102,8 +108,8 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
                     function void() shutdown = result[0].as(function void());
 
-                    WebHost webHost = new WebHost(container, webAppInfo, appHomeDir, shutdown, dependents);
-                    loaded.put(webAppInfo.deployment, webHost);
+                    WebHost webHost = new WebHost(container, webAppInfo, appHomeDir, shutdown, dependencies);
+                    activeWebHosts.put(webAppInfo.deployment, webHost);
 
                     File consoleFile = appHomeDir.fileFor("console.log");
                     consoleFile.append(errors.toString().utf8());
@@ -114,8 +120,6 @@ service HostManager (Directory usersDir, KeyStore keystore)
                 errors.add($"Error: Failed to create a Web host for {moduleName.quoted()}");
             }
         } catch (Exception e) {
-            @Inject Console console;
-            console.print(e); // TODO GG: remove
             errors.add($"Error: Failed to create a host for {moduleName.quoted()}; reason={e.text}");
         }
 
@@ -124,12 +128,13 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
     @Override
     void removeWebHost(WebHost webHost) {
-        loaded.remove(webHost.info.deployment);
+        webHost.close();
+        activeWebHosts.remove(webHost.info.deployment);
     }
 
     @Override
     void shutdown() {
-        for (WebHost webHost : loaded.values) {
+        for (WebHost webHost : activeWebHosts.values) {
             webHost.close();
         }
     }

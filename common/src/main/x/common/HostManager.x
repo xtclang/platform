@@ -32,7 +32,7 @@ interface HostManager {
      * @return True iff the WebHost was successfully created
      * @return (optional) the WebHost for the newly loaded Container
      */
-    conditional WebHost ensureWebHost(String accountName, WebAppInfo webAppInfo, Log errors);
+    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, Log errors);
 
     /**
      * Remove the specified WebHost.

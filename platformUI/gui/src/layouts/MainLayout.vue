@@ -183,14 +183,11 @@
 <script>
 import { ref, onMounted } from "vue";
 import { useUserStore } from "stores/user-store";
-import { useQuasar } from "quasar";
 
 export default {
   name: "MainLayout",
 
   setup() {
-    const $q = useQuasar();
-
     const leftDrawerOpen = ref(false);
     const signInDialog = ref(false);
     const userStore = useUserStore();

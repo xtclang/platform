@@ -10,13 +10,13 @@ const WebHost
         extends AppHost {
 
     construct (Container container, WebAppInfo info, Directory homeDir,
-               function void() shutdown, AppHost[] dependents) {
+               function void() shutdown, AppHost[] dependencies) {
         construct AppHost(info.moduleName, homeDir);
 
-        this.container  = container;
-        this.info       = info;
-        this.shutdown   = shutdown;
-        this.dependents = dependents;
+        this.container    = container;
+        this.info         = info;
+        this.shutdown     = shutdown;
+        this.dependencies = dependencies;
     }
 
     /**
@@ -32,14 +32,14 @@ const WebHost
     /**
      * The AppHosts for the containers this module depends on.
      */
-    AppHost[] dependents;
+    AppHost[] dependencies;
 
 
     // ----- Closeable -----------------------------------------------------------------------------
 
     @Override
     void close(Exception? e = Null) {
-        for (AppHost dependent : dependents) {
+        for (AppHost dependent : dependencies) {
             dependent.close(e);
         }
         shutdown();

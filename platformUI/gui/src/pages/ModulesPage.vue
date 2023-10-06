@@ -59,14 +59,14 @@
             <q-item-section top>
               <q-expansion-item
                 expand-separator
-                :icon="module.displayInfo.dependents.icon"
-                :header-class="module.displayInfo.dependents.displayClass"
-                :expand-icon-class="module.displayInfo.dependents.displayClass"
-                :label="module.displayInfo.dependents.displayText"
+                :icon="module.displayInfo.dependencies.icon"
+                :header-class="module.displayInfo.dependencies.displayClass"
+                :expand-icon-class="module.displayInfo.dependencies.displayClass"
+                :label="module.displayInfo.dependencies.displayText"
               >
                 <q-list dense flat separator class="rounded-borders">
                   <q-item
-                    v-for="dep in module.dependents"
+                    v-for="dep in module.dependencies"
                     :key="dep.name"
                   >
                     <q-item-section avatar>
@@ -169,11 +169,11 @@
 
         <q-card-section class="q-pt-none">
           <q-checkbox
-            v-model="resolveOnUpload"
-            label="Automatically resolve uploaded modules"
+            v-model="allowRedeployment"
+            label="Allow automatic re-deployment of active applications"
           />
           <q-uploader
-            :url="moduleStore.uploadURL + '?resolve=' + resolveOnUpload"
+            :url="moduleStore.uploadURL + '?redeploy=' + allowRedeployment"
             label="Select '.xtc' file(s) to upload"
             multiple
             batch
@@ -239,7 +239,7 @@ export default defineComponent({
     const showUploadDialog = ref(false);
     const webAppDialog = ref({ show: false, moduleName: undefined });
     const fileToUpload = ref(null);
-    const resolveOnUpload = ref(false);
+    const allowRedeployment = ref(true);
 
     onBeforeMount(() => {
       if (userStore.hasUser) {
@@ -303,7 +303,7 @@ export default defineComponent({
       showUploadDialog,
       webAppDialog,
       fileToUpload,
-      resolveOnUpload,
+      allowRedeployment,
       onUploaded,
       registerWebApp,
       deleteModule,

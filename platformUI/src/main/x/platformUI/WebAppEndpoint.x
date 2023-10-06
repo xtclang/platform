@@ -4,7 +4,7 @@ import common.WebHost;
 import common.model.AccountInfo;
 import common.model.ModuleInfo;
 import common.model.WebAppInfo;
-import common.model.DependentModule;
+import common.model.RequiredModule;
 
 import web.*;
 import web.responses.SimpleResponse;
@@ -39,7 +39,7 @@ service WebAppEndpoint() {
     }
 
     /**
-     * Returns a JSON map of all webapps for given account.
+     * Return a JSON map of all webapps for given account.
      */
     @Get("all")
     Map<String, WebAppInfo> getAvailable() {
@@ -51,7 +51,7 @@ service WebAppEndpoint() {
     }
 
     /**
-     * Handles a request to register a webapp for a module.
+     * Handle a request to register a webapp for a module.
      * Assumptions:
      *  - many webapps can be registered from the same module with different deployment
      *  - a deployment has one and only one webapp
@@ -79,7 +79,7 @@ service WebAppEndpoint() {
     }
 
     /**
-     * Handles a request to unregister a deployment.
+     * Handle a request to unregister a deployment.
      */
     @Delete("/unregister/{deployment}")
     SimpleResponse unregister(String deployment) {
@@ -92,7 +92,7 @@ service WebAppEndpoint() {
     }
 
     /**
-     * Handles a request to unregister a deployment
+     * Handle a request to start a deployment.
      */
     @Post("/start/{deployment}")
     SimpleResponse startWebApp(String deployment) {
@@ -111,8 +111,7 @@ service WebAppEndpoint() {
                 break;
             }
 
-            WebHost webHost;
-            if (webHost := hostManager.getWebHost(deployment)) {
+            if (hostManager.getWebHost(deployment)) {
                 if (!webAppInfo.active) {
                     // the host is marked as inactive; fix it
                     accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
@@ -122,7 +121,7 @@ service WebAppEndpoint() {
                 }
 
             ErrorLog errors = new ErrorLog();
-            if (!(webHost := hostManager.ensureWebHost(accountName, webAppInfo, errors))) {
+            if (!hostManager.createWebHost(accountName, webAppInfo, errors)) {
                 (status, message) = (InternalServerError, errors.toString());
                 break;
             }
@@ -149,7 +148,7 @@ service WebAppEndpoint() {
 //    }
 //
     /**
-     * Handles a request to unregister a deployment.
+     * Handle a request to stop a deployment.
      */
     @Post("/stop/{deployment}")
     SimpleResponse stopWebApp(String deployment) {
@@ -179,7 +178,6 @@ service WebAppEndpoint() {
             }
 
             hostManager.removeWebHost(webHost);
-            webHost.close();
             accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
         } while (False);
 

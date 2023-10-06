@@ -41,14 +41,14 @@ package model {
 
     enum ModuleType default(Generic) {Generic, Web, Db}
     const ModuleInfo(
-        String            name,       // qualified
-        Boolean           isResolved,
-        ModuleType        moduleType,
-        String[]          issues,
-        DependentModule[] dependents
+        String           name,       // qualified
+        Boolean          isResolved,
+        ModuleType       moduleType,
+        String[]         issues,
+        RequiredModule[] dependencies
     );
 
-    const DependentModule(
+    const RequiredModule(
         String  name,      // qualified
         Boolean available);
 

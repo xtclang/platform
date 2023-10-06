@@ -160,10 +160,16 @@
           <q-card square bordered class="q-pa-lg shadow-1">
             <q-card-section>
               <q-form class="q-gutter-md">
-                <q-input square filled clearable autofocus v-model="account" label="account"
-                   @keyup.enter="signIn"/>
-                <q-input square filled clearable v-model="password" type="password" label="password"
-                   @keyup.enter="signIn" />
+                <q-input square filled autofocus v-model="account" label="account"
+                  @keyup.enter="signIn"/>
+                <q-input square filled v-model="password" label="password"
+                  :type="showPassword ? 'text' : 'password'"
+                  @keyup.enter="signIn">
+                    <q-icon :name="showPassword ? 'visibility_on' : 'visibility_off'"
+                      class="cursor-pointer" size="sm"
+                      @click="showPassword = !showPassword"
+                    />
+                </q-input>
               </q-form>
             </q-card-section>
             <q-card-actions class="q-px-md">
@@ -193,6 +199,7 @@ export default {
     const userStore = useUserStore();
     const account = ref("");
     const password = ref("");
+    const showPassword = ref(false);
 
     function toggleLeftDrawer() {
       leftDrawerOpen.value = !leftDrawerOpen.value;
@@ -227,6 +234,7 @@ export default {
       signIn,
       account,
       password,
+      showPassword,
 
       links1: [
         { icon: "extension", text: "Modules",      location: { name: "modules" } },

@@ -48,9 +48,6 @@ export const useModuleStore = defineStore("module", {
 
     updateModules() {
       if (process.env.DEV) {
-        /*
-         * mock data for local testing
-         */
         console.log(`DEV MODE: Adding mock modules data`);
         this.modulesJSON = {
           "bank.examples.org": {
@@ -59,7 +56,7 @@ export const useModuleStore = defineStore("module", {
             moduleType: "Db",
             issues: [],
             dependencies: [
-              { name: "oodb.xtclang.org", available: true},
+              {name: "oodb.xtclang.org", available: true},
             ],
           },
           "bankStressTest.examples.org": {
@@ -68,31 +65,26 @@ export const useModuleStore = defineStore("module", {
             moduleType: "Web",
             issues: [],
             dependencies: [
-              { name: "web.xtclang.org", available: true},
-              { name: "bank.examples.org", available: true },
+              {name: "web.xtclang.org", available: true},
+              {name: "bank.examples.org", available: true},
             ],
           },
         };
         this.enhance();
-
       } else {
-        /*
-         * fetch actual data
-         */
+         // fetch actual data
         this.$q.loading.show();
         apiModule
           .get("/all")
-          .then((response) => {
+          .then(response => {
             this.modulesJSON = response.data;
             this.enhance();
           })
-          .catch((error) => {
-            console.log(error.toJSON());
+          .catch(error => {
+            console.log(error.response);
             this.$q.notify({
-              color: "negative",
-              position: "top",
+              color: "negative", position: "top", icon: "report_problem",
               message: "Could not fetch modules",
-              icon: "report_problem",
             });
           })
           .finally(() => {
@@ -113,18 +105,33 @@ export const useModuleStore = defineStore("module", {
         this.$q.loading.show();
         apiModule
           .delete("/delete/" + moduleName)
-          .then(() => {
-            this.updateModules();
-          })
-          .catch((error) => {
-            console.log(error.toJSON());
-            this.$q.loading.hide();
+          .then((response) => {
+              this.updateModules();
+            })
+          .catch(error => {
+            var response = error.response;
+            var message;
+            switch (response.status) {
+            case 409: // Conflict
+              message = "There are deployments that depend on this module:\n" +
+                        response.data;
+              break;
+
+            case 404: // NotFound
+              message = "The module is missing";
+              break;
+
+            default:
+              message = "Failed to delete the module: " + response;
+              break;
+            }
             this.$q.notify({
-              color: "negative",
-              position: "top",
-              message: "Could not delete the module",
-              icon: "report_problem",
+              color: "negative", position: "top", icon: "report_problem",
+              message: message,
             });
+          })
+          .finally(() => {
+            this.$q.loading.hide();
           });
       }
     },
@@ -144,15 +151,15 @@ export const useModuleStore = defineStore("module", {
           .then(() => {
             this.updateModules();
           })
-          .catch((error) => {
-            console.log(error.toJSON());
-            this.$q.loading.hide();
+          .catch(error => {
+            console.log(error.response);
             this.$q.notify({
-              color: "negative",
-              position: "top",
+              color: "negative", position: "top", icon: "report_problem",
               message: "Could not resolve the module",
-              icon: "report_problem",
             });
+          })
+          .finally(() => {
+            this.$q.loading.hide();
           });
       }
     },

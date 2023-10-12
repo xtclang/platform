@@ -33,6 +33,25 @@ package model {
         AccountInfo removeWebApp(String deployment) {
             return new AccountInfo(id, name, modules, webApps.remove(deployment), users);
         }
+
+        /**
+         * @return the name of deployments that depend on the specified module(s)
+         */
+        Set<String> collectDeployments(String moduleName) {
+            Set<String> deployments = new HashSet();
+
+            for ((String deployment, WebAppInfo webAppInfo) : webApps) {
+                String webModuleName = webAppInfo.moduleName;
+                if (webModuleName == moduleName) {
+                    deployments += deployment;
+                } else if (ModuleInfo moduleInfo := modules.get(webModuleName),
+                    moduleInfo.dependsOn(moduleName)) {
+                    deployments += deployment;
+                }
+            }
+
+            return deployments;
+        }
     }
 
     const AccountUser(UserId userId, AccountId accountId);
@@ -46,7 +65,14 @@ package model {
         ModuleType       moduleType,
         String[]         issues,
         RequiredModule[] dependencies
-    );
+        ) {
+            /**
+             * @return True iff this module depends on the specified module
+             */
+            Boolean dependsOn(String moduleName) {
+                return dependencies.any(rm -> rm.name == moduleName);
+            }
+        }
 
     const RequiredModule(
         String  name,      // qualified

@@ -19,14 +19,14 @@ export const useUserStore = defineStore('user', {
       } else {
         apiUser
           .get("/id")
-          .then((response) => {
+          .then(response => {
             if (response.status === 200) {
               this.user = response.data;
             } else {
               this.user = null;
             }
           })
-          .catch((error) => {
+          .catch(error => {
             console.log(error.toJSON());
             this.$q.notify({
               color: "negative",
@@ -61,7 +61,7 @@ export const useUserStore = defineStore('user', {
               this.user = null;
             }
           })
-          .catch((error) => { console.log(error.toJSON()); })
+          .catch(error => { console.log(error.toJSON()); })
           .finally(() => {
             if (this.user == null) {
               this.$q.notify({
@@ -82,23 +82,12 @@ export const useUserStore = defineStore('user', {
         this.user = undefined;
       } else {
         apiUser
-          .put("/logout", {}, {
-            auth: {
-              username: "___",
-              password: "___"
-            }
+          .put("/logout")
+          .then(response => {
+            this.user = undefined;
           })
-          .then((response) => {
-            this.user = null;
-          })
-          .catch((error) => {
+          .catch(error => {
             console.log(error.toJSON());
-            this.$q.notify({
-              color: "negative",
-              position: "top",
-              message: "Logout failed",
-              icon: "report_problem",
-            });
           });
       }
     },

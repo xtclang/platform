@@ -8,6 +8,7 @@ import ecstasy.reflect.TypeTemplate;
 
 import web.*;
 import web.http.FormDataFile;
+import web.responses.SimpleResponse;
 
 import common.ErrorLog;
 import common.WebHost;
@@ -142,44 +143,46 @@ service ModuleEndpoint() {
      * @return `OK` if operation succeeded; `Conflict` if there are any active applications that
      *         depend on the module; `NotFound` if the module is missing
      */
-    @Delete("/delete/{name}")
-    HttpStatus deleteModule(String name) {
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return HttpStatus.Unauthorized;
-        }
-        if (WebAppInfo info := accountInfo.webApps.get(name)) {
-            return HttpStatus.Conflict;
-        } else {
-            accountManager.removeModule(accountName, name);
+    @Delete("/delete/{moduleName}")
+    SimpleResponse deleteModule(String moduleName) {
+        if (AccountInfo accountInfo := accountManager.getAccount(accountName),
+            accountInfo.modules.contains(moduleName)) {
+
+            Set<String> dependentDeployments = accountInfo.collectDeployments(moduleName);
+            if (!dependentDeployments.empty) {
+                return new SimpleResponse(Conflict,
+                        bytes=dependentDeployments.toString(sep=",", pre="", post="").utf8());
+            }
+
+            accountManager.removeModule(accountName, moduleName);
+
             Directory libDir = hostManager.ensureUserLibDirectory(accountName);
-            if (File|Directory f := libDir.find(name + ".xtc")) {
+            if (File|Directory f := libDir.find(moduleName + ".xtc")) {
                 if (f.is(File)) {
                     f.delete();
-                    updateDependencies(libDir, name);
-                    return HttpStatus.OK;
-                } else {
-                    return HttpStatus.NotFound;
+                    // there could be un-deployed modules that depend on this one;
+                    // mark them as "unresolved"
+                    updateDependencies(libDir, moduleName);
                 }
-            } else {
-                return HttpStatus.NotFound;
+            return new SimpleResponse(OK);
             }
         }
+        return new SimpleResponse(NotFound);
     }
 
     /**
      * Handles a request to resolve a module
      */
-    @Post("/resolve/{name}")
-    HttpStatus resolve(String name) {
+    @Post("/resolve/{moduleName}")
+    SimpleResponse resolve(String moduleName) {
         Directory libDir = hostManager.ensureUserLibDirectory(accountName);
         try {
-            accountManager.addOrUpdateModule(accountName, buildModuleInfo(libDir, name));
-            return HttpStatus.OK;
+            accountManager.addOrUpdateModule(accountName, buildModuleInfo(libDir, moduleName));
+            return new SimpleResponse(OK);
         } catch (Exception e) {
             @Inject Console console;
             console.print(e);
-            return HttpStatus.InternalServerError;
+            return new SimpleResponse(InternalServerError, bytes=e.message.utf8());
         }
     }
 

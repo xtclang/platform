@@ -54,7 +54,7 @@ service User {
     SimpleResponse getUserId() {
         return accountName == ""
             ? new SimpleResponse(NoContent)
-            : new SimpleResponse(OK, Null, accountName.utf8());
+            : new SimpleResponse(OK, bytes=accountName.utf8());
     }
 
     /*

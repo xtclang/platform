@@ -22,6 +22,13 @@ class AppHost(String moduleName, Directory homeDir)
      */
     public/protected Directory homeDir;
 
+    /**
+     * Log the specified message to the application "console" file.
+     */
+    void log(String message) {
+        homeDir.fileFor("console.log").append(message.utf8());
+    }
+
 
     // ----- Closeable -----------------------------------------------------------------------------
 

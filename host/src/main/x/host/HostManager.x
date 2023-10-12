@@ -111,8 +111,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
                     WebHost webHost = new WebHost(container, webAppInfo, appHomeDir, shutdown, dependencies);
                     activeWebHosts.put(webAppInfo.deployment, webHost);
 
-                    File consoleFile = appHomeDir.fileFor("console.log");
-                    consoleFile.append(errors.toString().utf8());
+                    webHost.log(errors.toString());
 
                     return True, webHost;
                 }

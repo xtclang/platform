@@ -180,8 +180,6 @@ service ModuleEndpoint() {
             accountManager.addOrUpdateModule(accountName, buildModuleInfo(libDir, moduleName));
             return new SimpleResponse(OK);
         } catch (Exception e) {
-            @Inject Console console;
-            console.print(e);
             return new SimpleResponse(InternalServerError, bytes=e.message.utf8());
         }
     }
@@ -261,7 +259,6 @@ service ModuleEndpoint() {
      * TODO GG: make this async
      */
     private void redeploy(Set<String> moduleNames) {
-        @Inject Console console;
         if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
 
             ErrorLog errors = new ErrorLog();
@@ -271,7 +268,8 @@ service ModuleEndpoint() {
 
                     hostManager.removeWebHost(webHost);
                     if (!hostManager.createWebHost(accountName, info, errors)) {
-                        console.print($"Failed to redeploy {deployment.quoted()}; reason: {errors}");
+                        webHost.log($"Failed to redeploy {deployment.quoted()}; reason: {errors}\n");
+
                         accountManager.addOrUpdateWebApp(accountName, info.updateStatus(False));
                     }
                     errors.reset();

@@ -36,7 +36,8 @@
           <q-btn
             class="bg-secondary"
             flat
-            v-if="!userStore.hasUser" @click="showSignInDialog"
+            v-if="!userStore.hasUser"
+            @click="showSignInDialog"
           >
             Log in
           </q-btn>
@@ -152,36 +153,58 @@
     </q-page-container>
 
     <q-dialog v-model="signInDialog">
-      <div class="column">
-        <div class="row">
-          <h5 class="text-bold text-white q-my-md">Ecstasy Cloud</h5>
-        </div>
-        <div class="row">
-          <q-card square bordered class="q-pa-lg shadow-1">
-            <q-card-section>
-              <q-form class="q-gutter-md">
-                <q-input square filled autofocus v-model="account" label="account"
-                  @keyup.enter="signIn"/>
-                <q-input square filled v-model="password" label="password"
-                  :type="showPassword ? 'text' : 'password'"
-                  @keyup.enter="signIn">
-                    <q-icon :name="showPassword ? 'visibility_on' : 'visibility_off'"
-                      class="cursor-pointer" size="sm"
-                      @click="showPassword = !showPassword"
-                    />
-                </q-input>
-              </q-form>
-            </q-card-section>
-            <q-card-actions class="q-px-md">
-              <q-btn unelevated color="secondary" size="lg" class="full-width" label="Login"
-                @click="signIn" @keyup.enter="signIn"/>
-            </q-card-actions>
-            <q-card-section class="text-center q-pa-none">
-              <p>Not registered? Create an Account</p>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
+      <q-card square class="q-pa-none shadow-1">
+        <q-card-section class="bg-primary">
+          <h4 class="text-h5 text-white q-my-xs">Ecstasy Cloud Login</h4>
+        </q-card-section>
+        <q-card-section>
+          <q-form class="q-gutter-md">
+            <div>
+              <q-input
+                square
+                filled
+                autofocus
+                v-model="account"
+                label="account"
+                @keyup.enter="signIn"
+              />
+            </div>
+            <div>
+              <q-input
+                square
+                filled
+                v-model="password"
+                label="password"
+                :type="showPassword ? 'text' : 'password'"
+                @keyup.enter="signIn"
+              >
+                <template v-slot:append>
+                  <q-icon
+                    :name="showPassword ? 'fas fa-eye' : 'fas fa-eye-slash'"
+                    class="cursor-pointer"
+                    size="xs"
+                    @click="showPassword = !showPassword"
+                  />
+                </template>
+              </q-input>
+            </div>
+          </q-form>
+        </q-card-section>
+        <q-card-actions class="q-px-md">
+          <q-btn
+            unelevated
+            color="secondary"
+            size="lg"
+            class="full-width"
+            label="Login"
+            @click="signIn"
+            @keyup.enter="signIn"
+          />
+        </q-card-actions>
+        <q-card-section class="text-center q-pa-none">
+          <p>Not registered? Create an Account</p>
+        </q-card-section>
+      </q-card>
     </q-dialog>
   </q-layout>
 </template>
@@ -223,7 +246,7 @@ export default {
 
     onMounted(() => {
       userStore.updateUser();
-    })
+    });
 
     return {
       leftDrawerOpen,
@@ -237,8 +260,11 @@ export default {
       showPassword,
 
       links1: [
-        { icon: "extension", text: "Modules",      location: { name: "modules" } },
-        { icon: "web_asset", text: "Applications", location: { name: "applications" },
+        { icon: "extension", text: "Modules", location: { name: "modules" } },
+        {
+          icon: "web_asset",
+          text: "Applications",
+          location: { name: "applications" },
         },
       ],
       links2: [

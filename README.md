@@ -28,6 +28,11 @@ The project is organized as a number of sub-projects, with the important ones to
 
 * The *platformUI* library ([platform/platformUI](./platformUI)), contains the end-points for the platform web-application. 
   
+## Installation
+
+1. Please follow steps 1-3 of the [XDK Installation](https://github.com/xtclang/xvm#installation).
+2. Clone [the platform repository](https://github.com/xtclang/platform) to your local machine.
+
 ## Steps to test the PAAS functionality:
 
 Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every time after an OS reboot. Steps 3-8 need to be done just once.
@@ -73,9 +78,7 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
          https://xtc-platform.xqiz.it:8090/
 
 12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
-
-13. Click "AddModule" and specify an application module and the deployment name (e.g. "welcome", or "banking").
-
-14. Click "Load application" - after a couple of seconds a URL should appear.
-
-15. Click on the URL to launch your application web page.
+13. Log into the "Ecstasy Cloud" platform using "acme/password" credentials.
+14. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
+15. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
+16. Click on the URL to launch your application web page.

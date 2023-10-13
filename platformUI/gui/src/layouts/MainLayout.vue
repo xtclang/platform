@@ -3,9 +3,7 @@
     <q-header elevated class="bg-white text-grey-8" height-hint="64">
       <q-toolbar class="GNL__toolbar">
         <q-btn
-          flat
-          dense
-          round
+          flat dense round
           @click="toggleLeftDrawer"
           aria-label="Menu"
           icon="menu"
@@ -161,18 +159,16 @@
           <q-form class="q-gutter-md">
             <div>
               <q-input
-                square
-                filled
-                autofocus
+                square filled autofocus
                 v-model="account"
                 label="account"
                 @keyup.enter="signIn"
+                :rules="[user => !!user || 'User id is required']"
               />
             </div>
             <div>
               <q-input
-                square
-                filled
+                square filled
                 v-model="password"
                 label="password"
                 :type="showPassword ? 'text' : 'password'"
@@ -260,12 +256,8 @@ export default {
       showPassword,
 
       links1: [
-        { icon: "extension", text: "Modules", location: { name: "modules" } },
-        {
-          icon: "web_asset",
-          text: "Applications",
-          location: { name: "applications" },
-        },
+        { icon: "extension", text: "Modules",      location: { name: "modules" } },
+        { icon: "web_asset", text: "Applications", location: { name: "applications" } },
       ],
       links2: [
         { icon: "space_dashboard", text: "Dashboard 1" },

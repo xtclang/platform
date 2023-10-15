@@ -16,6 +16,7 @@ module platformUI.xqiz.it {
 
     import json.Schema;
 
+    import web.HttpsRequired;
     import web.StaticContent;
     import web.WebApp;
     import web.WebService;
@@ -44,6 +45,7 @@ module platformUI.xqiz.it {
      * The static content.
      */
     @WebService("/")
+    @HttpsRequired
     service Content()
             incorporates StaticContent(path, /gui) {
         import web.Get;

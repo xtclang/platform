@@ -57,28 +57,24 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
    
 6. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed
 
-7. Increase the heap size for "xec" to 4GB by editing the content of "[homebrew-root]/Cellar/xdk-latest/[xdk-version]/libexec/bin/xec.cfg" file to:
-
-        opts=-Xmx4g
-
-8. Make sure all necessary *node* modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
+7. Make sure all necessary *node* modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
    
         npm install
  
-9. Build the platform services using the gradle command (from within the "platform" directory):
+8. Build the platform services using the gradle command (from within the "platform" directory):
 
          gradle build
 
-10. Start the platform using the command (from within the "platform" directory):
+9. Start the platform using the command (from within the "platform" directory):
 
-         xec -L lib/ lib/kernel.xtc [password]
+        xec -L lib/ lib/kernel.xtc [password]
 
-11. Open the hosting site in a browser: 
+10. Open the hosting site in a browser: 
 
          https://xtc-platform.xqiz.it:8090/
 
-12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
-13. Log into the "Ecstasy Cloud" platform using "acme/password" credentials.
-14. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
-15. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
-16. Click on the URL to launch your application web page.
+11. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
+12. Log into the "Ecstasy Cloud" platform using "acme/password" credentials.
+13. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
+14. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
+15. Click on the URL to launch your application web page.

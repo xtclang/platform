@@ -55,26 +55,32 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
 
         keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/certs.p12 -storetype PKCS12 -storepass [password]
    
-6. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed
+6. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), [yarn](https://yarnpkg.com/) and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed. If you are using `brew`, you can simply say: 
+        
+       brew install gradle node yarn  
 
 7. Make sure all necessary *node* modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
    
         npm install
+
+8. If you plan to use `quasar` dev environment, please intall it globally by the following command:
+
+        npm install -g @quasar/cli
  
-8. Build the platform services using the gradle command (from within the "platform" directory):
+9. Build the platform services using the gradle command (from within the "platform" directory):
 
          gradle build
 
-9. Start the platform using the command (from within the "platform" directory):
+10. Start the platform using the command (from within the "platform" directory):
 
-        xec -L lib/ lib/kernel.xtc [password]
+         xec -L lib/ lib/kernel.xtc [password]
 
-10. Open the hosting site in a browser: 
+11. Open the hosting site in a browser: 
 
          https://xtc-platform.xqiz.it:8090/
 
-11. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
-12. Log into the "Ecstasy Cloud" platform using "acme/password" credentials.
-13. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
-14. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
-15. Click on the URL to launch your application web page.
+12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
+13. Log into the "Ecstasy Cloud" platform using "acme/password" credentials.
+14. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
+15. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
+16. Click on the URL to launch your application web page.

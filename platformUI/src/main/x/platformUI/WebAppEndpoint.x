@@ -43,11 +43,10 @@ service WebAppEndpoint() {
      */
     @Get("all")
     Map<String, WebAppInfo> getAvailable() {
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return new ListMap();
+        if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
+            return accountInfo.webApps;
         }
-        return accountInfo.webApps;
+        return new ListMap();
     }
 
     /**

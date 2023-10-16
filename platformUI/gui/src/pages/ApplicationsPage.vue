@@ -1,7 +1,7 @@
 <template>
   <q-page>
     <q-banner class="bg-negative text-white q-ma-xl" v-if="!userStore.hasUser">
-      Please to log in to see your deployed modules
+      Please log in to see your deployed modules
     </q-banner>
 
     <q-card

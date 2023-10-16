@@ -58,11 +58,10 @@ service ModuleEndpoint() {
      */
     @Get("all")
     Map<String, ModuleInfo> getAvailable() {
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return new ListMap();
+        if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
+            return accountInfo.modules;
         }
-        return accountInfo.modules;
+        return new ListMap();
     }
 
     /**

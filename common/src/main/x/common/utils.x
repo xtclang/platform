@@ -57,7 +57,8 @@ package utils {
         try {
             return True, new Container(template, Lightweight, repository, injector), dbHosts;
         } catch (Exception e) {
-            errors.add($"Failed to load \"{template.displayName}\": {e.text}");
+            errors.add($|Error: Failed to load "{template.displayName}": {e.message}
+                      );
             return False;
         }
     }
@@ -117,7 +118,7 @@ package utils {
         }
 
         if (!(dbModuleTemplate := generator.ensureDBModule(repository, buildDir, errors))) {
-            errors.add($"Error: Failed to create a DB host for : {dbModuleName}");
+            errors.add($"Error: Failed to create a DB host for {dbModuleName}");
             return False;
         }
 

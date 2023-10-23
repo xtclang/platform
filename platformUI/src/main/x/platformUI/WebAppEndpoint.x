@@ -121,7 +121,7 @@ service WebAppEndpoint() {
 
             ErrorLog errors = new ErrorLog();
             if (!hostManager.createWebHost(accountName, webAppInfo, errors)) {
-                (status, message) = (InternalServerError, errors.toString());
+                (status, message) = (Conflict, errors.collectErrors());
                 break;
             }
 

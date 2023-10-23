@@ -267,7 +267,7 @@ service ModuleEndpoint() {
 
                     hostManager.removeWebHost(webHost);
                     if (!hostManager.createWebHost(accountName, info, errors)) {
-                        webHost.log($"Failed to redeploy {deployment.quoted()}; reason: {errors}\n");
+                        webHost.log($"Error: Failed to redeploy {deployment.quoted()}; reason: {errors}\n");
 
                         accountManager.addOrUpdateWebApp(accountName, info.updateStatus(False));
                     }

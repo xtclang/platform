@@ -159,12 +159,12 @@ export const useWebAppStore = defineStore("webApp", {
             this.updateWebApps()
           })
           .catch((error) => {
-            console.log(error.toJSON());
+            console.log(error.response.data);
             this.$q.loading.hide();
             this.$q.notify({
               color: "negative",
               position: "top",
-              message: "Could not start the web application",
+              message: error.response.data,
               icon: "report_problem",
             });
           });

@@ -61,7 +61,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
     @Override
     conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, Log errors) {
         if (activeWebHosts.contains(webAppInfo.deployment)) {
-                errors.add($|Deployment "{webAppInfo.deployment}" is already active
+                errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
                           );
             return False;
         }
@@ -80,7 +80,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
             // we need the resolved module to look up annotations
             mainModule = repository.getResolvedModule(webAppInfo.moduleName);
         } catch (Exception e) {
-            errors.add($|Error: Failed to resolve the module: "{webAppInfo.moduleName}" ({e.text})
+            errors.add($|Error: Failed to resolve module: "{webAppInfo.moduleName}": {e.message}
                       );
             return False;
         }
@@ -88,7 +88,8 @@ service HostManager (Directory usersDir, KeyStore keystore)
         String moduleName = mainModule.qualifiedName;
         try {
             if (!utils.isWebModule(mainModule)) {
-                errors.add($"Module \"{moduleName}\" is not a WebApp");
+                errors.add($|Error: Module "{moduleName}" is not a WebApp
+                          );
                 return False;
             }
 
@@ -119,7 +120,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
                 errors.add($"Error: Failed to create a Web host for {moduleName.quoted()}");
             }
         } catch (Exception e) {
-            errors.add($"Error: Failed to create a host for {moduleName.quoted()}; reason={e.text}");
+            errors.add($"Error: {e.message}");
         }
 
         return False;

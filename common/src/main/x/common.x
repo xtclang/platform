@@ -21,5 +21,16 @@ module common.xqiz.it {
                 report(msg);
             }
         }
+
+        String collectErrors() {
+            StringBuffer buf = new StringBuffer();
+            for (String message : messages) {
+                if (message.startsWith("Error:")) {
+                    buf.append(message)
+                       .append("\n");
+                }
+            }
+            return buf.toString();
+        }
     }
 }

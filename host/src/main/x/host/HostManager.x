@@ -95,7 +95,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
             import xenia.tools.ModuleGenerator;
 
-            ModuleGenerator generator = new ModuleGenerator(moduleName);
+            ModuleGenerator generator = new ModuleGenerator(mainModule);
             if (ModuleTemplate hostTemplate := generator.ensureWebModule(repository, buildDir, errors)) {
                 Directory appHomeDir = hostDir.dirFor(webAppInfo.deployment).ensure();
 

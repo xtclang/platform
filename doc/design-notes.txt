@@ -1,0 +1,117 @@
+-- platform --
+Operational - platform data
+Security - login data
+-- xqiz.it --
+CRM
+Accounting
+
+--
+
+* need fast access to current state
+* need history
+
+security issues to incorporate:
+* 2FA
+* password info
+* tokens
+* client side cert (and is it required?)
+* browser fingerprint
+* gen a new token at login, place it into the session, and correlate it with IP & fingerprint (?) - but carefully avoid
+  using it for tracking info (i.e. use it to help secure the user's data, but do not allow it to be used to track the user)
+
+--
+
+Identity -> one of: a Person, a Token, the system
+
+Person : Identity
+- created : Date
+- name
+- legalName
+  - confirmed
+- emails ->  has one or more email addresses
+- phones ->  has one or more phone numbers
+- confirmations -> some sort of records of various details about the person
+- changes -> some sort of audit list of changes
+- orgs
+
+Token : Identity
+- description: identifies a process created and authorized by a human being
+- login -> identifies the identity that created the token
+
+System : Identity
+
+enum ContactType {None, Critical, Notify, Marketing, ThirdParty}
+
+enum Verified{NoAttempt, Pending, Verified, Failed} // REVIEW
+
+Email
+- address
+- Login (optional)
+- confirmed (date)
+- allow contact: notifications, marketing, third party
+* assume that this provides history: what has been sent and received
+
+Phone
+- number
+- usedBy        : Person[]
+- voiceEnabled  : ContactType
+- voiceVerified : Verified
+- voiceConfirmed: Date
+- voiceHistory  : ? (calls logged in and out, notes, recordings, whatever)
+- textEnabled   : ContactType
+- textVerified  : Verified
+- textConfirmed : Date
+- textHistory   : ? (what has been sent and received)
+
+Organization
+- name       : String
+- description: String
+- created    : Date
+- createdBy  : Person
+- category   : {Personal, Association, Team, Management, Corporation}  ; REVIEW
+- parent     : Organization?
+- people     : Person[]
+- orgs       : Organization[]
+* assets
+* need some mapping from responsibility (and/or "grants") to people
+* account status (red/yellow/green)
+* history (perhaps just a link to the previous version of the org? and who changed it?)
+
+DomainName
+- uri       : URI
+- temp      : Boolean       ; a temporary domain, e.g. "12345.app" maps (only) to "12345.app.xqiz.it"
+- ownedBy   : Organization
+
+What do I want to see when I land?
+
+Questions that I can ask:
+* what are my domains?
+* what are my apps?
+* what's in production? what's not?
+* are there any problems? what notifications do I have from the apps?
+* what things are "pending"? e.g. approval for domains I've claimed, processes I've kicked off
+* what are my projects? (perhaps correlated to branches)
+* what are my teams / orgs?
+* switch context from one org to another, or from one project to another
+
+== app hosting ==
+
+* what is an application?
+* application state (e.g. database)
+
+code
+- displayName
+- description
+- owner       : Organization
+- moduleName
+- hash                      ; some way to de-dup?
+- license[]                 ; list of possible licenses?
+- grant[]
+- versions
+- dependencies
+- bytes
+
+Database
+
+Deployment                  ; intersection of code and domain
+  Database[]

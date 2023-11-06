@@ -5,22 +5,8 @@ import common.WebHost;
 import web.*;
 
 @WebService("/host")
-service Controller() {
-
-    construct() {
-        accountManager = ControllerConfig.accountManager;
-        hostManager    = ControllerConfig.hostManager;
-    }
-
-    /**
-     * The account manager.
-     */
-    private AccountManager accountManager;
-
-    /**
-     * The host manager.
-     */
-    private HostManager hostManager;
+service Controller()
+        extends CoreService {
 
     @Post("debug")
     @LoginOptional // TODO: remove

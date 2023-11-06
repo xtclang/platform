@@ -160,10 +160,10 @@
             <div>
               <q-input
                 square filled autofocus
-                v-model="account"
-                label="account"
+                v-model="userId"
+                label="User Id"
                 @keyup.enter="signIn"
-                :rules="[user => !!user || 'User id is required']"
+                :rules="[user => !!user || 'User Id is required']"
               />
             </div>
             <div>
@@ -216,7 +216,7 @@ export default {
     const leftDrawerOpen = ref(false);
     const signInDialog = ref(false);
     const userStore = useUserStore();
-    const account = ref("");
+    const userId = ref("");
     const password = ref("");
     const showPassword = ref(false);
 
@@ -225,19 +225,19 @@ export default {
     }
 
     function showSignInDialog() {
-      account.value = "";
+      userId.value = "";
       password.value = "";
       signInDialog.value = true;
     }
 
     function hideSignInDialog() {
       signInDialog.value = false;
-      account.value = "";
+      userId.value = "";
       password.value = "";
     }
 
     function signIn() {
-      userStore.logIn(account.value, password.value, hideSignInDialog);
+      userStore.logIn(userId.value, password.value, hideSignInDialog);
     }
 
     onMounted(() => {
@@ -251,7 +251,7 @@ export default {
       signInDialog,
       showSignInDialog,
       signIn,
-      account,
+      userId,
       password,
       showPassword,
 

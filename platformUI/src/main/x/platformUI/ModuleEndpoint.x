@@ -26,29 +26,8 @@ import common.utils;
  */
 @WebService("/module")
 @LoginRequired
-service ModuleEndpoint() {
-
-    construct() {
-        accountManager = ControllerConfig.accountManager;
-        hostManager    = ControllerConfig.hostManager;
-    }
-
-    /**
-     * The account manager.
-     */
-    private AccountManager accountManager;
-
-    /**
-     * The host manager.
-     */
-    private HostManager hostManager;
-
-    /**
-     * The current account name.
-     */
-    String accountName.get() {
-        return session?.userId? : "";
-    }
+service ModuleEndpoint()
+        extends CoreService {
 
     /**
      * Return a JSON map of all uploaded modules for given account.
@@ -61,7 +40,7 @@ service ModuleEndpoint() {
         if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
             return accountInfo.modules;
         }
-        return new ListMap();
+        return [];
     }
 
     /**

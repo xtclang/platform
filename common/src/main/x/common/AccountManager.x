@@ -8,6 +8,15 @@ import common.model.WebAppInfo;
  */
 interface AccountManager {
     /**
+     * Retrieve accounts for the specified user.
+     *
+     * @param userName  the user name
+     *
+     * @return a list of account names for the specified user
+     */
+    Collection<String> getAccounts(String userName);
+
+    /**
      * Retrieve an 'AccountInfo' for the specified name.
      *
      * @param accountName  the account name

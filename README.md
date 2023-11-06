@@ -80,7 +80,7 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
          https://xtc-platform.xqiz.it:8090/
 
 12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
-13. Log into the "Ecstasy Cloud" platform using "acme/password" credentials.
+13. Log into the "Ecstasy Cloud" platform using "admin@acme.om/password" credentials.
 14. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
 15. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
 16. Click on the URL to launch your application web page.

@@ -14,29 +14,8 @@ import web.responses.SimpleResponse;
  */
 @WebService("/webapp")
 @LoginRequired
-service WebAppEndpoint() {
-
-    construct() {
-        accountManager = ControllerConfig.accountManager;
-        hostManager    = ControllerConfig.hostManager;
-    }
-
-    /**
-     * The account manager.
-     */
-    private AccountManager accountManager;
-
-    /**
-     * The host manager.
-     */
-    private HostManager hostManager;
-
-    /**
-     * The current account name.
-     */
-    String accountName.get() {
-        return session?.userId? : "";
-    }
+service WebAppEndpoint()
+        extends CoreService {
 
     /**
      * Return a JSON map of all webapps for given account.
@@ -46,7 +25,7 @@ service WebAppEndpoint() {
         if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
             return accountInfo.webApps;
         }
-        return new ListMap();
+        return [];
     }
 
     /**

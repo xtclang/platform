@@ -54,8 +54,6 @@ package model {
         }
     }
 
-    const AccountUser(UserId userId, AccountId accountId);
-
     const UserInfo(UserId id, String name, String email);
 
     enum ModuleType default(Generic) {Generic, Web, Db}

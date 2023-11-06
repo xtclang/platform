@@ -51,15 +51,27 @@ service AccountManager
         DBMap<AccountId, AccountInfo> accounts = dbConnection.accounts;
         DBMap<UserId, UserInfo>       users    = dbConnection.users;
         if (!accounts.contains(1)) {
-            UserInfo admin = new UserInfo(1, "admin", "admin@acme.com");
+            UserInfo admin = new UserInfo(1, "admin@acme.com", "john.doe@acme.com");
             users.put(1, admin);
-            accounts.put(1, new AccountInfo(1, "acme", [], [], Map:[1 = Admin]));
+            accounts.put(1, new AccountInfo(1, "admin@acme.com", [], [], Map:[1 = Admin]));
         }
 
         if (!accounts.contains(2)) {
-            UserInfo admin = new UserInfo(2, "admin", "admin@cvs.com");
+            UserInfo admin = new UserInfo(2, "admin@cvs.com", "john.doe@cvs.com");
             users.put(2, admin);
             accounts.put(2, new AccountInfo(2, "cvs", [], [], Map:[2 = Admin]));
+        }
+    }
+
+    @Override
+    Collection<String> getAccounts(String userName) {
+        using (val tx = dbConnection.createTransaction()) {
+            if (UserInfo userInfo := tx.users.values.any(info -> info.name == userName)) {
+                UserId userId = userInfo.id;
+                return tx.accounts.values.filter(info -> info.users.contains(userId))
+                                         .map   (info -> info.name).toArray(Constant);
+            }
+        return [];
         }
     }
 

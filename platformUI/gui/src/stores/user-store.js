@@ -27,7 +27,7 @@ export const useUserStore = defineStore('user', {
             }
           })
           .catch(error => {
-            console.log(error.toJSON());
+            console.log(error.response);
             this.$q.notify({
               color: "negative",
               position: "top",
@@ -38,10 +38,10 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    logIn(account, password, closeDialog) {
+    logIn(userId, password, closeDialog) {
       if (process.env.DEV) {
-        if (account == "mock") {
-          console.log(`DEV MODE: Adding mock account ` + account);
+        if (userId == "mock") {
+          console.log(`DEV MODE: Adding mock user ` + userId);
           this.user = "Mock User";
           closeDialog();
         } else {
@@ -53,7 +53,7 @@ export const useUserStore = defineStore('user', {
         }
       } else {
         apiUser
-          .get("/login/" + account + "/" + password)
+          .post("/login/" + userId, password)
           .then((response) => {
             if (response.status === 200) {
               this.user = response.data;
@@ -61,7 +61,7 @@ export const useUserStore = defineStore('user', {
               this.user = null;
             }
           })
-          .catch(error => { console.log(error.toJSON()); })
+          .catch(error => { console.log(error.response); })
           .finally(() => {
             if (this.user == null) {
               this.$q.notify({

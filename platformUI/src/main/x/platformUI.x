@@ -101,6 +101,6 @@ module platformUI.xqiz.it {
       /**
        * TODO: replace with webauth.DBRealm
        */
-      Realm realm = new FixedRealm("Platform", ["acme"="password", "cvs"="password"]);
+      Realm realm = new FixedRealm("Platform", ["admin@acme.com"="password", "admin@cvs.com"="password"]);
     }
 }

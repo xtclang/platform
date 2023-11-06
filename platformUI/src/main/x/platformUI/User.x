@@ -18,53 +18,42 @@ import web.security.Realm;
  * Dedicated service for user management.
  */
 @WebService("/user")
-service User {
+service User
+        extends CoreService {
     construct() {
-        accountManager = ControllerConfig.accountManager;
-        hostManager    = ControllerConfig.hostManager;
-        realm          = ControllerConfig.realm;
+        construct CoreService();
+
+        realm = ControllerConfig.realm;
     }
-
-    /**
-     * The account manager.
-     */
-    private AccountManager accountManager;
-
-    /**
-     * The host manager.
-     */
-    private HostManager hostManager;
 
     /**
      * The Realm used for authentication.
      */
-    private Realm realm;
-
-    /**
-     * The current account name.
-     */
-    String accountName.get() {
-        return session?.userId? : "";
-    }
+    protected Realm realm;
 
     /*
      * Return the SimpleResponse with the current user id or `NoContent`.
      */
     @Get("id")
     SimpleResponse getUserId() {
-        return accountName == ""
-            ? new SimpleResponse(NoContent)
-            : new SimpleResponse(OK, bytes=accountName.utf8());
+        return new SimpleResponse(OK, bytes=session?.userId?.utf8())
+             : new SimpleResponse(NoContent);
     }
 
     /*
      * Log in the specified user.
      */
-    @Get("login/{user}/{password}")
+    @Post("login/{userName}")
     @HttpsRequired
-    SimpleResponse login(Session session, String user, String password) {
-        if (realm.authenticate(user, password)) {
-            session.authenticate(user);
+    SimpleResponse login(SessionData session, String userName, @BodyParam String password) {
+        if (realm.authenticate(userName, password)) {
+            session.authenticate(userName);
+            Collection<String> accounts = accountManager.getAccounts(userName);
+
+            // TODO choose an account this user was last associated with
+            if (String accountName := accounts.any()) {
+                session.accountName = accountName;
+            }
             return getUserId();
         }
         return new SimpleResponse(Unauthorized);
@@ -75,8 +64,9 @@ service User {
      */
     @Put("logout")
     @HttpsRequired
-    HttpStatus signOut() {
-        session?.deauthenticate();
+    HttpStatus signOut(SessionData session) {
+        session.deauthenticate();
+        session.accountName = Null;
         return HttpStatus.NoContent;
     }
 }

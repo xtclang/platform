@@ -45,7 +45,6 @@ RUN mkdir -p ~/xqiz.it/platform \
         -storepass qwerty \
     && git clone https://github.com/azzazzel/xtc_platform.git ~/xtc_platform \
     && cd ~/xtc_platform && git checkout quasar_gui \
-    && cd ~/xtc_platform/platformUI/old_gui && npm install \
     && cd ~/xtc_platform/platformUI/gui && npm install \
     && cd ~/xtc_platform && ~/xvm/gradlew build
 

@@ -6,14 +6,14 @@ val common = project(":common");
 
 val libDir = "${rootProject.projectDir}/lib"
 
-val webContent = "${projectDir}/src/main/resources/gui"
+val guiDir     = "$projectDir/gui"
+val webContent = "$guiDir/dist"
 
 tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
 
-    delete("$projectDir/gui/build")
-    delete("$projectDir/src/main/resources/gui")
+    delete(webContent)
 }
 
 tasks.register("build") {
@@ -21,27 +21,25 @@ tasks.register("build") {
     description = "Build this module"
 
     dependsOn(common.tasks["build"])
-    dependsOn(buildGui)
+
+    // there must be a way to tell quasar not to rebuild if nothing changed, but I cannot
+    // figure it out and have to use a manual timestamp check
+    dependsOn(checkGui)
 
     doLast {
-        val src = fileTree("${projectDir}/src").getFiles().stream().
-                mapToLong({f -> f.lastModified()}).max().orElse(0)
-        val dst = file("$libDir/platformUI.xtc").lastModified()
+        val srcModule = "${projectDir}/src/main/x/platformUI.x"
 
-        if (src > dst) {
-            val srcModule = "${projectDir}/src/main/x/platformUI.x"
-
-            project.exec {
-                commandLine("xtc", "-verbose", "-rebuild",
-                            "-o", "$libDir",
-                            "-L", "$libDir",
-                            "$srcModule")
-            }
+        project.exec {
+            commandLine("xtc", "-verbose",
+                        "-o", "$libDir",
+                        "-L", "$libDir",
+                        "-r", "$webContent",
+                        "$srcModule")
         }
     }
 }
 
-val buildGui = tasks.register("buildGui") {
+val checkGui = tasks.register("checkGui") {
     group       = "Build"
     description = "Build the web app content"
 
@@ -53,29 +51,18 @@ val buildGui = tasks.register("buildGui") {
             mapToLong({f -> f.lastModified()}).max().orElse(0)
 
     if (src1 > dest || src2 > dest) {
-        dependsOn(copyContent)
+        dependsOn(buildGui)
         }
     else {
         println("$webContent is up to date")
-        }
+    }
 }
 
-val copyContent = tasks.register("copyContent") {
-
-    val guiDir   = "$projectDir/gui"
-    val guiBuild = "$guiDir/dist/spa"
-
-    project.exec {
-        workingDir(guiDir)
-        commandLine("yarn", "--ignore-engines", "quasar", "build")
-    }
-
+val buildGui = tasks.register("buildGui") {
     doLast {
-        println("Copying static content from $guiBuild to $webContent")
-
-        copy {
-            from(guiBuild)
-            into(webContent)
+        project.exec {
+            workingDir(guiDir)
+            commandLine("yarn", "--ignore-engines", "quasar", "build")
         }
     }
 }

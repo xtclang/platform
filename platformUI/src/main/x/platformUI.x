@@ -42,12 +42,12 @@ module platformUI.xqiz.it {
     }
 
     /**
-     * The static content.
+     * The static content (Quasar: Single Page Application).
      */
     @WebService("/")
     @HttpsRequired
     service Content()
-            incorporates StaticContent(path, /gui) {
+            incorporates StaticContent(path, Directory:/spa) {
         import web.Get;
         import web.ResponseOut;
 

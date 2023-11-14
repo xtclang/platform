@@ -45,7 +45,7 @@ service User
      */
     @Post("login/{userName}")
     @HttpsRequired
-    SimpleResponse login(SessionData session, String userName, @BodyParam String password) {
+    SimpleResponse login(SessionData session, String userName, @BodyParam String password="") {
         if (realm.authenticate(userName, password)) {
             session.authenticate(userName);
             Collection<String> accounts = accountManager.getAccounts(userName);

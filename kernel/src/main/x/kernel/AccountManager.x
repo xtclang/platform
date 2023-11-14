@@ -53,7 +53,7 @@ service AccountManager
         if (!accounts.contains(1)) {
             UserInfo admin = new UserInfo(1, "admin@acme.com", "john.doe@acme.com");
             users.put(1, admin);
-            accounts.put(1, new AccountInfo(1, "admin@acme.com", [], [], Map:[1 = Admin]));
+            accounts.put(1, new AccountInfo(1, "acme", [], [], Map:[1 = Admin]));
         }
 
         if (!accounts.contains(2)) {

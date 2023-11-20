@@ -9,19 +9,20 @@ tasks.register("build") {
     description = "Build this module"
 
     dependsOn(project(":common").tasks["build"])
+
     doLast {
-        val src = fileTree("${projectDir}/src").getFiles().stream().
-                mapToLong({f -> f.lastModified()}).max().orElse(0)
+        val src = fileTree("${projectDir}/src").files.stream().
+                mapToLong{f -> f.lastModified()}.max().orElse(0)
         val dst = file("$libDir/platformDB.xtc").lastModified()
 
         if (src > dst) {
             val srcModule = "${projectDir}/src/main/x/platformDB.x"
 
             project.exec {
-                commandLine("xtc", "-verbose",
-                            "-o", "$libDir",
-                            "-L", "$libDir",
-                            "$srcModule")
+                commandLine("xcc", "-verbose",
+                            "-o", libDir,
+                            "-L", libDir,
+                            srcModule)
             }
         }
     }

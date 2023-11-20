@@ -2,7 +2,7 @@
  * Build the "platformUI" module.
  */
 
-val common = project(":common");
+val common = project(":common")
 
 val libDir = "${rootProject.projectDir}/lib"
 
@@ -30,11 +30,11 @@ tasks.register("build") {
         val srcModule = "${projectDir}/src/main/x/platformUI.x"
 
         project.exec {
-            commandLine("xtc", "-verbose",
-                        "-o", "$libDir",
-                        "-L", "$libDir",
-                        "-r", "$webContent",
-                        "$srcModule")
+            commandLine("xcc", "-verbose",
+                        "-o", libDir,
+                        "-L", libDir,
+                        "-r", webContent,
+                        srcModule)
         }
     }
 }
@@ -43,12 +43,12 @@ val checkGui = tasks.register("checkGui") {
     group       = "Build"
     description = "Build the web app content"
 
-    val src1 = fileTree("$projectDir/gui/src").getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val src2 = fileTree("$projectDir/gui/public").getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
-    val dest = fileTree("$webContent").getFiles().stream().
-            mapToLong({f -> f.lastModified()}).max().orElse(0)
+    val src1 = fileTree("$projectDir/gui/src").files.stream().
+            mapToLong{f -> f.lastModified()}.max().orElse(0)
+    val src2 = fileTree("$projectDir/gui/public").files.stream().
+            mapToLong{f -> f.lastModified()}.max().orElse(0)
+    val dest = fileTree(webContent).files.stream().
+            mapToLong{f -> f.lastModified()}.max().orElse(0)
 
     if (src1 > dest || src2 > dest) {
         dependsOn(buildGui)

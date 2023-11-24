@@ -80,7 +80,6 @@ package model {
         String  deployment, // the same module could be deployed multiple times
         String  moduleName, // qualified
         String  hostName,
-        String  bindAddr,
         UInt16  httpPort,
         UInt16  httpsPort,
         Boolean active) {
@@ -92,7 +91,7 @@ package model {
 
         WebAppInfo updateStatus(Boolean active) {
             return new WebAppInfo(deployment, moduleName,
-                                  hostName, bindAddr, httpPort, httpsPort, active);
+                                  hostName, httpPort, httpsPort, active);
         }
     }
 }

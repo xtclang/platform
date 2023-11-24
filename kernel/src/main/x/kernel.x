@@ -95,7 +95,6 @@ module kernel.xqiz.it {
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container := utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
-                String hostName  = config.getOrDefault("hostName",    "xtc-platform.xqiz.it").as(String);
                 String bindAddr  = config.getOrDefault("bindAddress", "xtc-platform.xqiz.it").as(String);
                 UInt16 httpPort  = config.getOrDefault("httpPort",     8080).as(IntLiteral).toUInt16();
                 UInt16 httpsPort = config.getOrDefault("httpsPort",    8090).as(IntLiteral).toUInt16();
@@ -103,10 +102,10 @@ module kernel.xqiz.it {
                 UInt16 portHigh  = config.getOrDefault("userPortHIgh", 8199).as(IntLiteral).toUInt16();
 
                 container.invoke("configure",
-                    Tuple:(accountManager, hostManager, hostName, bindAddr,
-                           httpPort, httpsPort, keystore, portLow..portHigh));
+                    Tuple:(accountManager, hostManager,
+                           bindAddr, httpPort, httpsPort, keystore, portLow..portHigh));
 
-                console.print($"Started the XtcPlatform at http://{hostName}:{httpPort}");
+                console.print($"Started the XtcPlatform at http://{bindAddr}:{httpPort}");
             } else {
                 return;
             }

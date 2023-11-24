@@ -1,5 +1,4 @@
 {
-"hostName":"xtc-platform.xqiz.it",
 "bindAddress":"xtc-platform.xqiz.it",
 "httpPort":8080,
 "httpsPort":8090,

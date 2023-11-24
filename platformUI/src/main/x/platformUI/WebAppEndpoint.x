@@ -50,9 +50,10 @@ service WebAppEndpoint()
             return HttpStatus.NotFound;
         }
 
-        (String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort) = getAuthority(deployment);
+        (String hostName, UInt16 httpPort, UInt16 httpsPort) = getAuthority(deployment);
+
         accountManager.addOrUpdateWebApp(accountName,
-            new WebAppInfo(deployment, moduleName, hostName, bindAddr, httpPort, httpsPort, False));
+            new WebAppInfo(deployment, moduleName, hostName, httpPort, httpsPort, False));
         return HttpStatus.OK;
     }
 
@@ -168,10 +169,16 @@ service WebAppEndpoint()
     /**
      * Get the host name and ports for the specified deployment.
      */
-    (String hostName, String bindAddr, UInt16 httpPort, UInt16 httpsPort) getAuthority(String deployment) {
+    (String hostName, UInt16 httpPort, UInt16 httpsPort) getAuthority(String deployment) {
         assert UInt16 httpPort := accountManager.allocatePort(ControllerConfig.userPorts);
 
-        return ControllerConfig.hostName, ControllerConfig.bindAddr, httpPort, httpPort+1;
+        // This is very temporary; there is a lot of complexity that will have to be resolved here:
+        // - check for the name uniqueness
+        // - create a domain (e.g. $"{deployment}.{accountName}.users.xqiz.it"
+        // - ensure a certificate for that domain (using "let's encrypt")
+        // - ensure a dynamic route for the domain into our http server
+
+        return ControllerConfig.bindAddr, httpPort, httpPort+1;
     }
 
 

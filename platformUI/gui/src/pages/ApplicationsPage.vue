@@ -175,7 +175,7 @@
 </template>
 
 <script>
-import { defineComponent, onBeforeMount, ref, watch } from "vue";
+import { defineComponent, onBeforeMount, onUnmounted, ref, watch } from "vue";
 import { useUserStore } from "stores/user-store";
 import { useModuleStore } from "stores/module-store";
 import { useWebAppStore } from "stores/webapp-store";
@@ -191,12 +191,18 @@ export default defineComponent({
     const moduleStore = useModuleStore();
     const webAppStore = useWebAppStore();
     const newAppDialog = ref({ show: false });
+    const intervalId = setInterval(() => {
+      if (userStore.hasUser) {
+        webAppStore.updateStatus();
+      }}, 5000);
 
     onBeforeMount(() => {
       if (userStore.hasUser) {
         webAppStore.updateWebApps();
       }
     });
+
+    onUnmounted(() => clearInterval(intervalId));
 
     function showAddRegistrationDialog() {
       moduleStore.updateModules();

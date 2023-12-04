@@ -28,6 +28,24 @@ service WebAppEndpoint()
     }
 
     /**
+     * Return a JSON map of statuses for all webapps for given account.
+     */
+    @Get("status")
+    Map<String, WebAppInfo> checkStatus() {
+        if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
+            HashMap<String, WebAppInfo> status = new HashMap();
+            for ((String deployment, WebAppInfo info) : accountInfo.webApps) {
+                if (WebHost webHost := hostManager.getWebHost(deployment)) {
+                    info = info.updateStatus(webHost.active);
+                }
+                status.put(deployment, info);
+            }
+            return status.freeze(inPlace=True);
+        }
+        return [];
+    }
+
+    /**
      * Handle a request to register a webapp for a module.
      * Assumptions:
      *  - many webapps can be registered from the same module with different deployment

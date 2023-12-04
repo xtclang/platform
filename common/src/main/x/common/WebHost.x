@@ -85,7 +85,7 @@ service WebHost
     /*
      * Activate the underlying WebApp.
      *
-     * @return True iff the hosted WebApp is active.
+     * @return True iff the hosted WebApp is active
      */
     conditional HttpHandler activate(Log errors) {
         if (HttpHandler handler ?= this.handler) {

@@ -81,6 +81,27 @@ export const useWebAppStore = defineStore("webApp", {
       }
     },
 
+    updateStatus() {
+      if (process.env.DEV) {
+        this.webAppsJSON = {
+          "bank1": {
+            "active": Math.random() > 0.5,
+          },
+          "bank2": {
+            "active": Math.random() > 0.5,
+          },
+        };
+        this.enhance();
+      } else {
+        apiWebApp
+          .get("/status")
+          .then((response) => {
+            this.webAppsJSON = response.data;
+            this.enhance();
+          })
+      }
+    },
+
     registerWebApp(deployment, moduleName, update) {
       if (process.env.DEV) {
         this.$q.notify({
@@ -196,7 +217,5 @@ export const useWebAppStore = defineStore("webApp", {
           });
       }
     },
-
   },
-
 });

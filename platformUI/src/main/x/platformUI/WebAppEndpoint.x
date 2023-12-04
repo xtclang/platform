@@ -4,7 +4,6 @@ import common.WebHost;
 import common.model.AccountInfo;
 import common.model.ModuleInfo;
 import common.model.WebAppInfo;
-import common.model.RequiredModule;
 
 import web.*;
 import web.responses.SimpleResponse;
@@ -63,7 +62,8 @@ service WebAppEndpoint()
     @Delete("/unregister/{deployment}")
     SimpleResponse unregister(String deployment) {
         SimpleResponse response = stopWebApp(deployment);
-        if (response.status == OK) {
+        if (response.status == OK, WebHost webHost := hostManager.getWebHost(deployment)) {
+            hostManager.removeWebHost(webHost);
             accountManager.removeWebApp(accountName, deployment);
         }
 
@@ -156,7 +156,7 @@ service WebAppEndpoint()
                 break;
             }
 
-            hostManager.removeWebHost(webHost);
+            webHost.deactivate();
             accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
         } while (False);
 

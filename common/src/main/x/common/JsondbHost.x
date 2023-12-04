@@ -18,7 +18,7 @@ class JsondbHost(String dbModuleName, Directory homeDir)
      * Cached CatalogMetadata instance.
      */
     @Lazy CatalogMetadata meta.calc() {
-        return container.innerTypeSystem.primaryModule.as(CatalogMetadata);
+        return container?.innerTypeSystem.primaryModule.as(CatalogMetadata) : assert;
     }
 
     /**

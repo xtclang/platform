@@ -1,14 +1,9 @@
-import ecstasy.mgmt.Container;
 import ecstasy.mgmt.DirRepository;
 import ecstasy.mgmt.LinkedRepository;
 import ecstasy.mgmt.ModuleRepository;
 
-import ecstasy.reflect.ModuleTemplate;
-import ecstasy.reflect.TypeTemplate;
-
 import ecstasy.text.Log;
 
-import common.AppHost;
 import common.WebHost;
 
 import common.model.WebAppInfo;
@@ -16,6 +11,8 @@ import common.model.WebAppInfo;
 import common.utils;
 
 import crypto.KeyStore;
+
+import xenia.HttpServer;
 
 
 /**
@@ -36,9 +33,9 @@ service HostManager (Directory usersDir, KeyStore keystore)
     private KeyStore keystore;
 
     /**
-     * Active WebHosts keyed by the deployment name.
+     * Deployed WebHosts keyed by the deployment name.
      */
-    private Map<String, WebHost> activeWebHosts = new HashMap();
+    private Map<String, WebHost> deployedWebHosts = new HashMap();
 
 
     // ----- common.HostManager API ------------------------------------------------------------------------------------
@@ -55,12 +52,12 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
     @Override
     conditional WebHost getWebHost(String deployment) {
-        return activeWebHosts.get(deployment);
+        return deployedWebHosts.get(deployment);
     }
 
     @Override
     conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, Log errors) {
-        if (activeWebHosts.contains(webAppInfo.deployment)) {
+        if (deployedWebHosts.contains(webAppInfo.deployment)) {
                 errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
                           );
             return False;
@@ -75,50 +72,21 @@ service HostManager (Directory usersDir, KeyStore keystore)
 
         ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir), new DirRepository(buildDir)];
         ModuleRepository   repository = new LinkedRepository(baseRepos.freeze(True));
-        ModuleTemplate     mainModule;
+
+        @Inject HttpServer server;
         try {
-            // we need the resolved module to look up annotations
-            mainModule = repository.getResolvedModule(webAppInfo.moduleName);
-        } catch (Exception e) {
-            errors.add($|Error: Failed to resolve module: "{webAppInfo.moduleName}": {e.message}
-                      );
-            return False;
-        }
+            server.configure(webAppInfo.hostName, webAppInfo.httpPort, webAppInfo.httpsPort,
+                             getKeyStore(userDir));
 
-        String moduleName = mainModule.qualifiedName;
-        try {
-            if (!utils.isWebModule(mainModule)) {
-                errors.add($|Error: Module "{moduleName}" is not a WebApp
-                          );
-                return False;
+            Directory homeDir = hostDir.dirFor(webAppInfo.deployment).ensure();
+            WebHost   webHost = new WebHost(server, repository, webAppInfo, homeDir, buildDir);
+
+            if (webHost.activate(errors)) {
+                server.start(webHost);
+                deployedWebHosts.put(webAppInfo.deployment, webHost);
+                return True, webHost;
             }
-
-            import xenia.tools.ModuleGenerator;
-
-            ModuleGenerator generator = new ModuleGenerator(mainModule);
-            if (ModuleTemplate hostTemplate := generator.ensureWebModule(repository, buildDir, errors)) {
-                Directory appHomeDir = hostDir.dirFor(webAppInfo.deployment).ensure();
-
-                if ((Container container, AppHost[] dependencies) :=
-                        utils.createContainer(repository, hostTemplate, appHomeDir, buildDir, False, errors)) {
-                    KeyStore keystore = getKeyStore(userDir);
-
-                    Tuple result = container.invoke("createServer_",
-                        Tuple:(webAppInfo.hostName, webAppInfo.httpPort, webAppInfo.httpsPort,
-                               keystore));
-
-                    function void() shutdown = result[0].as(function void());
-
-                    WebHost webHost = new WebHost(container, webAppInfo, appHomeDir, shutdown, dependencies);
-                    activeWebHosts.put(webAppInfo.deployment, webHost);
-
-                    webHost.log(errors.toString());
-
-                    return True, webHost;
-                }
-            } else {
-                errors.add($"Error: Failed to create a Web host for {moduleName.quoted()}");
-            }
+            webHost.close(Null);
         } catch (Exception e) {
             errors.add($"Error: {e.message}");
         }
@@ -129,12 +97,12 @@ service HostManager (Directory usersDir, KeyStore keystore)
     @Override
     void removeWebHost(WebHost webHost) {
         webHost.close();
-        activeWebHosts.remove(webHost.info.deployment);
+        deployedWebHosts.remove(webHost.info.deployment);
     }
 
     @Override
     void shutdown() {
-        for (WebHost webHost : activeWebHosts.values) {
+        for (WebHost webHost : deployedWebHosts.values) {
             webHost.close();
         }
     }

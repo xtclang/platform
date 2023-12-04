@@ -169,7 +169,7 @@ service Injector(Directory appHomeDir, Boolean platform)
 
         default:
             // HttpServer is not a shared Ecstasy type, so it's not handled by the switch()
-            if (type.is(Type<HttpServer>) && name == "server") {
+            if (platform && type.is(Type<HttpServer>) && name == "server") {
                 return (InjectedRef.Options address) -> {
                     @Inject(resourceName="server", opts=address) HttpServer server;
                     return server;

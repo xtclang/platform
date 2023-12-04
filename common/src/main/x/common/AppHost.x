@@ -9,8 +9,7 @@ class AppHost(String moduleName, Directory homeDir)
     /**
      * The Container that hosts the module.
      */
-    @Unassigned
-    Container container;
+    Container? container;
 
     /**
      * The hosted module name.
@@ -34,6 +33,6 @@ class AppHost(String moduleName, Directory homeDir)
 
     @Override
     void close(Exception? e = Null) {
-        container.kill();
+        container?.kill();
     }
 }

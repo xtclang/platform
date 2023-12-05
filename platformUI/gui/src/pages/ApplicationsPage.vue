@@ -191,12 +191,13 @@ export default defineComponent({
     const moduleStore = useModuleStore();
     const webAppStore = useWebAppStore();
     const newAppDialog = ref({ show: false });
-    const intervalId = setInterval(() => {
-      if (userStore.hasUser) {
-        webAppStore.updateStatus();
-      }}, 5000);
+    let intervalId;
 
     onBeforeMount(() => {
+      intervalId = setInterval(
+          () => webAppStore.updateStatus(),
+          5000);
+
       if (userStore.hasUser) {
         webAppStore.updateWebApps();
       }

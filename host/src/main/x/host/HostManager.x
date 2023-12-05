@@ -81,7 +81,7 @@ service HostManager (Directory usersDir, KeyStore keystore)
             Directory homeDir = hostDir.dirFor(webAppInfo.deployment).ensure();
             WebHost   webHost = new WebHost(server, repository, webAppInfo, homeDir, buildDir);
 
-            if (webHost.activate(errors)) {
+            if (webHost.activate(True, errors)) {
                 server.start(webHost);
                 deployedWebHosts.put(webAppInfo.deployment, webHost);
                 return True, webHost;

@@ -73,6 +73,16 @@ service WebHost
     @Atomic Int pendingRequests;
 
     /**
+     * Total request counter (serves as an activity inidicator).
+     */
+    Int totalRequests;
+
+    /**
+     * The timer used to monitor the application activity.
+     */
+    @Inject Timer timer;
+
+    /**
      * Indicates the number of attempted deactivations before forcefully killing the container.
      */
     Int deactivationProgress;
@@ -82,12 +92,21 @@ service WebHost
      */
     static Int DeactivationThreshold = 15;
 
+    /**
+     * The inactivity duration limit; if no requests come within that period, the application
+     * will be deactivated.
+     */
+    static Duration InactivityDuration = Duration.ofSeconds(10);
+
     /*
      * Activate the underlying WebApp.
      *
+     * @param explicit  True if the activation request comes from the platform management UI;
+     *                  False if it's caused by an application HTTP request
+     *
      * @return True iff the hosted WebApp is active
      */
-    conditional HttpHandler activate(Log errors) {
+    conditional HttpHandler activate(Boolean explicit, Log errors) {
         if (HttpHandler handler ?= this.handler) {
             return True, handler;
         }
@@ -120,6 +139,12 @@ service WebHost
                     HttpHandler handler = result[0].as(HttpHandler);
                     this.container = container;
                     this.handler   = handler;
+
+                    // set the alarm, expecting at least one application request within next
+                    // "check interval"
+                    Int currentCount = totalRequests + 1;
+                    timer.schedule(InactivityDuration, () -> checkActivity(currentCount));
+
                     return True, handler;
                 } catch (Exception e) {
                     errors.add(e.toString());
@@ -133,23 +158,44 @@ service WebHost
         return False;
     }
 
+    void checkActivity(Int prevRequests) {
+        if (totalRequests <= prevRequests) {
+            // no activity since the last check; deactivate the handler
+            deactivate(False);
+        } else {
+            // some activity detected; reschedule the check
+            Int currentCount = totalRequests;
+            timer.schedule(InactivityDuration, () -> checkActivity(currentCount));
+        }
+    }
+
     /*
      * Deactivate the underlying WebApp.
+     *
+     * @param explicit  True if the deactivation request comes from the platform management UI;
+     *                  False if it's caused by the [activity check](checkActivity)
      */
-    void deactivate() {
+    void deactivate(Boolean explicit) {
         if (active) {
+            // TODO: if deactivation is "implicit", should we force it in the same wat as for an
+            //       implicit one?
+
             if (pendingRequests > 0 && ++deactivationProgress < DeactivationThreshold) {
-                @Inject Timer timer;
-                timer.schedule(Second, () -> deactivate());
+                timer.schedule(Second, () -> deactivate(explicit));
                 return;
             }
 
+            // TODO: if deactivation is "explicit", we could prevent an implicit activation
+
             // TODO: pause, serialize and only then kill
+            for (AppHost dependent : dependencies) {
+                dependent.close();
+            }
             container?.kill();
 
-            container            = Null;
             dependencies         = [];
             handler              = Null;
+            container            = Null;
             deactivationProgress = 0;
         }
     }
@@ -169,7 +215,7 @@ service WebHost
         if (!(handler ?= this.handler)) {
             Log errors = new ErrorLog();
 
-            if (!(handler := activate(errors))) {
+            if (!(handler := activate(False, errors))) {
                 log($"Error: Failed to activate: {errors}");
 
                 httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
@@ -178,6 +224,7 @@ service WebHost
         }
 
         pendingRequests++;
+        totalRequests++;
 
         @Future Tuple result = handler.handle(context, uri, method, tls);
 

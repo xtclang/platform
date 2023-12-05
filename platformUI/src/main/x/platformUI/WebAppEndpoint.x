@@ -81,6 +81,7 @@ service WebAppEndpoint()
     SimpleResponse unregister(String deployment) {
         SimpleResponse response = stopWebApp(deployment);
         if (response.status == OK, WebHost webHost := hostManager.getWebHost(deployment)) {
+            webHost.close();
             hostManager.removeWebHost(webHost);
             accountManager.removeWebApp(accountName, deployment);
         }
@@ -108,16 +109,16 @@ service WebAppEndpoint()
                 break;
             }
 
-            if (hostManager.getWebHost(deployment)) {
-                if (!webAppInfo.active) {
-                    // the host is marked as inactive; fix it
-                    accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
-                    }
-                (status, message) = (OK, $"The application is already running");
+            ErrorLog errors = new ErrorLog();
+            if (WebHost webHost := hostManager.getWebHost(deployment)) {
+                if (!webHost.activate(True, errors)) {
+                    (status, message) = (Conflict, errors.collectErrors());
+                    break;
+                }
+                accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
                 break;
                 }
 
-            ErrorLog errors = new ErrorLog();
             if (!hostManager.createWebHost(accountName, webAppInfo, errors)) {
                 (status, message) = (Conflict, errors.collectErrors());
                 break;
@@ -174,7 +175,7 @@ service WebAppEndpoint()
                 break;
             }
 
-            webHost.deactivate();
+            webHost.deactivate(True);
             accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
         } while (False);
 

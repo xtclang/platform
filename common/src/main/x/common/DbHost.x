@@ -30,7 +30,7 @@ class DbHost(String dbModuleName, Directory homeDir)
     // ----- Closeable -------------------------------------------------------------------------------------------------
 
     @Override
-    void close(Exception? e) {
+    void close(Exception? e = Null) {
         closeDatabase();
 
         super(e);

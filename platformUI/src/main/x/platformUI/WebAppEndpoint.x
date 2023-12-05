@@ -111,20 +111,25 @@ service WebAppEndpoint()
 
             ErrorLog errors = new ErrorLog();
             if (WebHost webHost := hostManager.getWebHost(deployment)) {
-                if (!webHost.activate(True, errors)) {
+                if (webHost.activate(True, errors)) {
+                    accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
+                } else {
                     (status, message) = (Conflict, errors.collectErrors());
-                    break;
+                    hostManager.removeWebHost(webHost);
                 }
-                accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
-                break;
-                }
-
-            if (!hostManager.createWebHost(accountName, webAppInfo, errors)) {
-                (status, message) = (Conflict, errors.collectErrors());
                 break;
             }
 
-            accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
+            if (WebHost webHost := hostManager.createWebHost(accountName, webAppInfo, errors)) {
+                if (webHost.activate(True, errors)) {
+                    accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
+                } else {
+                    (status, message) = (Conflict, errors.collectErrors());
+                    hostManager.removeWebHost(webHost);
+                }
+            } else {
+                (status, message) = (Conflict, errors.collectErrors());
+            }
         } while (False);
 
         return new SimpleResponse(status, bytes=message?.utf8() : Null);

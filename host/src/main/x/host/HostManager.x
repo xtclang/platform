@@ -18,7 +18,7 @@ import xenia.HttpServer;
 /**
  * The module for basic hosting functionality.
  */
-service HostManager (Directory usersDir, KeyStore keystore)
+service HostManager(Directory usersDir, KeyStore keystore)
         implements common.HostManager {
     // ----- properties ------------------------------------------------------------------------------------------------
 
@@ -78,20 +78,18 @@ service HostManager (Directory usersDir, KeyStore keystore)
             server.configure(webAppInfo.hostName, webAppInfo.httpPort, webAppInfo.httpsPort,
                              getKeyStore(userDir));
 
-            Directory homeDir = hostDir.dirFor(webAppInfo.deployment).ensure();
-            WebHost   webHost = new WebHost(server, repository, webAppInfo, homeDir, buildDir);
+            String    deployment = webAppInfo.deployment;
+            Directory homeDir    = hostDir.dirFor(deployment).ensure();
+            WebHost   webHost    = new WebHost(server, repository, webAppInfo, homeDir, buildDir);
 
-            if (webHost.activate(True, errors)) {
-                server.start(webHost);
-                deployedWebHosts.put(webAppInfo.deployment, webHost);
-                return True, webHost;
-            }
-            webHost.close(Null);
+            server.start(webHost);
+            deployedWebHosts.put(deployment, webHost);
+
+            return True, webHost;
         } catch (Exception e) {
             errors.add($"Error: {e.message}");
+            return False;
         }
-
-        return False;
     }
 
     @Override

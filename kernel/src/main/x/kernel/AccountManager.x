@@ -63,6 +63,13 @@ service AccountManager
         }
     }
 
+    /**
+     * Retrieve all known accounts. This operation is not a part of the AccountManager interface.
+     */
+    AccountInfo[] getAccounts() {
+        return dbConnection.accounts.values.toArray(Constant);
+    }
+
     @Override
     Collection<String> getAccounts(String userName) {
         using (val tx = dbConnection.createTransaction()) {

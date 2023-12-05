@@ -29,6 +29,9 @@ module kernel.xqiz.it {
     import common.HostManager;
     import common.utils;
 
+    import common.model.AccountInfo;
+    import common.model.WebAppInfo;
+
     import json.Doc;
     import json.Parser;
 
@@ -70,12 +73,12 @@ module kernel.xqiz.it {
         ErrorLog errors = new ErrorLog();
         try {
             // initialize the account manager
-            console.print($"Starting the AccountManager..."); // inside the kernel for now
+            console.print($"Info: Starting the AccountManager..."); // inside the kernel for now
             AccountManager accountManager = new AccountManager();
             accountManager.init(repository, hostDir, buildDir, errors);
 
             // create a container for the platformUI controller and configure it
-            console.print($"Starting the HostManager...");
+            console.print($"Info: Starting the HostManager...");
 
             File storeFile = platformDir.fileFor("certs.p12");
             import crypto.KeyStore;
@@ -91,7 +94,7 @@ module kernel.xqiz.it {
             }
 
             // create a container for the platformUI controller and configure it
-            console.print($"Starting the platform UI controller...");
+            console.print($"Info: Starting the platform UI controller...");
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container := utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
@@ -105,12 +108,25 @@ module kernel.xqiz.it {
                     Tuple:(accountManager, hostManager,
                            bindAddr, httpPort, httpsPort, keystore, portLow..portHigh));
 
-                console.print($"Started the XtcPlatform at http://{bindAddr}:{httpPort}");
+                console.print($"Info: Started the XtcPlatform at http://{bindAddr}:{httpPort}");
             } else {
                 return;
             }
 
-            // TODO create and configure the account-, IO-, keyStore-manager, etc.
+            // create WebHosts for all active web applications
+            for (AccountInfo accountInfo : accountManager.getAccounts()) {
+                for (WebAppInfo webAppInfo : accountInfo.webApps.values) {
+                    if (webAppInfo.active) {
+                        if (hostManager.createWebHost(accountInfo.name, webAppInfo, errors)) {
+                            console.print($|Info: Initialized deployment: "{webAppInfo.deployment}" \
+                                           |of "{webAppInfo.moduleName}"
+                                         );
+                        }
+                    }
+                }
+            }
+
+            // TODO create and configure the IO-manager, secret-manager, etc.
         } catch (Exception e) {
             errors.add($"Error: Failed to start the XtcPlatform: {e}");
         } finally {

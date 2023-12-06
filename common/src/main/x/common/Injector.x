@@ -42,7 +42,7 @@ service Injector(Directory appHomeDir, Boolean platform)
     class ConsoleImpl(File consoleFile)
             implements Console {
         @Override
-        void print(Object o, Boolean suppressNewline=False) {
+        void print(Object o = "", Boolean suppressNewline = False) {
             write(o.is(String) ? o : o.toString(), suppressNewline);
         }
 

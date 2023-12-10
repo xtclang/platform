@@ -54,8 +54,11 @@ module kernel.xqiz.it {
         @Inject ModuleRepository repository;
 
         // get the password
-        String password;
-        if (args.size == 0) {
+        String password = "";
+        if (args.size > 0) {
+            password = args[0];
+        }
+        if (password.size == 0) {
             console.print("Enter password:");
             password = console.readLine(suppressEcho=True);
         } else {

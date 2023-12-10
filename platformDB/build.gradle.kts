@@ -1,29 +1,12 @@
-/*
- * Build the platformDB module.
+/**
+ * The platform database subproject.
  */
 
-val libDir = "${rootProject.projectDir}/lib"
+plugins {
+    alias(libs.plugins.xtc)
+}
 
-tasks.register("build") {
-    group       = "Build"
-    description = "Build this module"
-
-    dependsOn(project(":common").tasks["build"])
-
-    doLast {
-        val src = fileTree("${projectDir}/src").files.stream().
-                mapToLong{f -> f.lastModified()}.max().orElse(0)
-        val dst = file("$libDir/platformDB.xtc").lastModified()
-
-        if (src > dst) {
-            val srcModule = "${projectDir}/src/main/x/platformDB.x"
-
-            project.exec {
-                commandLine("xcc", "--verbose",
-                            "-o", libDir,
-                            "-L", libDir,
-                            srcModule)
-            }
-        }
-    }
+dependencies {
+    xdkDistribution(libs.xdk)
+    xtcModule(project(":common"))
 }

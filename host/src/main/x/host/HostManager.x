@@ -94,7 +94,10 @@ service HostManager(Directory usersDir, KeyStore keystore)
 
     @Override
     void removeWebHost(WebHost webHost) {
-        webHost.close();
+        try {
+            webHost.close();
+        } catch (Exception ignore) {}
+
         deployedWebHosts.remove(webHost.info.deployment);
     }
 

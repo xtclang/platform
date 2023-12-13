@@ -80,7 +80,7 @@ module kernel.xqiz.it {
             // create a container for the platformUI controller and configure it
             console.print($"Info: Starting the HostManager...");
 
-            File storeFile = platformDir.fileFor("certs.p12");
+            File storeFile = platformDir.fileFor("keystore.p12");
             import crypto.KeyStore;
             @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
 

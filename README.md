@@ -35,25 +35,26 @@ The project is organized as a number of sub-projects, with the important ones to
 
 ## Steps to test the PAAS functionality:
 
-Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every time after an OS reboot. Steps 3-8 need to be done just once.
+Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every time after an OS reboot.
 
-1. Make sure your "etc/hosts" file contains the following entries:
+1. Create "xqiz.it" subdirectory under the user home directory for the platform persistent data. The subdirectory "platform" will be used to keep the platform operational information and subdirectory "users" for hosted applications.
 
-        127.0.0.10 xtc-platform.xqiz.it
+2. Create a file "~/xqiz.it/port-forwarding.conf" with the following content:
 
-2. Allow the loopback addresses binding by running this script as an admin user: (this step needs to be repeated after reboot)
+       rdr pass on lo0 inet proto tcp from any to self port 80  -> 127.0.0.1 port 8080
+       rdr pass on lo0 inet proto tcp from any to self port 443 -> 127.0.0.1 port 8090
 
-        sudo ifconfig lo0 alias 127.0.0.10
-
-3. Create "xqiz.it" subdirectory under the user home directory for the platform persistent data. The subdirectory "platform" will be used to keep the platform operational information and subdirectory "users" for hosted applications.
+3. Run the following command to redirect http and https traffic to unprivileged ports:
+      
+       sudo pfctl -evf ~/xqiz.it/port-forwarding.conf
 
 4. Create a self-signed certificate for the platform web server. For example:
    
-        keytool -genkeypair -alias platform -keyalg RSA -keysize 2048 -validity 365 -dname "OU=Platform, O=[your name], C=US" -keystore ~/xqiz.it/platform/certs.p12 -storetype PKCS12 -storepass [password]
+        keytool -genkeypair -alias platform -keyalg RSA -keysize 2048 -validity 365 -dname "OU=Platform, O=[your name], C=US" -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass [password]
 
 5. Add a symmetric key to encode the cookies:
 
-        keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/certs.p12 -storetype PKCS12 -storepass [password]
+        keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass [password]
    
 6. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), [yarn](https://yarnpkg.com/) and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed. If you are using `brew`, you can simply say: 
         
@@ -77,7 +78,7 @@ Note that steps 1 and 2 are temporary, and step 2 needs to be re-executed every 
 
 11. Open the hosting site in a browser: 
 
-         https://xtc-platform.xqiz.it:8090/
+         https://xtc-platform.localhost.xqiz.it
 
 12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
 13. Log into the "Ecstasy Cloud" platform using "admin@acme.om/password" credentials.

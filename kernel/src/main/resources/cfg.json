@@ -1,5 +1,5 @@
 {
-"bindAddress":"xtc-platform.xqiz.it",
+"bindAddress":"xtc-platform.localhost.xqiz.it",
 "httpPort":8080,
 "httpsPort":8090,
 "userPortLow":8100,

@@ -13,7 +13,7 @@ import web.responses.SimpleResponse;
  */
 @WebService("/webapp")
 @LoginRequired
-service WebAppEndpoint()
+service WebAppEndpoint
         extends CoreService {
 
     /**
@@ -81,10 +81,9 @@ service WebAppEndpoint()
     SimpleResponse unregister(String deployment) {
         SimpleResponse response = stopWebApp(deployment);
         if (response.status == OK, WebHost webHost := hostManager.getWebHost(deployment)) {
-            webHost.close();
             hostManager.removeWebHost(webHost);
-            accountManager.removeWebApp(accountName, deployment);
         }
+        accountManager.removeWebApp(accountName, deployment);
 
         return response;
     }

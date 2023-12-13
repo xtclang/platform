@@ -5,7 +5,7 @@ import common.WebHost;
 import web.*;
 
 @WebService("/host")
-service Controller()
+service Controller
         extends CoreService {
 
     @Post("debug")

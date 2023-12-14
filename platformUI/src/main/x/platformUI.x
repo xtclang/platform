@@ -55,6 +55,7 @@ module platformUI.xqiz.it {
             router.addRoute(hostAddr, new HttpHandler(server, this));
 
             for (WebHost webHost : webHosts) {
+                webHost.httpServer = server;
                 router.addRoute(webHost.info.hostName, webHost);
             }
 

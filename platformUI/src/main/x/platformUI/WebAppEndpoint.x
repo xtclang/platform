@@ -48,7 +48,7 @@ service WebAppEndpoint
     /**
      * Handle a request to register a webapp for a module.
      * Assumptions:
-     *  - many webapps can be registered from the same module with different deployment
+     *  - many webapps can be registered from the same module with a different deployment
      *  - a deployment has one and only one webapp
      */
     @Post("/register/{deployment}/{moduleName}")
@@ -67,10 +67,13 @@ service WebAppEndpoint
             return HttpStatus.NotFound;
         }
 
-        (String hostName, UInt16 httpPort, UInt16 httpsPort) = getAuthority(deployment);
+        // compute the full host name (e.g. "shop.acme.com.xqiz.it")
+        String hostName = $"{deployment}.{accountName}.{router.baseDomain}";
+
+        // TODO: obtain a certificate for that domain
 
         accountManager.addOrUpdateWebApp(accountName,
-            new WebAppInfo(deployment, moduleName, hostName, httpPort, httpsPort, False));
+            new WebAppInfo(deployment, moduleName, hostName, False));
         return HttpStatus.OK;
     }
 
@@ -82,7 +85,10 @@ service WebAppEndpoint
         SimpleResponse response = stopWebApp(deployment);
         if (response.status == OK, WebHost webHost := hostManager.getWebHost(deployment)) {
             hostManager.removeWebHost(webHost);
+            router.removeRoute(webHost.info.hostName);
         }
+
+        // TODO: revoke the certificate?
         accountManager.removeWebApp(accountName, deployment);
 
         return response;
@@ -110,8 +116,9 @@ service WebAppEndpoint
 
             ErrorLog errors = new ErrorLog();
             if (WebHost webHost := hostManager.getWebHost(deployment)) {
-                if (webHost.activate(True, errors)) {
+                if (webHost.activate(router.httpServer, True, errors)) {
                     accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
+                    router.addRoute(webAppInfo.hostName, webHost);
                 } else {
                     (status, message) = (Conflict, errors.collectErrors());
                     hostManager.removeWebHost(webHost);
@@ -120,8 +127,9 @@ service WebAppEndpoint
             }
 
             if (WebHost webHost := hostManager.createWebHost(accountName, webAppInfo, errors)) {
-                if (webHost.activate(True, errors)) {
+                if (webHost.activate(router.httpServer, True, errors)) {
                     accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
+                    router.addRoute(webAppInfo.hostName, webHost);
                 } else {
                     (status, message) = (Conflict, errors.collectErrors());
                     hostManager.removeWebHost(webHost);
@@ -185,24 +193,4 @@ service WebAppEndpoint
 
         return new SimpleResponse(status, bytes=message?.utf8() : Null);
     }
-
-
-    // ----- helpers -------------------------------------------------------------------------------
-
-    /**
-     * Get the host name and ports for the specified deployment.
-     */
-    (String hostName, UInt16 httpPort, UInt16 httpsPort) getAuthority(String deployment) {
-        assert UInt16 httpPort := accountManager.allocatePort(ControllerConfig.userPorts);
-
-        // This is very temporary; there is a lot of complexity that will have to be resolved here:
-        // - check for the name uniqueness
-        // - create a domain (e.g. $"{deployment}.{accountName}.users.xqiz.it"
-        // - ensure a certificate for that domain (using "let's encrypt")
-        // - ensure a dynamic route for the domain into our http server
-
-        return ControllerConfig.bindAddr, httpPort, httpPort+1;
-    }
-
-
 }

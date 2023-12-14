@@ -27,6 +27,9 @@ module kernel.xqiz.it {
 
     import common.ErrorLog;
     import common.HostManager;
+    import common.WebHost;
+
+    import common.names;
     import common.utils;
 
     import common.model.AccountInfo;
@@ -80,7 +83,7 @@ module kernel.xqiz.it {
             // create a container for the platformUI controller and configure it
             console.print($"Info: Starting the HostManager...");
 
-            File storeFile = platformDir.fileFor("keystore.p12");
+            File storeFile = platformDir.fileFor(names.PlatformKeyStore);
             import crypto.KeyStore;
             @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
 
@@ -93,37 +96,38 @@ module kernel.xqiz.it {
                 return;
             }
 
+            // create WebHosts for all active web applications
+            WebHost[] webHosts = new WebHost[];
+            for (AccountInfo accountInfo : accountManager.getAccounts()) {
+                for (WebAppInfo webAppInfo : accountInfo.webApps.values) {
+                    if (webAppInfo.active, WebHost webHost :=
+                            hostManager.createWebHost(accountInfo.name, webAppInfo, errors)) {
+                        webHosts += webHost;
+                        console.print($|Info: Initialized deployment: "{webAppInfo.hostName}" \
+                                       |of "{webAppInfo.moduleName}"
+                                     );
+                    }
+                }
+            }
+
             // create a container for the platformUI controller and configure it
             console.print($"Info: Starting the platform UI controller...");
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
-            if (Container  container := utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
-                String bindAddr  = config.getOrDefault("bindAddress", "xtc-platform.xqiz.it").as(String);
-                UInt16 httpPort  = config.getOrDefault("httpPort",     8080).as(IntLiteral).toUInt16();
-                UInt16 httpsPort = config.getOrDefault("httpsPort",    8090).as(IntLiteral).toUInt16();
-                UInt16 portLow   = config.getOrDefault("userPortLow",  8100).as(IntLiteral).toUInt16();
-                UInt16 portHigh  = config.getOrDefault("userPortHIgh", 8199).as(IntLiteral).toUInt16();
+            if (Container  container :=
+                    utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
+
+                String hostAddr  = config.getOrDefault("hostAddr",  names.PlatformUri).as(String);
+                UInt16 httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
+                UInt16 httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
 
                 container.invoke("configure",
-                    Tuple:(accountManager, hostManager,
-                           bindAddr, httpPort, httpsPort, keystore, portLow..portHigh));
+                    Tuple:(accountManager, hostManager, hostAddr, httpPort, httpsPort, keystore,
+                           webHosts.freeze(True)));
 
-                console.print($"Info: Started the XtcPlatform at http://{bindAddr}:{httpPort}");
+                console.print($"Info: Started the XtcPlatform at http://{hostAddr}:{httpPort}");
             } else {
                 return;
-            }
-
-            // create WebHosts for all active web applications
-            for (AccountInfo accountInfo : accountManager.getAccounts()) {
-                for (WebAppInfo webAppInfo : accountInfo.webApps.values) {
-                    if (webAppInfo.active) {
-                        if (hostManager.createWebHost(accountInfo.name, webAppInfo, errors)) {
-                            console.print($|Info: Initialized deployment: "{webAppInfo.deployment}" \
-                                           |of "{webAppInfo.moduleName}"
-                                         );
-                        }
-                    }
-                }
             }
 
             // TODO create and configure the IO-manager, secret-manager, etc.

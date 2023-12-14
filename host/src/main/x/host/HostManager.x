@@ -73,23 +73,13 @@ service HostManager(Directory usersDir, KeyStore keystore)
         ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir), new DirRepository(buildDir)];
         ModuleRepository   repository = new LinkedRepository(baseRepos.freeze(True));
 
-        @Inject HttpServer server;
-        try {
-            server.configure(webAppInfo.hostName, webAppInfo.httpPort, webAppInfo.httpsPort,
-                             getKeyStore(userDir));
+        String    deployment = webAppInfo.deployment;
+        Directory homeDir    = hostDir.dirFor(deployment).ensure();
+        WebHost   webHost    = new WebHost(repository, webAppInfo, homeDir, buildDir);
 
-            String    deployment = webAppInfo.deployment;
-            Directory homeDir    = hostDir.dirFor(deployment).ensure();
-            WebHost   webHost    = new WebHost(server, repository, webAppInfo, homeDir, buildDir);
+        deployedWebHosts.put(deployment, webHost);
 
-            server.start(webHost);
-            deployedWebHosts.put(deployment, webHost);
-
-            return True, webHost;
-        } catch (Exception e) {
-            errors.add($"Error: {e.message}");
-            return False;
-        }
+        return True, webHost;
     }
 
     @Override
@@ -107,7 +97,6 @@ service HostManager(Directory usersDir, KeyStore keystore)
             webHost.close();
         }
     }
-
 
     /**
      * Ensure the user directory for the specified account.

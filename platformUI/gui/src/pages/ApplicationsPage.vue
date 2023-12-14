@@ -58,8 +58,8 @@
                     <q-btn
                       flat color="primary" icon="lock_open" align="left"
                       class="text-lowercase"
-                      :label="`${currentWebApp.hostName}:${currentWebApp.httpPort}`"
-                      :href="`http://${currentWebApp.hostName}:${currentWebApp.httpPort}`"
+                      :label="`${currentWebApp.hostName}`"
+                      :href="`http://${currentWebApp.hostName}`"
                       :target="deployment"
                     />
                   </q-item-section>
@@ -69,8 +69,8 @@
                     <q-btn
                       flat color="primary" icon="https" align="left"
                       class="text-lowercase"
-                      :label="`${currentWebApp.hostName}:${currentWebApp.httpsPort}`"
-                      :href="`https://${currentWebApp.hostName}:${currentWebApp.httpsPort}`"
+                      :label="`${currentWebApp.hostName}`"
+                      :href="`https://${currentWebApp.hostName}`"
                       :target="deployment"
                     />
                   </q-item-section>

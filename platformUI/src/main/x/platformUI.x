@@ -11,6 +11,9 @@ module platformUI.xqiz.it {
 
     import common.AccountManager;
     import common.HostManager;
+    import common.WebHost;
+
+    import common.names;
 
     import crypto.KeyStore;
 
@@ -24,15 +27,45 @@ module platformUI.xqiz.it {
     import web.security.FixedRealm;
     import web.security.Realm;
 
+    import xenia.HttpHandler;
+    import xenia.HttpServer;
+
     /**
      * Configure the controller.
      */
     void configure(AccountManager accountManager, HostManager hostManager,
-                   String bindAddr, UInt16 httpPort, UInt16 httpsPort, KeyStore keystore,
-                   Range<UInt16> userPorts) {
-        ControllerConfig.init(accountManager, hostManager,
-            xenia.createServer(this, bindAddr, httpPort, httpsPort, keystore),
-            bindAddr, userPorts);
+                   String hostAddr, UInt16 httpPort, UInt16 httpsPort, KeyStore keystore,
+                   WebHost[] webHosts) {
+        // the 'hostAddr' is a full URI of the platform server, e.g. "xtc-platform.localhost.xqiz.it";
+        // we need to extract the base domain ("localhost.xqiz.it")
+        String baseDomain;
+        if (Int dot := hostAddr.indexOf('.')) {
+            baseDomain = hostAddr.substring(dot + 1);
+        } else {
+            throw new IllegalState($"Invalid host address: {hostAddr.quoted()}");
+        }
+
+        @Inject HttpServer server;
+        try {
+            server.configure(hostAddr, httpPort, httpsPort, keystore,
+                names.PlatformTlsKey, names.CookieEncryptionKey);
+
+            Router router = new Router(server, baseDomain);
+
+            router.addRoute(hostAddr, new HttpHandler(server, this));
+
+            for (WebHost webHost : webHosts) {
+                router.addRoute(webHost.info.hostName, webHost);
+            }
+
+            server.start(router);
+
+            ControllerConfig.init(accountManager, hostManager, router);
+            }
+        catch (Exception e) {
+            server.close(e);
+            throw e;
+        }
 
         this.registry_.jsonSchema = new Schema(
                 enableReflection = True,
@@ -73,22 +106,12 @@ module platformUI.xqiz.it {
         HostManager hostManager;
 
         @Unassigned
-        function void() shutdownServer;
+        Router router;
 
-        @Unassigned
-        String bindAddr;
-
-        @Unassigned
-        Range<UInt16> userPorts;
-
-        void init(AccountManager accountManager, HostManager hostManager,
-                 function void() shutdownServer,
-                 String bindAddr, Range<UInt16> userPorts) {
+        void init(AccountManager accountManager, HostManager hostManager, Router router) {
             this.accountManager = accountManager;
             this.hostManager    = hostManager;
-            this.shutdownServer = shutdownServer;
-            this.bindAddr       = bindAddr;
-            this.userPorts      = userPorts;
+            this.router         = router;
         }
 
       /**

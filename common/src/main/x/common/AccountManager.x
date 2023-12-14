@@ -58,17 +58,6 @@ interface AccountManager {
      */
     void removeWebApp(String accountName, String webAppName);
 
-    /**
-     * Obtain an available HTTP port within the specified range. The returned value will always be
-     * an even number and the next (odd) value should be used for a corresponding HTTPS port.
-     *
-     * @param  range  the range to allocate the port within
-     *
-     * @return True iff the port is allocated
-     * @return (optional) the allocated port
-     */
-     conditional UInt16 allocatePort(Range<UInt16> range);
-
 
     // ----- lifecycle -------------------------------------------------------------------------------------------------
 

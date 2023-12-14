@@ -22,7 +22,7 @@ service Controller
             hostManager.shutdown();
             accountManager.shutdown();
         } finally {
-            callLater(ControllerConfig.shutdownServer);
+            callLater(ControllerConfig.router.shutdown);
         }
         return HttpStatus.OK;
     }

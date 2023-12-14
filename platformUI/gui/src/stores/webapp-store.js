@@ -41,16 +41,12 @@ export const useWebAppStore = defineStore("webApp", {
             "deployment": "bank1",
             "moduleName": "bankStressTest.examples.org",
             "hostName": "xtc-platform.xqiz.it",
-            "httpPort": 8100,
-            "httpsPort": 8101,
             "active": true,
           },
           "bank2": {
             "deployment": "bank2",
             "moduleName": "bankStressTest.examples.org",
             "hostName": "xtc-platform.xqiz.it",
-            "httpPort": 8102,
-            "httpsPort": 8103,
             "active": false,
           },
         };

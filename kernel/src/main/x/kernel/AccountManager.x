@@ -53,13 +53,13 @@ service AccountManager
         if (!accounts.contains(1)) {
             UserInfo admin = new UserInfo(1, "admin@acme.com", "john.doe@acme.com");
             users.put(1, admin);
-            accounts.put(1, new AccountInfo(1, "acme", [], [], Map:[1 = Admin]));
+            accounts.put(1, new AccountInfo(1, "acme.com", [], [], Map:[1 = Admin]));
         }
 
         if (!accounts.contains(2)) {
             UserInfo admin = new UserInfo(2, "admin@cvs.com", "john.doe@cvs.com");
             users.put(2, admin);
-            accounts.put(2, new AccountInfo(2, "cvs", [], [], Map:[2 = Admin]));
+            accounts.put(2, new AccountInfo(2, "cvs.com", [], [], Map:[2 = Admin]));
         }
     }
 
@@ -109,10 +109,6 @@ service AccountManager
     void addOrUpdateWebApp(String accountName, WebAppInfo webAppInfo) {
         using (val tx = dbConnection.createTransaction()) {
             if (AccountInfo accountInfo := getAccount(accountName)) {
-                if (!accountInfo.webApps.contains(webAppInfo.deployment)) {
-                    // update the "allocatedPorts" table
-                    tx.allocatedPorts.put(webAppInfo.httpPort, accountInfo.id);
-                }
                 tx.accounts.put(accountInfo.id, accountInfo.addOrUpdateWebApp(webAppInfo));
             }
         }
@@ -121,28 +117,9 @@ service AccountManager
     @Override
     void removeWebApp(String accountName, String appName) {
         using (val tx = dbConnection.createTransaction()) {
-            if (AccountInfo accountInfo := getAccount(accountName),
-                WebAppInfo  webAppInfo  := accountInfo.webApps.get(appName)) {
-
+            if (AccountInfo accountInfo := getAccount(accountName)) {
                 tx.accounts.put(accountInfo.id, accountInfo.removeWebApp(appName));
-                // update the "allocatedPorts" table
-                dbConnection.allocatedPorts.remove(webAppInfo.httpPort);
             }
-        }
-    }
-
-
-    @Override
-    conditional UInt16 allocatePort(Range<UInt16> range) {
-        using (val tx = dbConnection.createTransaction()) {
-            DBMap<UInt16, AccountId> allocatedPorts = dbConnection.allocatedPorts;
-
-            for (UInt16 port = range.lowerBound; port < range.upperBound; port += 2) {
-                if (!allocatedPorts.contains(port)) {
-                    return True, port;
-                }
-            }
-            return False;
         }
     }
 

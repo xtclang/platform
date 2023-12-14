@@ -20,12 +20,6 @@ module platformDB.xqiz.it {
         @RO DBMap<AccountId, AccountInfo> accounts;
 
         @RO DBMap<UserId, UserInfo> users;
-
-        /**
-         * Temporary, until the automatic DNS registration is implemented.
-         * Holds the HTTP ports allocated to accounts.
-         */
-        @RO DBMap<UInt16, AccountId> allocatedPorts;
     }
 
     typedef (oodb.Connection<Schema>  + Schema) as Connection;

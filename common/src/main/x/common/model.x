@@ -79,19 +79,11 @@ package model {
     const WebAppInfo(
         String  deployment, // the same module could be deployed multiple times
         String  moduleName, // qualified
-        String  hostName,
-        UInt16  httpPort,
-        UInt16  httpsPort,
+        String  hostName,   // the full host name (e.g. "shop.acme.com.xqiz.it")
         Boolean active) {
 
-        assert() {
-            // for now, the ports are consecutive and the http port is an even number
-            assert httpPort % 2 == 0 && httpsPort == httpPort + 1;
-        }
-
         WebAppInfo updateStatus(Boolean active) {
-            return new WebAppInfo(deployment, moduleName,
-                                  hostName, httpPort, httpsPort, active);
+            return new WebAppInfo(deployment, moduleName, hostName, active);
         }
     }
 }

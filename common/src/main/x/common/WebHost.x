@@ -22,20 +22,14 @@ service WebHost
         extends AppHost
         implements Handler {
 
-    construct (HttpServer httpServer, ModuleRepository repository, WebAppInfo info,
+    construct (ModuleRepository repository, WebAppInfo info,
                Directory homeDir, Directory buildDir) {
         construct AppHost(info.moduleName, homeDir);
 
-        this.httpServer = httpServer;
         this.repository = repository;
         this.info       = info;
         this.buildDir   = buildDir;
     }
-
-    /**
-     * The HttpServer to use for communications.
-     */
-    HttpServer httpServer;
 
     /**
      * The module repository to use.
@@ -58,6 +52,11 @@ service WebHost
     AppHost[] dependencies = [];
 
     /**
+     * The HttpServer to use for communications.
+     */
+    HttpServer? httpServer;
+
+    /**
      * The underlying HttpHandler.
      */
     HttpHandler? handler;
@@ -68,14 +67,9 @@ service WebHost
     Boolean active.get() = handler != Null;
 
     /**
-     * Pending request counter.
+     * Total request counter (serves as an activity indicator).
      */
-    @Atomic Int pendingRequests;
-
-    /**
-     * Total request counter (serves as an activity inidicator).
-     */
-    Int totalRequests;
+    private Int totalRequests;
 
     /**
      * The timer used to monitor the application activity.
@@ -85,7 +79,7 @@ service WebHost
     /**
      * Indicates the number of attempted deactivations before forcefully killing the container.
      */
-    Int deactivationProgress;
+    private Int deactivationProgress;
 
     /**
      * The number of seconds to wait for the application traffic to stop before killing it.
@@ -106,7 +100,7 @@ service WebHost
      *
      * @return True iff the hosted WebApp is active
      */
-    conditional HttpHandler activate(Boolean explicit, Log errors) {
+    conditional HttpHandler activate(HttpServer httpServer, Boolean explicit, Log errors) {
         if (HttpHandler handler ?= this.handler) {
             return True, handler;
         }
@@ -135,10 +129,11 @@ service WebHost
                     utils.createContainer(repository, webTemplate, homeDir, buildDir, False, errors)) {
 
                 try {
-                    Tuple result = container.invoke("createHandler_", Tuple:(httpServer));
+                    Tuple       result  = container.invoke("createHandler_", Tuple:(httpServer));
                     HttpHandler handler = result[0].as(HttpHandler);
-                    this.container = container;
-                    this.handler   = handler;
+                    this.container  = container;
+                    this.handler    = handler;
+                    this.httpServer = httpServer;
 
                     // set the alarm, expecting at least one application request within next
                     // "check interval"
@@ -174,15 +169,17 @@ service WebHost
      *
      * @param explicit  True if the deactivation request comes from the platform management UI;
      *                  False if it's caused by the [activity check](checkActivity)
+     *
+     * @return True iff the deactivation has succeeded; False if it has been re-scheduled
      */
-    void deactivate(Boolean explicit) {
-        if (active) {
+    Boolean deactivate(Boolean explicit) {
+        if (HttpHandler handler ?= this.handler) {
             // TODO: if deactivation is "implicit", should we force it in the same wat as for an
             //       implicit one?
 
-            if (pendingRequests > 0 && ++deactivationProgress < DeactivationThreshold) {
+            if (handler.pendingRequests > 0 && ++deactivationProgress < DeactivationThreshold) {
                 timer.schedule(Second, () -> deactivate(explicit));
-                return;
+                return False;
             }
 
             // TODO: if deactivation is "explicit", we could prevent an implicit activation
@@ -193,11 +190,12 @@ service WebHost
             }
             container?.kill();
 
-            dependencies         = [];
-            handler              = Null;
-            container            = Null;
-            deactivationProgress = 0;
+            this.dependencies         = [];
+            this.handler              = Null;
+            this.container            = Null;
+            this.deactivationProgress = 0;
         }
+        return True;
     }
 
 
@@ -205,6 +203,8 @@ service WebHost
 
     @Override
     void handle(RequestContext context, String uri, String method, Boolean tls) {
+        assert HttpServer httpServer ?= this.httpServer as
+                $"WebHost for {info.hostName.quoted()} has not been activated";
         if (deactivationProgress > 0) {
             // deactivation is in progress; would be nice to send back a corresponding page
             httpServer.send(context, HttpStatus.ServiceUnavailable.code, [], [], []);
@@ -215,7 +215,7 @@ service WebHost
         if (!(handler ?= this.handler)) {
             Log errors = new ErrorLog();
 
-            if (!(handler := activate(False, errors))) {
+            if (!(handler := activate(httpServer, False, errors))) {
                 log($"Error: Failed to activate: {errors}");
 
                 httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
@@ -223,12 +223,9 @@ service WebHost
             }
         }
 
-        pendingRequests++;
         totalRequests++;
 
-        @Future Tuple result = handler.handle(context, uri, method, tls);
-
-        &result.whenComplete((r, e) -> {pendingRequests--;});
+        handler.handle^(context, uri, method, tls);
     }
 
 
@@ -239,7 +236,6 @@ service WebHost
         for (AppHost dependent : dependencies) {
             dependent.close(e);
         }
-        httpServer.close(e);
 
         super(e);
     }

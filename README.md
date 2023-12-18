@@ -46,42 +46,48 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 
 3. Run the following command to redirect http and https traffic to unprivileged ports:
       
-       sudo pfctl -evf ~/xqiz.it/port-forwarding.conf
+       sudo pfctl -evf ~/xqiz.it/platform/port-forwarding.conf
 
-4. Create a self-signed certificate for the platform web server. For example:
+4. Make sure you can ping the local platform address:
+       
+       ping xtc-platform.localhost.xqiz.it
+   
+   If that address fails to resolve you may need to change the rools on you DNS server. For example, for Verizon routers you would need add an exception entry for "127.0.0.1" to your DNS Server settiings: "Exceptions to DNS Rebind Protection" (Advanced - Network Settings - DNS Server)   
+
+5. Create a self-signed certificate for the platform web server. For example:
    
         keytool -genkeypair -alias platform -keyalg RSA -keysize 2048 -validity 365 -dname "OU=Platform, O=[your name], C=US" -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass [password]
 
-5. Add a symmetric key to encode the cookies:
+6. Add a symmetric key to encode the cookies:
 
         keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass [password]
    
-6. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), [yarn](https://yarnpkg.com/) and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed. If you are using `brew`, you can simply say: 
+7. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), [yarn](https://yarnpkg.com/) and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed. If you are using `brew`, you can simply say: 
         
        brew install gradle node yarn  
 
-7. Make sure all necessary *node* modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
+8. Make sure all necessary *node* modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
    
         npm install
 
-8. If you plan to use `quasar` dev environment, please intall it globally by the following command:
+9. If you plan to use `quasar` dev environment, please intall it globally by the following command:
 
         npm install -g @quasar/cli
  
-9. Build the platform services using the gradle command (from within the "platform" directory):
+10. Build the platform services using the gradle command (from within the "platform" directory):
 
-         gradle build
+          gradle build
 
-10. Start the platform using the command (from within the "platform" directory):
+11. Start the platform using the command (from within the "platform" directory):
 
          xec -L lib/ lib/kernel.xtc [password]
 
-11. Open the hosting site in a browser: 
+12. Open the hosting site in a browser: 
 
          https://xtc-platform.localhost.xqiz.it
 
-12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
-13. Log into the "Ecstasy Cloud" platform using "admin@acme.om/password" credentials.
-14. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
-15. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
-16. Click on the URL to launch your application web page.
+13. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
+14. Log into the "Ecstasy Cloud" platform using "admin@acme.om/password" credentials.
+15. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
+16. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
+17. Click on the URL to launch your application web page.

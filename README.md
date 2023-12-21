@@ -52,7 +52,7 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
        
        ping xtc-platform.localhost.xqiz.it
    
-   If that address fails to resolve you may need to change the rools on you DNS server. For example, for Verizon routers you would need add an exception entry for "127.0.0.1" to your DNS Server settiings: "Exceptions to DNS Rebind Protection" (Advanced - Network Settings - DNS Server)   
+   If that address fails to resolve you may need to change the rules on you DNS server. For example, for Verizon routers you would need add an exception entry for "127.0.0.1" to your DNS Server settings: "Exceptions to DNS Rebind Protection" (Advanced - Network Settings - DNS Server)   
 
 5. Create a self-signed certificate for the platform web server. For example:
    
@@ -70,7 +70,7 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
    
         npm install
 
-9. If you plan to use `quasar` dev environment, please intall it globally by the following command:
+9. If you plan to use `quasar` dev environment, please install it globally by the following command:
 
         npm install -g @quasar/cli
  

@@ -7,12 +7,26 @@ import common.model.WebAppInfo;
  * The Host Manager API.
  */
 interface HostManager {
-    // ----- WebHost management ----------------------------------------------------------------------------------------
+    // ----- WebHost management --------------------------------------------------------------------
 
     /**
-     * Ensure a user "lib" directory for the specified account (e.g. "~/xqiz.it/users/acme/lib").
+     * Ensure a users directory for the specified account (e.g. "~/xqiz.it/users/acme.com").
      */
-    Directory ensureUserLibDirectory(String accountName);
+    Directory ensureUserDirectory(String accountName);
+
+    /**
+     * Ensure a user "lib" directory for the specified account (e.g. "~/xqiz.it/users/acme.com/lib").
+     */
+    Directory ensureUserLibDirectory(String accountName) {
+        return ensureUserDirectory(accountName).dirFor("lib");
+    }
+
+    /**
+     * Ensure a user "host" directory for the specified account (e.g. "~/xqiz.it/users/acme.com/host").
+     */
+    Directory ensureUserHostDirectory(String accountName) {
+        return ensureUserDirectory(accountName).dirFor("host");
+    }
 
     /**
      * Retrieve a 'WebHost' for the specified deployment.
@@ -40,10 +54,17 @@ interface HostManager {
     void removeWebHost(WebHost webHost);
 
 
-    // ----- lifecycle -------------------------------------------------------------------------------------------------
+    // ----- lifecycle -----------------------------------------------------------------------------
 
     /**
-     * Shutdown all hosted services.
+     * Shutdown all hosted services. Regardless of the outcome, when this method returns no new
+     * request will be accepted for processing.
+     *
+     * @param force  (optional) pass True to force the shutdown
+     *
+     * @return False iff there any pending requests and some services are still shutting down.
+     *         in which case the caller is supposed to either "force" the shutdown or repeat it
+     *         within a reasonable duration of time and for a reasonable number of times
      */
-    void shutdown();
+    Boolean shutdown(Boolean force = False);
 }

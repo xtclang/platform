@@ -5,6 +5,8 @@ import ecstasy.reflect.ModuleTemplate;
 
 import ecstasy.text.Log;
 
+import crypto.Decryptor;
+
 import web.HttpStatus;
 
 import xenia.HttpHandler;
@@ -22,11 +24,12 @@ service WebHost
         extends AppHost
         implements Handler {
 
-    construct (ModuleRepository repository, WebAppInfo info,
+    construct (ModuleRepository repository, String account, WebAppInfo info,
                Directory homeDir, Directory buildDir) {
         construct AppHost(info.moduleName, homeDir);
 
         this.repository = repository;
+        this.account    = account;
         this.info       = info;
         this.buildDir   = buildDir;
     }
@@ -35,6 +38,11 @@ service WebHost
      * The module repository to use.
      */
     ModuleRepository repository;
+
+    /**
+     * The account name this deployment belongs to.
+     */
+    String account;
 
     /**
      * The web application details.
@@ -60,6 +68,11 @@ service WebHost
      * The underlying HttpHandler.
      */
     HttpHandler? handler;
+
+    /**
+     * The decryptor to be used by the underlying handler.
+     */
+    Decryptor? decryptor;
 
     /**
      * Indicates whether or not this WebHost is ready to handle HTTP requests.
@@ -120,9 +133,9 @@ service WebHost
             return False;
         }
 
-        import xenia.tools.ModuleGenerator;
+        import tools.ModuleGenerator;
 
-        ModuleGenerator generator = new ModuleGenerator(mainModule, $/_webModule.txt);
+        ModuleGenerator generator = new ModuleGenerator(mainModule);
         if (ModuleTemplate webTemplate := generator.ensureWebModule(repository, buildDir, errors)) {
             Container container;
             if ((container, dependencies) :=
@@ -131,6 +144,8 @@ service WebHost
                 try {
                     Tuple       result  = container.invoke("createHandler_", Tuple:(httpServer));
                     HttpHandler handler = result[0].as(HttpHandler);
+                    handler.configure(decryptor? : assert);
+
                     this.container  = container;
                     this.handler    = handler;
                     this.httpServer = httpServer;
@@ -174,10 +189,9 @@ service WebHost
      */
     Boolean deactivate(Boolean explicit) {
         if (HttpHandler handler ?= this.handler) {
-            // TODO: if deactivation is "implicit", should we force it in the same wat as for an
-            //       implicit one?
+            // TODO: if deactivation is "implicit", we need to "serialize to disk" rather than "shutdown"
 
-            if (handler.pendingRequests > 0 && ++deactivationProgress < DeactivationThreshold) {
+            if (!handler.shutdown() && ++deactivationProgress < DeactivationThreshold) {
                 timer.schedule(Second, () -> deactivate(explicit));
                 return False;
             }
@@ -189,6 +203,7 @@ service WebHost
                 dependent.close();
             }
             container?.kill();
+            httpServer?.removeRoute(info.hostName);
 
             this.dependencies         = [];
             this.handler              = Null;
@@ -200,6 +215,11 @@ service WebHost
 
 
     // ----- Handler -------------------------------------------------------------------------------
+
+    @Override
+    void configure(Decryptor decryptor) {
+        this.decryptor = decryptor;
+    }
 
     @Override
     void handle(RequestContext context, String uri, String method, Boolean tls) {

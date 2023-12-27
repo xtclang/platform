@@ -91,7 +91,7 @@ module kernel.xqiz.it {
             HostManager    hostManager;
             if (Container  container :=
                     utils.createContainer(repository, hostModule, hostDir, buildDir, True, errors)) {
-                hostManager = container.invoke("configure", Tuple:(usersDir, keystore))[0].as(HostManager);
+                hostManager = container.invoke("configure", Tuple:(usersDir))[0].as(HostManager);
             } else {
                 return;
             }

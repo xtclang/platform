@@ -59,7 +59,7 @@ interface AccountManager {
     void removeWebApp(String accountName, String webAppName);
 
 
-    // ----- lifecycle -------------------------------------------------------------------------------------------------
+    // ----- lifecycle -----------------------------------------------------------------------------
 
     /**
      * Shutdown all account services.

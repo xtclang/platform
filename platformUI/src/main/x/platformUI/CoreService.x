@@ -7,7 +7,8 @@ service CoreService {
     construct() {
         accountManager = ControllerConfig.accountManager;
         hostManager    = ControllerConfig.hostManager;
-        router         = ControllerConfig.router;
+        httpServer     = ControllerConfig.httpServer;
+        baseDomain     = ControllerConfig.baseDomain;
     }
 
     /**
@@ -21,9 +22,14 @@ service CoreService {
     protected HostManager hostManager;
 
     /**
-     * The router.
+     * The HttpServer.
      */
-    protected Router router;
+    protected HttpServer httpServer;
+
+    /**
+     * The base domain name.
+     */
+    protected String baseDomain;
 
     /**
      * The current account name.

@@ -47,21 +47,20 @@ module platformUI.xqiz.it {
 
         @Inject HttpServer server;
         try {
-            server.configure(hostAddr, httpPort, httpsPort, keystore,
-                names.PlatformTlsKey, names.CookieEncryptionKey);
+            server.configure(hostAddr, httpPort, httpsPort);
 
-            Router router = new Router(server, baseDomain);
-
-            router.addRoute(hostAddr, new HttpHandler(server, this));
+            server.addRoute(hostAddr, new HttpHandler(server, this), keystore,
+                    names.PlatformTlsKey, names.CookieEncryptionKey);
 
             for (WebHost webHost : webHosts) {
                 webHost.httpServer = server;
-                router.addRoute(webHost.info.hostName, webHost);
+                @Inject Console console;
+                console.print($"TODO server.addRoute({webHost.info.hostName}");
             }
 
-            server.start(router);
+            server.start();
 
-            ControllerConfig.init(accountManager, hostManager, router);
+            ControllerConfig.init(accountManager, hostManager, server, baseDomain);
             }
         catch (Exception e) {
             server.close(e);
@@ -107,12 +106,17 @@ module platformUI.xqiz.it {
         HostManager hostManager;
 
         @Unassigned
-        Router router;
+        HttpServer httpServer;
 
-        void init(AccountManager accountManager, HostManager hostManager, Router router) {
+        @Unassigned
+        String baseDomain;
+
+        void init(AccountManager accountManager, HostManager hostManager,
+                  HttpServer httpServer, String baseDomain) {
             this.accountManager = accountManager;
             this.hostManager    = hostManager;
-            this.router         = router;
+            this.httpServer     = httpServer;
+            this.baseDomain     = baseDomain;
         }
 
       /**

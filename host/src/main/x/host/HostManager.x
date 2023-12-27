@@ -10,17 +10,14 @@ import common.model.WebAppInfo;
 
 import common.utils;
 
-import crypto.KeyStore;
-
 import xenia.HttpServer;
 
 
 /**
  * The module for basic hosting functionality.
  */
-service HostManager(Directory usersDir, KeyStore keystore)
+service HostManager(Directory usersDir)
         implements common.HostManager {
-    // ----- properties ------------------------------------------------------------------------------------------------
 
     /**
      * The "users" directory.
@@ -28,26 +25,21 @@ service HostManager(Directory usersDir, KeyStore keystore)
     private Directory usersDir;
 
     /**
-     * TEMPORARY: For now the platform keystore is shared by all web apps.
-     */
-    private KeyStore keystore;
-
-    /**
      * Deployed WebHosts keyed by the deployment name.
      */
     private Map<String, WebHost> deployedWebHosts = new HashMap();
 
 
-    // ----- common.HostManager API ------------------------------------------------------------------------------------
+    // ----- common.HostManager API ----------------------------------------------------------------
 
     @Override
-    Directory ensureUserLibDirectory(String accountName) {
+    Directory ensureUserDirectory(String accountName) {
         import ecstasy.fs.DirectoryFileStore;
 
-        Directory userDir = ensureUserDirectory(accountName);
+        Directory userDir = utils.ensureUserDirectory(usersDir, accountName);
 
-        // make sure there is no way for them to get any higher that the "lib" directory
-        return new DirectoryFileStore(userDir.dirFor("lib").ensure()).root;
+        // make sure there is no way for them to get any higher that their "root" directory
+        return new DirectoryFileStore(userDir.ensure()).root;
     }
 
     @Override
@@ -75,7 +67,7 @@ service HostManager(Directory usersDir, KeyStore keystore)
 
         String    deployment = webAppInfo.deployment;
         Directory homeDir    = hostDir.dirFor(deployment).ensure();
-        WebHost   webHost    = new WebHost(repository, webAppInfo, homeDir, buildDir);
+        WebHost   webHost    = new WebHost(repository, accountName, webAppInfo, homeDir, buildDir);
 
         deployedWebHosts.put(deployment, webHost);
 
@@ -92,22 +84,19 @@ service HostManager(Directory usersDir, KeyStore keystore)
     }
 
     @Override
-    void shutdown() {
+    Boolean shutdown(Boolean force = False) {
+        Boolean reschedule = False;
+        for (WebHost webHost : deployedWebHosts.values) {
+            reschedule |= webHost.deactivate(True);
+        }
+
+        if (reschedule) {
+            return False;
+        }
+
         for (WebHost webHost : deployedWebHosts.values) {
             webHost.close();
         }
+        return True;
     }
-
-    /**
-     * Ensure the user directory for the specified account.
-     */
-    private Directory ensureUserDirectory(String accountName) {
-        // TODO: validate/convert the name
-        return usersDir.dirFor(accountName).ensure();
-    }
-
-    /**
-     * Get the KeyStore.
-     */
-    private KeyStore getKeyStore(Directory userDir) = keystore;
 }

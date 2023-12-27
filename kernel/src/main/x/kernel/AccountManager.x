@@ -70,6 +70,9 @@ service AccountManager
         return dbConnection.accounts.values.toArray(Constant);
     }
 
+
+    // ----- common.AccountManager API -------------------------------------------------------------
+
     @Override
     Collection<String> getAccounts(String userName) {
         using (val tx = dbConnection.createTransaction()) {

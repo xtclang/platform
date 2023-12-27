@@ -18,12 +18,14 @@ service Controller
     @Post("shutdown")
     @LoginOptional // TODO: TEMPORARY: only the admin can shutdown the host
     HttpStatus shutdown() {
-        try {
-            hostManager.shutdown();
-            accountManager.shutdown();
-        } finally {
-            callLater(ControllerConfig.router.shutdown);
+        if (!hostManager.shutdown()) {
+            // wait a second (TODO: repeat a couple of times)
+            @Inject Timer timer;
+            timer.schedule(Second, hostManager.&shutdown(True));
+            return HttpStatus.Processing;
         }
-        return HttpStatus.OK;
+    accountManager.shutdown();
+    httpServer.close();
+    return HttpStatus.OK;
     }
 }

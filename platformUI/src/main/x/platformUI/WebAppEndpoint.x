@@ -68,7 +68,7 @@ service WebAppEndpoint
         }
 
         // compute the full host name (e.g. "shop.acme.com.xqiz.it")
-        String hostName = $"{deployment}.{accountName}.{router.baseDomain}";
+        String hostName = $"{deployment}.{accountName}.{baseDomain}";
 
         // TODO: obtain a certificate for that domain
 
@@ -85,7 +85,6 @@ service WebAppEndpoint
         SimpleResponse response = stopWebApp(deployment);
         if (response.status == OK, WebHost webHost := hostManager.getWebHost(deployment)) {
             hostManager.removeWebHost(webHost);
-            router.removeRoute(webHost.info.hostName);
         }
 
         // TODO: revoke the certificate?
@@ -116,23 +115,26 @@ service WebAppEndpoint
 
             ErrorLog errors = new ErrorLog();
             if (WebHost webHost := hostManager.getWebHost(deployment)) {
-                if (webHost.activate(router.httpServer, True, errors)) {
+                if (webHost.activate(httpServer, True, errors)) {
                     accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
-                    router.addRoute(webAppInfo.hostName, webHost);
                 } else {
                     (status, message) = (Conflict, errors.collectErrors());
                     hostManager.removeWebHost(webHost);
+                    webHost.deactivate(True);
                 }
                 break;
             }
 
             if (WebHost webHost := hostManager.createWebHost(accountName, webAppInfo, errors)) {
-                if (webHost.activate(router.httpServer, True, errors)) {
+                @Inject Console console;
+                console.print($"TODO server.addRoute({webHost.info.hostName}");
+
+                if (webHost.activate(httpServer, True, errors)) {
                     accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
-                    router.addRoute(webAppInfo.hostName, webHost);
                 } else {
                     (status, message) = (Conflict, errors.collectErrors());
                     hostManager.removeWebHost(webHost);
+                    webHost.deactivate(True);
                 }
             } else {
                 (status, message) = (Conflict, errors.collectErrors());

@@ -20,8 +20,8 @@ package utils {
      * @param repository  the [ModuleRepository] to load the module(s) from
      * @param template    the [ModuleTemplate] for the "main" module
      * @param appHomeDir  the "home" directory for the deployment (could be multiple for a module)
-     *                    (e.g. "~/xqiz.it/users/acme/host/banking)"
-     * @param buildDir    the directory for auto-generated modules (e.g. "~/xqiz.it/users/acme/build")
+     *                    (e.g. "~/xqiz.it/users/acme.com/host/banking)"
+     * @param buildDir    the directory for auto-generated modules (e.g. "~/xqiz.it/users/acme.com/build")
      * @param platform    True iff the loading module is one of the "core" platform modules
      *
      * @return True iff the container has been loaded successfully
@@ -89,8 +89,8 @@ package utils {
      * @param repository    the [ModuleRepository] to load the module(s) from
      * @param dbModuleName  the name of `Database` module (fully qualified)
      * @param dbImpl        the database implementation name (currently always "jsondb")
-     * @param appHomeDir    the application deployment directory (e.g. "~/xqiz.it/users/acme/host/banking")
-     * @param buildDir      the directory for auto-generated modules (e.g. "~/xqiz.it/users/acme/build")
+     * @param appHomeDir    the application deployment directory (e.g. "~/xqiz.it/users/acme.com/host/banking")
+     * @param buildDir      the directory for auto-generated modules (e.g. "~/xqiz.it/users/acme.com/build")
      *
      * @return True if the DbHost was successfully created; False otherwise (the errors are logged)
      * @return (optional) the DbHost
@@ -132,7 +132,7 @@ package utils {
      * Create a database [Injector].
      *
      * @param dbHosts     the array of [DbHost]s for databases the Injector should be able to provide connections to
-     * @param appHomeDir  the "home" directory for the module (e.g. "~/xqiz.it/users/acme/host/shopping)"
+     * @param appHomeDir  the "home" directory for the module (e.g. "~/xqiz.it/users/acme.com/host/shopping)"
      *
      * @return an Injector that injects db connections based on the arrays of the specified DbHosts
      */
@@ -195,4 +195,13 @@ package utils {
         TypeTemplate databaseTemplate = oodb.Database.as(Type).template;
         return template.type.isA(databaseTemplate);
     }
+
+    /**
+     * Ensure the user directory for the specified account.
+     */
+    static Directory ensureUserDirectory(Directory usersDir, String accountName) {
+        // TODO: validate/convert the name
+        return usersDir.dirFor(accountName).ensure();
+    }
+
 }

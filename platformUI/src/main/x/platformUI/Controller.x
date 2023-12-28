@@ -1,7 +1,3 @@
-import ecstasy.mgmt.Container;
-
-import common.WebHost;
-
 import web.*;
 
 @WebService("/host")
@@ -18,14 +14,21 @@ service Controller
     @Post("shutdown")
     @LoginOptional // TODO: TEMPORARY: only the admin can shutdown the host
     HttpStatus shutdown() {
+        @Inject Timer timer;
+
         if (!hostManager.shutdown()) {
             // wait a second (TODO: repeat a couple of times)
-            @Inject Timer timer;
-            timer.schedule(Second, hostManager.&shutdown(True));
+            timer.schedule(Second, () ->
+                {
+                hostManager.shutdown(True);
+                httpServer.close();
+                });
             return HttpStatus.Processing;
         }
     accountManager.shutdown();
-    httpServer.close();
+
+    // respond first; terminate the server an eon later
+    timer.schedule(Duration.ofMillis(10), httpServer.&close);
     return HttpStatus.OK;
     }
 }

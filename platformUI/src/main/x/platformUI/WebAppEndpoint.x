@@ -52,29 +52,40 @@ service WebAppEndpoint
      *  - a deployment has one and only one webapp
      */
     @Post("/register/{deployment}/{moduleName}")
-    HttpStatus register(String deployment, String moduleName) {
+    SimpleResponse register(String deployment, String moduleName) {
+        HttpStatus  status  = OK;
+        String?     message = Null;
+        do {
+            AccountInfo accountInfo;
+            if (!(accountInfo := accountManager.getAccount(accountName))) {
+                (status, message) = (Unauthorized, $"Account '{accountName}' is missing");
+                break;
+            }
 
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return HttpStatus.Unauthorized;
-        }
+            if (accountInfo.webApps.contains(deployment)) {
+                (status, message) = (Conflict, $"Deployment already exists: '{deployment}'");
+                break;
+            }
 
-        if (accountInfo.webApps.contains(deployment)) {
-            return HttpStatus.Conflict;
-        }
+            if (!accountInfo.modules.contains(moduleName)) {
+                (status, message) = (NotFound, $"Module is missing: '{moduleName}'");
+                break;
+            }
 
-        if (!accountInfo.modules.contains(moduleName)) {
-            return HttpStatus.NotFound;
-        }
+            // compute the full host name (e.g. "shop.acme.com.xqiz.it")
+            String hostName = $"{deployment}.{accountName}.{baseDomain}";
 
-        // compute the full host name (e.g. "shop.acme.com.xqiz.it")
-        String hostName = $"{deployment}.{accountName}.{baseDomain}";
+            ErrorLog errors = new ErrorLog();
+            if (!hostManager.ensureCertificate(accountName, hostName, errors)) {
+                (status, message) = (Conflict, errors.collectErrors());
+                break;
+            }
 
-        // TODO: obtain a certificate for that domain
+            accountManager.addOrUpdateWebApp(accountName,
+                new WebAppInfo(deployment, moduleName, hostName, False));
+        } while (False);
 
-        accountManager.addOrUpdateWebApp(accountName,
-            new WebAppInfo(deployment, moduleName, hostName, False));
-        return HttpStatus.OK;
+        return new SimpleResponse(status, bytes=message?.utf8() : Null);
     }
 
     /**
@@ -103,7 +114,7 @@ service WebAppEndpoint
         do {
             AccountInfo accountInfo;
             if (!(accountInfo := accountManager.getAccount(accountName))) {
-                (status, message) = (NotFound, $"Account '{accountName}' is missing");
+                (status, message) = (Unauthorized, $"Account '{accountName}' is missing");
                 break;
             }
 
@@ -125,10 +136,7 @@ service WebAppEndpoint
                 break;
             }
 
-            if (WebHost webHost := hostManager.createWebHost(accountName, webAppInfo, errors)) {
-                @Inject Console console;
-                console.print($"TODO server.addRoute({webHost.info.hostName}");
-
+            if (WebHost webHost := hostManager.createWebHost(httpServer, accountName, webAppInfo, errors)) {
                 if (webHost.activate(httpServer, True, errors)) {
                     accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
                 } else {

@@ -116,11 +116,11 @@ export const useWebAppStore = defineStore("webApp", {
             }
           })
           .catch((error) => {
-            console.log(error.toJSON());
+            console.log(error.response.data);
             this.$q.notify({
               color: "negative",
               position: "top",
-              message: "Could not register the webapp",
+              message: error.response.data,
               icon: "report_problem",
             });
           })

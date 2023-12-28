@@ -32,8 +32,8 @@ package utils {
     static conditional (Container, AppHost[]) createContainer(
                     ModuleRepository repository, ModuleTemplate template, Directory appHomeDir,
                     Directory buildDir, Boolean platform, Log errors) {
-        DbHost[] dbHosts;
-        Injector injector;
+        DbHost[]     dbHosts;
+        HostInjector injector;
 
         Map<String, String> dbNames = detectDatabases(template);
         if (dbNames.size > 0) {
@@ -51,7 +51,7 @@ package utils {
             injector = createDbInjector(dbHosts, appHomeDir);
         } else {
             dbHosts  = [];
-            injector = new Injector(appHomeDir, platform);
+            injector = new HostInjector(appHomeDir, platform);
         }
 
         try {
@@ -123,25 +123,25 @@ package utils {
         }
 
         dbHost.container = new Container(dbModuleTemplate, Lightweight, repository,
-                                new Injector(dbHomeDir, False));
+                                new HostInjector(dbHomeDir, False));
         dbHost.makeImmutable();
         return True, dbHost;
     }
 
     /**
-     * Create a database [Injector].
+     * Create a database [HostInjector].
      *
      * @param dbHosts     the array of [DbHost]s for databases the Injector should be able to provide connections to
      * @param appHomeDir  the "home" directory for the module (e.g. "~/xqiz.it/users/acme.com/host/shopping)"
      *
-     * @return an Injector that injects db connections based on the arrays of the specified DbHosts
+     * @return a HostInjector that injects db connections based on the arrays of the specified DbHosts
      */
-    static Injector createDbInjector(DbHost[] dbHosts, Directory appHomeDir) {
+    static HostInjector createDbInjector(DbHost[] dbHosts, Directory appHomeDir) {
         import oodb.Connection;
         import oodb.RootSchema;
         import oodb.DBUser;
 
-        return new Injector(appHomeDir, False) {
+        return new HostInjector(appHomeDir, False) {
             @Override
             Supplier getResource(Type type, String name) {
                 if (type.is(Type<RootSchema>) || type.is(Type<Connection>)) {

@@ -38,6 +38,8 @@ module kernel.xqiz.it {
     import json.Doc;
     import json.Parser;
 
+    import xenia.HttpServer;
+
     void run(String[] args=[]) {
         @Inject Console          console;
         @Inject Directory        homeDir;
@@ -96,12 +98,32 @@ module kernel.xqiz.it {
                 return;
             }
 
+            // create a container for the platformUI controller and configure it
+            console.print($"Info: Starting the platform UI controller...");
+
+            String hostAddr  = config.getOrDefault("hostAddr",  names.PlatformUri).as(String);
+            UInt16 httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
+            UInt16 httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
+
+            @Inject HttpServer server;
+            server.configure(hostAddr, httpPort, httpsPort);
+
+            ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
+            if (Container  container :=
+                    utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
+
+                container.invoke("configure",
+                        Tuple:(server, hostAddr, keystore, accountManager, hostManager));
+            } else {
+                return;
+            }
+
             // create WebHosts for all active web applications
             WebHost[] webHosts = new WebHost[];
             for (AccountInfo accountInfo : accountManager.getAccounts()) {
                 for (WebAppInfo webAppInfo : accountInfo.webApps.values) {
                     if (webAppInfo.active, WebHost webHost :=
-                            hostManager.createWebHost(accountInfo.name, webAppInfo, errors)) {
+                            hostManager.createWebHost(server, accountInfo.name, webAppInfo, errors)) {
                         webHosts += webHost;
                         console.print($|Info: Initialized deployment: "{webAppInfo.hostName}" \
                                        |of "{webAppInfo.moduleName}"
@@ -110,25 +132,8 @@ module kernel.xqiz.it {
                 }
             }
 
-            // create a container for the platformUI controller and configure it
-            console.print($"Info: Starting the platform UI controller...");
-
-            ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
-            if (Container  container :=
-                    utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
-
-                String hostAddr  = config.getOrDefault("hostAddr",  names.PlatformUri).as(String);
-                UInt16 httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
-                UInt16 httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
-
-                container.invoke("configure",
-                    Tuple:(accountManager, hostManager, hostAddr, httpPort, httpsPort, keystore,
-                           webHosts.freeze(True)));
-
-                console.print($"Info: Started the XtcPlatform at http://{hostAddr}:{httpPort}");
-            } else {
-                return;
-            }
+            server.start();
+            console.print($"Info: Started the XtcPlatform at https://{hostAddr}");
 
             // TODO create and configure the IO-manager, secret-manager, etc.
         } catch (Exception e) {

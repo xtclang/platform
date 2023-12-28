@@ -245,7 +245,7 @@ service ModuleEndpoint
                     moduleNames.contains(webHost.moduleName)) {
 
                     hostManager.removeWebHost(webHost);
-                    if (!hostManager.createWebHost(accountName, info, errors)) {
+                    if (!hostManager.createWebHost(httpServer, accountName, info, errors)) {
                         webHost.log($"Error: Failed to redeploy {deployment.quoted()}; reason: {errors}\n");
 
                         accountManager.addOrUpdateWebApp(accountName, info.updateStatus(False));

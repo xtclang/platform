@@ -33,9 +33,8 @@ module platformUI.xqiz.it {
     /**
      * Configure the controller.
      */
-    void configure(AccountManager accountManager, HostManager hostManager,
-                   String hostAddr, UInt16 httpPort, UInt16 httpsPort, KeyStore keystore,
-                   WebHost[] webHosts) {
+    void configure(HttpServer server, String hostAddr, KeyStore keystore,
+                   AccountManager accountManager, HostManager hostManager) {
         // the 'hostAddr' is a full URI of the platform server, e.g. "xtc-platform.localhost.xqiz.it";
         // we need to extract the base domain ("localhost.xqiz.it")
         String baseDomain;
@@ -45,27 +44,10 @@ module platformUI.xqiz.it {
             throw new IllegalState($"Invalid host address: {hostAddr.quoted()}");
         }
 
-        @Inject HttpServer server;
-        try {
-            server.configure(hostAddr, httpPort, httpsPort);
+        server.addRoute(hostAddr, new HttpHandler(server, this), keystore,
+                names.PlatformTlsKey, names.CookieEncryptionKey);
 
-            server.addRoute(hostAddr, new HttpHandler(server, this), keystore,
-                    names.PlatformTlsKey, names.CookieEncryptionKey);
-
-            for (WebHost webHost : webHosts) {
-                webHost.httpServer = server;
-                @Inject Console console;
-                console.print($"TODO server.addRoute({webHost.info.hostName}");
-            }
-
-            server.start();
-
-            ControllerConfig.init(accountManager, hostManager, server, baseDomain);
-            }
-        catch (Exception e) {
-            server.close(e);
-            throw e;
-        }
+        ControllerConfig.init(accountManager, hostManager, server, baseDomain);
 
         this.registry_.jsonSchema = new Schema(
                 enableReflection = True,

@@ -11,12 +11,10 @@ import crypto.KeyStore;
 
 import web.security.Authenticator;
 
-import xenia.HttpServer;
-
 /**
- * The Injector service.
+ * The ResourceProvider used for hosted containers.
  */
-service Injector(Directory appHomeDir, Boolean platform)
+service HostInjector(Directory appHomeDir, Boolean platform)
         implements ResourceProvider {
 
     @Lazy FileStore store.calc() {
@@ -168,13 +166,11 @@ service Injector(Directory appHomeDir, Boolean platform)
             };
 
         default:
-            // HttpServer is not a shared Ecstasy type, so it's not handled by the switch()
-            if (platform && type.is(Type<HttpServer>) && name == "server") {
-                return (InjectedRef.Options address) -> {
-                    @Inject(resourceName="server", opts=address) HttpServer server;
-                    return server;
-                };
-            }
+            if (platform) {
+                @Inject ecstasy.reflect.Injector injector;
+
+                return (InjectedRef.Options opts) -> injector.inject(type, name, opts);
+                }
 
             return (InjectedRef.Options address) ->
                 throw new Exception($|Invalid resource: type="{type}", name="{name}"

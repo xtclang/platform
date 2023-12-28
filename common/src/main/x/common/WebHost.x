@@ -24,10 +24,11 @@ service WebHost
         extends AppHost
         implements Handler {
 
-    construct (ModuleRepository repository, String account, WebAppInfo info,
+    construct (HttpServer httpServer, ModuleRepository repository, String account, WebAppInfo info,
                Directory homeDir, Directory buildDir) {
         construct AppHost(info.moduleName, homeDir);
 
+        this.httpServer = httpServer;
         this.repository = repository;
         this.account    = account;
         this.info       = info;
@@ -60,9 +61,9 @@ service WebHost
     AppHost[] dependencies = [];
 
     /**
-     * The HttpServer to use for communications.
+     * The HttpServer to use.
      */
-    HttpServer? httpServer;
+    HttpServer httpServer;
 
     /**
      * The underlying HttpHandler.
@@ -113,7 +114,7 @@ service WebHost
      *
      * @return True iff the hosted WebApp is active
      */
-    conditional HttpHandler activate(HttpServer httpServer, Boolean explicit, Log errors) {
+    conditional HttpHandler activate(Boolean explicit, Log errors) {
         if (HttpHandler handler ?= this.handler) {
             return True, handler;
         }
@@ -146,9 +147,8 @@ service WebHost
                     HttpHandler handler = result[0].as(HttpHandler);
                     handler.configure(decryptor? : assert);
 
-                    this.container  = container;
-                    this.handler    = handler;
-                    this.httpServer = httpServer;
+                    this.container = container;
+                    this.handler   = handler;
 
                     // set the alarm, expecting at least one application request within next
                     // "check interval"
@@ -203,7 +203,6 @@ service WebHost
                 dependent.close();
             }
             container?.kill();
-            httpServer?.removeRoute(info.hostName);
 
             this.dependencies         = [];
             this.handler              = Null;
@@ -223,8 +222,6 @@ service WebHost
 
     @Override
     void handle(RequestContext context, String uri, String method, Boolean tls) {
-        assert HttpServer httpServer ?= this.httpServer as
-                $"WebHost for {info.hostName.quoted()} has not been activated";
         if (deactivationProgress > 0) {
             // deactivation is in progress; would be nice to send back a corresponding page
             httpServer.send(context, HttpStatus.ServiceUnavailable.code, [], [], []);
@@ -235,7 +232,7 @@ service WebHost
         if (!(handler ?= this.handler)) {
             Log errors = new ErrorLog();
 
-            if (!(handler := activate(httpServer, False, errors))) {
+            if (!(handler := activate(False, errors))) {
                 log($"Error: Failed to activate: {errors}");
 
                 httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);

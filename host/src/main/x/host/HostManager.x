@@ -8,10 +8,14 @@ import common.WebHost;
 
 import common.model.WebAppInfo;
 
+import common.names;
 import common.utils;
 
-import xenia.HttpServer;
+import crypto.Certificate;
+import crypto.CertificateManager;
+import crypto.KeyStore;
 
+import xenia.HttpServer;
 
 /**
  * The module for basic hosting functionality.
@@ -43,19 +47,53 @@ service HostManager(Directory usersDir)
     }
 
     @Override
+    Boolean ensureCertificate(String accountName, String hostName, Log errors) {
+        Directory userDir = utils.ensureUserDirectory(usersDir, accountName);
+        File      store   = usersDir.fileFor(KeyStoreName);
+        String    pwd     = accountName; // TODO: obtain the password from the "master" keystore
+
+        try {
+            if (store.exists) {
+                @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+
+                if (Certificate cert := keystore.getCertificate(hostName), cert.valid) {
+                    return True;
+                }
+            }
+
+            // create or renew the certificate
+            @Inject CertificateManager manager;
+
+            if (!store.exists) {
+                // create a cookie encryption key
+                manager.createSymmetricKey(store, pwd, names.CookieEncryptionKey);
+            }
+
+            // use the host name as a name for the certificate
+            String dName = CertificateManager.distinguishedName(hostName, org=accountName);
+            manager.createCertificate(store, pwd, hostName, dName);
+            return True;
+        } catch (Exception e) {
+            errors.add($"Error: Failed to obtain a certificate for {hostName.quoted}: {e.message}");
+            return False;
+        }
+    }
+
+    @Override
     conditional WebHost getWebHost(String deployment) {
         return deployedWebHosts.get(deployment);
     }
 
     @Override
-    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, Log errors) {
+    conditional WebHost createWebHost(HttpServer httpServer, String accountName,
+                                      WebAppInfo webAppInfo, Log errors) {
         if (deployedWebHosts.contains(webAppInfo.deployment)) {
                 errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
                           );
             return False;
         }
 
-        Directory userDir  = ensureUserDirectory(accountName);
+        Directory userDir  = utils.ensureUserDirectory(usersDir, accountName);
         Directory libDir   = userDir.dirFor("lib").ensure();
         Directory buildDir = userDir.dirFor("build").ensure();
         Directory hostDir  = userDir.dirFor("host").ensure();
@@ -67,15 +105,31 @@ service HostManager(Directory usersDir)
 
         String    deployment = webAppInfo.deployment;
         Directory homeDir    = hostDir.dirFor(deployment).ensure();
-        WebHost   webHost    = new WebHost(repository, accountName, webAppInfo, homeDir, buildDir);
+        WebHost   webHost    = new WebHost(httpServer, repository, accountName, webAppInfo, homeDir, buildDir);
+
+        File   store = usersDir.fileFor(KeyStoreName);
+        String pwd   = accountName; // TODO: obtain the password from the "master" keystore
+
+        assert store.exists as "Missing keystore";
+        @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+
+        String hostName = webAppInfo.hostName;
+
+        if (!ensureCertificate(accountName, hostName, errors)) {
+            return False;
+        }
 
         deployedWebHosts.put(deployment, webHost);
+
+        httpServer.addRoute(hostName, webHost, keystore, hostName, names.CookieEncryptionKey);
 
         return True, webHost;
     }
 
     @Override
     void removeWebHost(WebHost webHost) {
+        webHost.httpServer.removeRoute(webHost.info.hostName);
+
         try {
             webHost.close();
         } catch (Exception ignore) {}
@@ -99,4 +153,9 @@ service HostManager(Directory usersDir)
         }
         return True;
     }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    static String KeyStoreName = "keystore.p12";
 }

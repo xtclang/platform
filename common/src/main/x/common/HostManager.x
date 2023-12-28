@@ -2,6 +2,8 @@ import ecstasy.text.Log;
 
 import common.model.WebAppInfo;
 
+import xenia.HttpServer;
+
 
 /**
  * The Host Manager API.
@@ -29,6 +31,14 @@ interface HostManager {
     }
 
     /**
+     * Ensure there is a keystore for the specified account that contains a private key and a
+     * certificate for the specified host name and a symmetrical key to be used for cookie encryption.
+     *
+     * @return True iff the certificate exists and is valid; otherwise an error is logged
+     */
+    Boolean ensureCertificate(String accountName, String hostName, Log errors);
+
+    /**
      * Retrieve a 'WebHost' for the specified deployment.
      *
      * @return True iff there is a WebHost for the specified deployment
@@ -39,6 +49,7 @@ interface HostManager {
     /**
      * Create a 'WebHost' for the specified application module.
      *
+     * @param httpServer  the HttpServer to use
      * @param account     the account name
      * @param webAppInfo  the web application info
      * @param errors      the error log
@@ -46,7 +57,8 @@ interface HostManager {
      * @return True iff the WebHost was successfully created
      * @return (optional) the WebHost for the newly loaded Container
      */
-    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, Log errors);
+    conditional WebHost createWebHost(HttpServer httpServer, String accountName,
+                                      WebAppInfo webAppInfo, Log errors);
 
     /**
      * Remove the specified WebHost.

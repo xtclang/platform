@@ -1,37 +1,29 @@
 # Platform as a Service #
 
-This is the public repository for the prototype of the PAAS project.
-
-## What is PAAS?
-
-TODO
+This is the public repository for the open source Ecstasy PaaS project, sponsored by [xqiz.it](http://xqiz.it).
 
 ## Status:
 
-This project is currently in the "proof of concept" mode.
-
-## License
-
-TODO
+This project is being actively developed, but is not yet considered a production-ready release.
 
 ## Layout
 
 The project is organized as a number of sub-projects, with the important ones to know about being:
 
-* The *common* library ([platform/common](./common)), contains common interfaces shared across platform modules. 
+* The *common* library (`./common`), contains common interfaces shared across platform modules. 
   
-* The *kernel* library ([platform/kernel](./kernel)), contains the boot-strapping functionality. It's responsible for starting system services and introducing them to each other. 
+* The *kernel* library (`./kernel`), contains the boot-strapping functionality. It's responsible for starting system services and introducing them to each other. 
   
-* The *host* library ([platform/host](./host)), contains the manager for hosted applications.
+* The *host* library (`./host`), contains the manager for hosted applications.
 
-* The *platformDB* library ([platform/platformDB](./platformDB)), contains the platform database. 
+* The *platformDB* library (`./platformDB`), contains the platform database. 
 
-* The *platformUI* library ([platform/platformUI](./platformUI)), contains the end-points for the platform web-application. 
+* The *platformUI* library (`./platformUI`), contains the end-points for the platform web-application. 
   
 ## Installation
 
 1. Please follow steps 1-3 of the [XDK Installation](https://github.com/xtclang/xvm#installation).
-2. Clone [the platform repository](https://github.com/xtclang/platform) to your local machine.
+2. Clone [the platform repository](https://github.com/xtclang/platform) to your local machine. For purposes of this document, we will assume that the project directory is `~/Development/platform/`, but you may use whatever location makes sense for your environment.
 
 ## Steps to test the PAAS functionality:
 
@@ -39,7 +31,7 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 
 1. Create "xqiz.it" subdirectory under the user home directory for the platform persistent data. The subdirectory "platform" will be used to keep the platform operational information and subdirectory "users" for hosted applications.
 
-2. Create a file "~/xqiz.it/port-forwarding.conf" with the following content:
+2. Create a file "~/xqiz.it/platform/port-forwarding.conf" with the following content:
 
        rdr pass on lo0 inet proto tcp from any to self port 80  -> 127.0.0.1 port 8080
        rdr pass on lo0 inet proto tcp from any to self port 443 -> 127.0.0.1 port 8090
@@ -51,43 +43,96 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 4. Make sure you can ping the local platform address:
        
        ping xtc-platform.localhost.xqiz.it
-   
+                                           
+   The domain name `xtc-platform.localhost.xqiz.it` should resolve to `127.0.0.1`. This allows the same xqiz.it cloud-hosted platform to be self-hosted on the `localhost` loop-back address, enabling local and disconnected development.
+
    If that address fails to resolve you may need to change the rules on you DNS server. For example, for Verizon routers you would need add an exception entry for "127.0.0.1" to your DNS Server settings: "Exceptions to DNS Rebind Protection" (Advanced - Network Settings - DNS Server)   
 
 5. Create a self-signed certificate for the platform web server. For example:
    
-        keytool -genkeypair -alias platform -keyalg RSA -keysize 2048 -validity 365 -dname "OU=Platform, O=[your name], C=US" -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass [password]
+        keytool -genkeypair -alias platform -keyalg RSA -keysize 2048 -validity 365 -dname "OU=Platform, O=localhost, C=US" -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass password
+        
+   Note: You can replace the place-holders "localhost" and "password" in the above command if you want to. The password is used to encrypt the key storage.
 
 6. Add a symmetric key to encode the cookies:
 
-        keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass [password]
-   
+        keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass password
+
+   Note: If you replaced the place-holder "password" in the previous step, then also replace it (with the same password) in this command.
+
 7. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), [yarn](https://yarnpkg.com/) and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed. If you are using `brew`, you can simply say: 
         
-       brew install gradle node yarn  
+        brew install gradle node yarn  
 
-8. Make sure all necessary *node* modules are installed using the following command from the ([platform/platformUI/gui](./platformUI/gui)) directory:
-   
+8. Change your directory to the `./platformUI/gui` directory inside the local git repo installed above.
+
+        cd ~/Development/platform/platformUI/gui
+
+9. Make sure all necessary *node* modules are installed within that directory using the following command:
+
         npm install
 
-9. If you plan to use `quasar` dev environment, please install it globally by the following command:
+10. If you plan to use `quasar` dev environment, please install it globally by the following command:
 
-        npm install -g @quasar/cli
+         npm install -g @quasar/cli
  
-10. Build the platform services using the gradle command (from within the "platform" directory):
+11. Build the platform services using the gradle command (from within the "platform" directory):
 
-          gradle build
+        cd ~/Development/platform/
+        gradle clean build
 
-11. Start the platform using the command (from within the "platform" directory):
+12. Start the platform using the command (from within the "platform" directory):
 
-         xec -L lib/ lib/kernel.xtc [password]
+        xec -L lib/ lib/kernel.xtc password
 
-12. Open the hosting site in a browser: 
+    Note: If you replaced the place-holder "password" in the steps 5 and 6, then also replace it (with the same password) in this command.
 
-         https://xtc-platform.localhost.xqiz.it
+    Note: The server will run in the current shell, and 
 
-13. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
-14. Log into the "Ecstasy Cloud" platform using "admin@acme.om/password" credentials.
-15. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
-16. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
-17. Click on the URL to launch your application web page.
+13. Open the [locally hosted platform web page](https://xtc-platform.localhost.xqiz.it): 
+
+        https://xtc-platform.localhost.xqiz.it
+
+    Note: Using the locally-created (self-signed) certificate from step 5 above, you will receive warnings from the browser about the unverifiability of the website and its certificate.
+
+14. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
+
+15. Log into the "Ecstasy Cloud" platform using the pre-defined test user "admin@acme.com" and the password "password".
+
+16. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
+
+17. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
+
+18. Click on the URL to launch your application web page.
+
+19. To stop the server cleanly, from a separate shell run this command:
+
+        curl -k -b cookies.txt -L -i -w '\n' -X POST https://xtc-platform.localhost.xqiz.it/host/shutdown
+
+    If you do not stop the server cleanly, the next start-up will be much slower, since the databases on the server will need to be recovered.
+
+## License
+
+The license for source code is Apache 2.0, unless explicitly noted. We chose Apache 2.0 for its
+compatibility with almost every reasonable use, and its compatibility with almost every license,
+reasonable or otherwise.
+
+The license for documentation (including any the embedded markdown API documentation and/or
+derivative forms thereof) is Creative Commons CC-BY-4.0, unless explicitly noted.
+
+To help ensure clean IP (which will help us keep this project free and open source), pull requests
+for source code changes require a signed contributor agreement to be submitted in advance. We use
+the Apache contributor model agreements (modified to identify this specific project), which can be
+found in the [license](./license) directory. Contributors are required to sign and submit an Ecstasy
+Project Individual Contributor License Agreement (ICLA), or be a named employee on an Ecstasy
+Project Corporate Contributor License Agreement (CCLA), both derived directly from the Apache
+agreements of the same name. (Sorry for the paper-work! We hate it, too!)
+
+The Ecstasy name is a trademark owned and administered by The Ecstasy Project. Unlicensed use of the
+Ecstasy trademark is prohibited and will constitute infringement.
+
+The xqiz.it name is a trademark owned and administered by Xqizit Incorporated. Unlicensed use of the
+xqiz.it trademark is prohibited and will constitute infringement.
+
+All content of the project not covered by the above terms is probably an accident that we need to be
+made aware of, and remains (c) The Ecstasy Project, all rights reserved.

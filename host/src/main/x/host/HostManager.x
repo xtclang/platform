@@ -49,7 +49,7 @@ service HostManager(Directory usersDir)
     @Override
     Boolean ensureCertificate(String accountName, String hostName, Log errors) {
         Directory userDir = utils.ensureUserDirectory(usersDir, accountName);
-        File      store   = usersDir.fileFor(KeyStoreName);
+        File      store   = userDir.fileFor(KeyStoreName);
         String    pwd     = accountName; // TODO: obtain the password from the "master" keystore
 
         try {
@@ -107,14 +107,21 @@ service HostManager(Directory usersDir)
         Directory homeDir    = hostDir.dirFor(deployment).ensure();
         WebHost   webHost    = new WebHost(httpServer, repository, accountName, webAppInfo, homeDir, buildDir);
 
-        File   store = usersDir.fileFor(KeyStoreName);
+        File   store = userDir.fileFor(KeyStoreName);
         String pwd   = accountName; // TODO: obtain the password from the "master" keystore
 
-        assert store.exists as "Missing keystore";
-        @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+        KeyStore keystore;
+        try {
+            @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore ks;
+            keystore = ks;
+        } catch (Exception e) {
+            errors.add($|Error: {store.exists ? "Corrupted" : "Missing"} keystore: "{store}";\
+                        | application "{deployment}" for account "{accountName}" needs to be redeployed
+                      );
+            return False;
+        }
 
         String hostName = webAppInfo.hostName;
-
         if (!ensureCertificate(accountName, hostName, errors)) {
             return False;
         }

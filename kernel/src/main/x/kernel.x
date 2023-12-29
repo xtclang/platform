@@ -35,6 +35,8 @@ module kernel.xqiz.it {
     import common.model.AccountInfo;
     import common.model.WebAppInfo;
 
+    import crypto.CertificateManager;
+
     import json.Doc;
     import json.Parser;
 
@@ -63,12 +65,20 @@ module kernel.xqiz.it {
         // get the configuration
         Map<String, Doc> config;
         try {
-            File configFile = platformDir.fileFor("cfg.json");
-            if (!configFile.exists) {
-                configFile.contents = #/cfg.json; // create a copy from the embedded resource
+            File   configFile = platformDir.fileFor("cfg.json");
+            File   configInit = /cfg.json;
+            String jsonConfig;
+            if (configFile.exists && configFile.modified > configInit.modified) {
+                jsonConfig = configFile.contents.unpackUtf8();
+            } else {
+                if (configFile.exists) {
+                    console.print($"Warning: Your local config file is out of date; replacing with the default");
+                }
+                Byte[] configData = configInit.contents;
+                jsonConfig = configData.unpackUtf8();
+                configFile.contents = configData; // create a copy from the embedded resource
             }
 
-            String jsonConfig = configFile.contents.unpackUtf8();
             config = new Parser(jsonConfig.toReader()).parseDoc().as(Map<String, Doc>);
         } catch (Exception e) {
             console.print($"Error: Invalid config file");
@@ -77,6 +87,25 @@ module kernel.xqiz.it {
 
         ErrorLog errors = new ErrorLog();
         try {
+            String hostName  = config.getOrDefault("hostName",  names.PlatformUri).as(String);
+            UInt16 httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
+            UInt16 httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
+
+            File storeFile = platformDir.fileFor(names.PlatformKeyStore);
+            if (!storeFile.exists)
+                {
+                console.print($|Warning: *** The platform keystore does not exist; creating a new one\
+                               | with a self-signed certificate for the platform web server.
+                               |Warning: *** The password you have provided will be used to encrypt it.
+                             );
+
+                @Inject CertificateManager manager;
+                String dName = CertificateManager.distinguishedName(hostName, org="localhost", orgUnit="Platform");
+
+                manager.createCertificate(storeFile, password, names.PlatformTlsKey, dName);
+                manager.createSymmetricKey(storeFile, password, names.CookieEncryptionKey);
+                }
+
             // initialize the account manager
             console.print($"Info: Starting the AccountManager..."); // inside the kernel for now
             AccountManager accountManager = new AccountManager();
@@ -85,7 +114,6 @@ module kernel.xqiz.it {
             // create a container for the platformUI controller and configure it
             console.print($"Info: Starting the HostManager...");
 
-            File storeFile = platformDir.fileFor(names.PlatformKeyStore);
             import crypto.KeyStore;
             @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
 
@@ -101,19 +129,15 @@ module kernel.xqiz.it {
             // create a container for the platformUI controller and configure it
             console.print($"Info: Starting the platform UI controller...");
 
-            String hostAddr  = config.getOrDefault("hostAddr",  names.PlatformUri).as(String);
-            UInt16 httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
-            UInt16 httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
-
             @Inject HttpServer server;
-            server.configure(hostAddr, httpPort, httpsPort);
+            server.configure(hostName, httpPort, httpsPort);
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
                     utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
 
                 container.invoke("configure",
-                        Tuple:(server, hostAddr, keystore, accountManager, hostManager));
+                        Tuple:(server, hostName, keystore, accountManager, hostManager));
             } else {
                 return;
             }
@@ -133,7 +157,7 @@ module kernel.xqiz.it {
             }
 
             server.start();
-            console.print($"Info: Started the XtcPlatform at https://{hostAddr}");
+            console.print($"Info: Started the XtcPlatform at https://{hostName}");
 
             // TODO create and configure the IO-manager, secret-manager, etc.
         } catch (Exception e) {

@@ -126,7 +126,7 @@ service WebAppEndpoint
 
             ErrorLog errors = new ErrorLog();
             if (WebHost webHost := hostManager.getWebHost(deployment)) {
-                if (webHost.activate(httpServer, True, errors)) {
+                if (webHost.activate(True, errors)) {
                     accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
                 } else {
                     (status, message) = (Conflict, errors.collectErrors());
@@ -137,7 +137,7 @@ service WebAppEndpoint
             }
 
             if (WebHost webHost := hostManager.createWebHost(httpServer, accountName, webAppInfo, errors)) {
-                if (webHost.activate(httpServer, True, errors)) {
+                if (webHost.activate(True, errors)) {
                     accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
                 } else {
                     (status, message) = (Conflict, errors.collectErrors());

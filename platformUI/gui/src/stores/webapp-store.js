@@ -63,7 +63,7 @@ export const useWebAppStore = defineStore("webApp", {
             this.enhance();
           })
           .catch((error) => {
-            console.log(error.toJSON());
+            console.log(error.response.data);
             this.$q.notify({
               color: "negative",
               position: "top",
@@ -146,7 +146,7 @@ export const useWebAppStore = defineStore("webApp", {
             this.updateWebApps()
           })
           .catch((error) => {
-            console.log(error.toJSON());
+            console.log(error.response.data);
             this.$q.loading.hide();
             this.$q.notify({
               color: "negative",
@@ -202,7 +202,7 @@ export const useWebAppStore = defineStore("webApp", {
             this.updateWebApps()
           })
           .catch((error) => {
-            console.log(error.toJSON());
+            console.log(error.response.data);
             this.$q.loading.hide();
             this.$q.notify({
               color: "negative",

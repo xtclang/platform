@@ -48,64 +48,50 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 
    If that address fails to resolve you may need to change the rules on you DNS server. For example, for Verizon routers you would need add an exception entry for "127.0.0.1" to your DNS Server settings: "Exceptions to DNS Rebind Protection" (Advanced - Network Settings - DNS Server)   
 
-5. Create a self-signed certificate for the platform web server. For example:
-   
-        keytool -genkeypair -alias platform -keyalg RSA -keysize 2048 -validity 365 -dname "OU=Platform, O=localhost, C=US" -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass password
-        
-   Note: You can replace the place-holders "localhost" and "password" in the above command if you want to. The password is used to encrypt the key storage.
-
-6. Add a symmetric key to encode the cookies:
-
-        keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore ~/xqiz.it/platform/keystore.p12 -storetype PKCS12 -storepass password
-
-   Note: If you replaced the place-holder "password" in the previous step, then also replace it (with the same password) in this command.
-
-7. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), [yarn](https://yarnpkg.com/) and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed. If you are using `brew`, you can simply say: 
+5. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), [yarn](https://yarnpkg.com/) and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed. If you are using `brew`, you can simply say: 
         
         brew install gradle node yarn  
 
-8. Change your directory to the `./platformUI/gui` directory inside the local git repo installed above.
+6. Change your directory to the `./platformUI/gui` directory inside the local git repo installed above.
 
         cd ~/Development/platform/platformUI/gui
 
-9. Make sure all necessary *node* modules are installed within that directory using the following command:
+7. Make sure all necessary *node* modules are installed within that directory using the following command:
 
         npm install
 
-10. If you plan to use `quasar` dev environment, please install it globally by the following command:
+8. If you plan to use `quasar` dev environment, please install it globally by the following command:
 
-         npm install -g @quasar/cli
+        npm install -g @quasar/cli
  
-11. Build the platform services using the gradle command (from within the "platform" directory):
+9. Build the platform services using the gradle command (from within the "platform" directory):
 
-        cd ~/Development/platform/
-        gradle clean build
+       cd ~/Development/platform/
+       gradle clean build
 
-12. Start the platform using the command (from within the "platform" directory):
+10. Start the platform using the command (from within the "platform" directory):
 
         xec -L lib/ lib/kernel.xtc password
 
-    Note: If you replaced the place-holder "password" in the steps 5 and 6, then also replace it (with the same password) in this command.
+    Note: The password you choose during the very first run will be used to encrypt the platform key storage. You will need the same password for all subsequent runs.  
 
-    Note: The server will run in the current shell, and 
-
-13. Open the [locally hosted platform web page](https://xtc-platform.localhost.xqiz.it): 
+11. Open the [locally hosted platform web page](https://xtc-platform.localhost.xqiz.it): 
 
         https://xtc-platform.localhost.xqiz.it
 
     Note: Using the locally-created (self-signed) certificate from step 5 above, you will receive warnings from the browser about the unverifiability of the website and its certificate.
 
-14. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
+12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
 
-15. Log into the "Ecstasy Cloud" platform using the pre-defined test user "admin@acme.com" and the password "password".
+13. Log into the "Ecstasy Cloud" platform using the pre-defined test user "admin@acme.com" and the password "password".
 
-16. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
+14. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
 
-17. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
+15. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
 
-18. Click on the URL to launch your application web page.
+16. Click on the URL to launch your application web page.
 
-19. To stop the server cleanly, from a separate shell run this command:
+17. To stop the server cleanly, from a separate shell run this command:
 
         curl -k -b cookies.txt -L -i -w '\n' -X POST https://xtc-platform.localhost.xqiz.it/host/shutdown
 

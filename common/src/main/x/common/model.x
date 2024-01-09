@@ -83,7 +83,9 @@ package model {
         Boolean active) {
 
         WebAppInfo updateStatus(Boolean active) {
-            return new WebAppInfo(deployment, moduleName, hostName, active);
+            return active == this.active
+                ? this
+                : new WebAppInfo(deployment, moduleName, hostName, active);
         }
     }
 }

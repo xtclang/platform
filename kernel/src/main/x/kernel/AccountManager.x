@@ -63,15 +63,12 @@ service AccountManager
         }
     }
 
-    /**
-     * Retrieve all known accounts. This operation is not a part of the AccountManager interface.
-     */
+    // ----- common.AccountManager API -------------------------------------------------------------
+
+    @Override
     AccountInfo[] getAccounts() {
         return dbConnection.accounts.values.toArray(Constant);
     }
-
-
-    // ----- common.AccountManager API -------------------------------------------------------------
 
     @Override
     Collection<String> getAccounts(String userName) {

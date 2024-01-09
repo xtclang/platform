@@ -10,10 +10,14 @@ module platformUI.xqiz.it {
     package xenia  import xenia.xtclang.org;
 
     import common.AccountManager;
+    import common.ErrorLog;
     import common.HostManager;
     import common.WebHost;
 
     import common.names;
+
+    import common.model.AccountInfo;
+    import common.model.WebAppInfo;
 
     import crypto.KeyStore;
 
@@ -34,7 +38,7 @@ module platformUI.xqiz.it {
      * Configure the controller.
      */
     void configure(HttpServer server, String hostAddr, KeyStore keystore,
-                   AccountManager accountManager, HostManager hostManager) {
+                   AccountManager accountManager, HostManager hostManager, ErrorLog errors) {
         // the 'hostAddr' is a full URI of the platform server, e.g. "xtc-platform.localhost.xqiz.it";
         // we need to extract the base domain ("localhost.xqiz.it")
         String baseDomain;
@@ -47,7 +51,27 @@ module platformUI.xqiz.it {
         server.addRoute(hostAddr, new HttpHandler(server, this), keystore,
                 names.PlatformTlsKey, names.CookieEncryptionKey);
 
-        ControllerConfig.init(accountManager, hostManager, server, baseDomain);
+        ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore);
+
+        // create WebHosts for all active web applications
+        @Inject Console console;
+
+        for (AccountInfo accountInfo : accountManager.getAccounts()) {
+            for (WebAppInfo webAppInfo : accountInfo.webApps.values) {
+                if (webAppInfo.active) {
+                    if (WebHost webHost :=
+                        hostManager.createWebHost(server, accountInfo.name, webAppInfo, errors)) {
+
+                        console.print($|Info: Initialized deployment: "{webAppInfo.hostName}" \
+                                       |of "{webAppInfo.moduleName}"
+                                     );
+                    }
+                    // there must be an error logged
+                } else {
+                    ControllerConfig.addStubRoute(webAppInfo.hostName);
+                }
+            }
+        }
 
         this.registry_.jsonSchema = new Schema(
                 enableReflection = True,
@@ -93,12 +117,26 @@ module platformUI.xqiz.it {
         @Unassigned
         String baseDomain;
 
+        @Unassigned
+        KeyStore keystore;
+
         void init(AccountManager accountManager, HostManager hostManager,
-                  HttpServer httpServer, String baseDomain) {
+                  HttpServer httpServer, String baseDomain, KeyStore keystore) {
             this.accountManager = accountManager;
             this.hostManager    = hostManager;
             this.httpServer     = httpServer;
             this.baseDomain     = baseDomain;
+            this.keystore       = keystore;
+        }
+
+        /**
+         * Add a stub route for the specified deployment.
+         */
+        void addStubRoute(String hostName) {
+            StubHandler handler = new StubHandler(/spa/pages/not-deployed.html, ["%deployment%"=hostName]);
+
+            httpServer.addRoute(hostName, handler, keystore,
+                    names.PlatformTlsKey, names.CookieEncryptionKey);
         }
 
       /**

@@ -8,6 +8,11 @@ import common.model.WebAppInfo;
  */
 interface AccountManager {
     /**
+     * Retrieve all known accounts.
+     */
+    AccountInfo[] getAccounts();
+
+    /**
      * Retrieve accounts for the specified user.
      *
      * @param userName  the user name

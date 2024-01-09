@@ -27,13 +27,9 @@ module kernel.xqiz.it {
 
     import common.ErrorLog;
     import common.HostManager;
-    import common.WebHost;
 
     import common.names;
     import common.utils;
-
-    import common.model.AccountInfo;
-    import common.model.WebAppInfo;
 
     import crypto.CertificateManager;
 
@@ -137,23 +133,9 @@ module kernel.xqiz.it {
                     utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
 
                 container.invoke("configure",
-                        Tuple:(server, hostName, keystore, accountManager, hostManager));
+                        Tuple:(server, hostName, keystore, accountManager, hostManager, errors));
             } else {
                 return;
-            }
-
-            // create WebHosts for all active web applications
-            WebHost[] webHosts = new WebHost[];
-            for (AccountInfo accountInfo : accountManager.getAccounts()) {
-                for (WebAppInfo webAppInfo : accountInfo.webApps.values) {
-                    if (webAppInfo.active, WebHost webHost :=
-                            hostManager.createWebHost(server, accountInfo.name, webAppInfo, errors)) {
-                        webHosts += webHost;
-                        console.print($|Info: Initialized deployment: "{webAppInfo.hostName}" \
-                                       |of "{webAppInfo.moduleName}"
-                                     );
-                    }
-                }
             }
 
             server.start();

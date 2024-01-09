@@ -9,6 +9,7 @@ service CoreService {
         hostManager    = ControllerConfig.hostManager;
         httpServer     = ControllerConfig.httpServer;
         baseDomain     = ControllerConfig.baseDomain;
+        keystore       = ControllerConfig.keystore;
     }
 
     /**
@@ -30,6 +31,11 @@ service CoreService {
      * The base domain name.
      */
     protected String baseDomain;
+
+    /**
+     * The keystore for the platform.
+     */
+    protected KeyStore keystore;
 
     /**
      * The current account name.

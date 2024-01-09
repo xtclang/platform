@@ -83,6 +83,8 @@ service WebAppEndpoint
 
             accountManager.addOrUpdateWebApp(accountName,
                 new WebAppInfo(deployment, moduleName, hostName, False));
+
+            ControllerConfig.addStubRoute(hostName); // give them something better than 404 to look at
         } while (False);
 
         return new SimpleResponse(status, bytes=message?.utf8() : Null);

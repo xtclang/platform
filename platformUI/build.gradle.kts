@@ -30,7 +30,7 @@ tasks.register("build") {
         val srcModule = "${projectDir}/src/main/x/platformUI.x"
 
         project.exec {
-            commandLine("xcc", "-verbose",
+            commandLine("xcc", "--verbose",
                         "-o", libDir,
                         "-L", libDir,
                         "-r", webContent,

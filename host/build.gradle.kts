@@ -19,7 +19,7 @@ tasks.register("build") {
             val srcModule = "${projectDir}/src/main/x/host.x"
 
             project.exec {
-                commandLine("xcc", "-verbose",
+                commandLine("xcc", "--verbose",
                             "-o", libDir,
                             "-L", libDir,
                             srcModule)

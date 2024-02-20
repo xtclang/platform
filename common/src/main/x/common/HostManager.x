@@ -2,6 +2,8 @@ import ecstasy.text.Log;
 
 import common.model.WebAppInfo;
 
+import crypto.CryptoPassword;
+
 import xenia.HttpServer;
 
 
@@ -12,31 +14,32 @@ interface HostManager {
     // ----- WebHost management --------------------------------------------------------------------
 
     /**
-     * Ensure a users directory for the specified account (e.g. "~/xqiz.it/users/acme.com").
+     * Ensure an account home directory for the specified account (e.g. "~/xqiz.it/accounts/self").
      */
-    Directory ensureUserDirectory(String accountName);
+    Directory ensureAccountHomeDirectory(String accountName);
 
     /**
-     * Ensure a user "lib" directory for the specified account (e.g. "~/xqiz.it/users/acme.com/lib").
+     * Ensure a "lib" directory for the specified account (e.g. "~/xqiz.it/accounts/self/lib").
+     * This is the repository for Ecstasy modules that belong to the account.
      */
-    Directory ensureUserLibDirectory(String accountName) {
-        return ensureUserDirectory(accountName).dirFor("lib");
+    Directory ensureAccountLibDirectory(String accountName) {
+        return ensureAccountHomeDirectory(accountName).dirFor("lib").ensure();
     }
 
     /**
-     * Ensure a user "host" directory for the specified account (e.g. "~/xqiz.it/users/acme.com/host").
-     */
-    Directory ensureUserHostDirectory(String accountName) {
-        return ensureUserDirectory(accountName).dirFor("host");
-    }
-
-    /**
-     * Ensure there is a keystore for the specified account that contains a private key and a
+     * Ensure there is a keystore for the specified web app that contains a private key and a
      * certificate for the specified host name and a symmetrical key to be used for cookie encryption.
+     *
+     * @param accountName  the account the web app belongs to
+     * @param deployment   the deployment name
+     * @param hostName     the application host name
+     * @param pwd          the password to use for the keystore
+     * @param errors       the logger to report errors to
      *
      * @return True iff the certificate exists and is valid; otherwise an error is logged
      */
-    Boolean ensureCertificate(String accountName, String hostName, Log errors);
+    Boolean ensureCertificate(String accountName, String deployment, String hostName,
+                              CryptoPassword pwd, Log errors);
 
     /**
      * Retrieve a 'WebHost' for the specified deployment.
@@ -52,13 +55,14 @@ interface HostManager {
      * @param httpServer  the HttpServer to use
      * @param account     the account name
      * @param webAppInfo  the web application info
+     * @param pwd         the password to use for the keystore
      * @param errors      the error log
      *
      * @return True iff the WebHost was successfully created
      * @return (optional) the WebHost for the newly loaded Container
      */
     conditional WebHost createWebHost(HttpServer httpServer, String accountName,
-                                      WebAppInfo webAppInfo, Log errors);
+                                      WebAppInfo webAppInfo, CryptoPassword pwd, Log errors);
 
     /**
      * Remove the specified WebHost.

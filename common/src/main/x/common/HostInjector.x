@@ -46,7 +46,7 @@ service HostInjector(Directory appHomeDir, Boolean platform)
 
         @Override
         String readLine(Boolean suppressEcho = False) {
-            throw new UnsupportedOperation();
+            throw new Unsupported();
         }
 
         void write(String s, Boolean suppressNewline) {
@@ -121,7 +121,7 @@ service HostInjector(Directory appHomeDir, Boolean platform)
                     return tmpDir;
                 }
 
-                Directory temp = store.root.find("_temp").as(Directory);
+                Directory temp = store.root.dirFor("_temp").ensure();
                 return &temp.maskAs(Directory);
 
             default:

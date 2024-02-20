@@ -19,6 +19,17 @@ package names {
     static String CookieEncryptionKey = "cookies";
 
     /**
+     * The name of the password encryption key in the platform keystore. This key is used to encode
+     * various passwords before storing them in the platform DB.
+     */
+    static String PasswordEncryptionKey = "passwords";
+
+    /**
+     * The platform Realm name.
+     */
+    static String PlatformRealm = "platform";
+
+    /**
      * The platform landing page URI.
      */
     static String PlatformUri = "xtc-platform.localhost.xqiz.it";

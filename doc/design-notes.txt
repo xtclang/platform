@@ -115,3 +115,20 @@ Database
 
 Deployment                  ; intersection of code and domain
   Database[]
+
+
+    Session ->
+                        Anon Org (implicit) - wonderful12345678.temp.xqiz.it
+
+        Login Identity -> (e.g. Bob.Smith@gmail.com)
+            |   |   |     Personal "Org" (implicit) - Bob_Smith_gmail_com.user.xqiz.it
+            |   |   |     Automatically assigned as "admin" User (implicit)
+            |   |   V
+            |   |   Menu/AddOrg - Organization
+            |   |        |
+            |   |        V
+            |   |        Menu/AddUser2Org - associate another user w/ org
+            |   V
+            |   Menu/CreateGroup - Group
+            |
+            |

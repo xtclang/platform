@@ -3,6 +3,7 @@
  */
 @WebApp
 module platformUI.xqiz.it {
+    package auth   import webauth.xtclang.org;
     package common import common.xqiz.it;
     package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
@@ -28,7 +29,7 @@ module platformUI.xqiz.it {
     import web.WebApp;
     import web.WebService;
 
-    import web.security.FixedRealm;
+    import web.security.Authenticator;
     import web.security.Realm;
 
     import xenia.HttpHandler;
@@ -37,7 +38,7 @@ module platformUI.xqiz.it {
     /**
      * Configure the controller.
      */
-    void configure(HttpServer server, String hostAddr, KeyStore keystore,
+    void configure(HttpServer server, String hostAddr, KeyStore keystore, Realm realm,
                    AccountManager accountManager, HostManager hostManager, ErrorLog errors) {
         // the 'hostAddr' is a full URI of the platform server, e.g. "xtc-platform.localhost.xqiz.it";
         // we need to extract the base domain ("localhost.xqiz.it")
@@ -51,7 +52,7 @@ module platformUI.xqiz.it {
         server.addRoute(hostAddr, new HttpHandler(server, this), keystore,
                 names.PlatformTlsKey, names.CookieEncryptionKey);
 
-        ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore);
+        ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm);
 
         // create WebHosts for all active web applications
         @Inject Console console;
@@ -60,8 +61,8 @@ module platformUI.xqiz.it {
             for (WebAppInfo webAppInfo : accountInfo.webApps.values) {
                 if (webAppInfo.active) {
                     if (WebHost webHost :=
-                        hostManager.createWebHost(server, accountInfo.name, webAppInfo, errors)) {
-
+                        hostManager.createWebHost(server, accountInfo.name, webAppInfo,
+                                accountManager.decrypt(webAppInfo.password), errors)) {
                         console.print($|Info: Initialized deployment: "{webAppInfo.hostName}" \
                                        |of "{webAppInfo.moduleName}"
                                      );
@@ -120,13 +121,17 @@ module platformUI.xqiz.it {
         @Unassigned
         KeyStore keystore;
 
+        @Unassigned
+        Realm realm;
+
         void init(AccountManager accountManager, HostManager hostManager,
-                  HttpServer httpServer, String baseDomain, KeyStore keystore) {
+                  HttpServer httpServer, String baseDomain, KeyStore keystore, Realm realm) {
             this.accountManager = accountManager;
             this.hostManager    = hostManager;
             this.httpServer     = httpServer;
             this.baseDomain     = baseDomain;
             this.keystore       = keystore;
+            this.realm          = realm;
         }
 
         /**
@@ -138,10 +143,5 @@ module platformUI.xqiz.it {
             httpServer.addRoute(hostName, handler, keystore,
                     names.PlatformTlsKey, names.CookieEncryptionKey);
         }
-
-      /**
-       * TODO: replace with webauth.DBRealm
-       */
-      Realm realm = new FixedRealm("Platform", ["admin@acme.com"="password", "admin@cvs.com"="password"]);
     }
 }

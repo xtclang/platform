@@ -71,7 +71,7 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 
 10. Start the platform using the command (from within the "platform" directory):
 
-        xec -L lib/ lib/kernel.xtc password
+        xec -L lib/ lib/kernel.xtc [password]
 
     Note: The password you choose during the very first run will be used to encrypt the platform key storage. You will need the same password for all subsequent runs.  
 
@@ -83,7 +83,7 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 
 12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
 
-13. Log into the "Ecstasy Cloud" platform using the pre-defined test user "admin@acme.com" and the password "password".
+13. Log into the "Ecstasy Cloud" platform using the pre-defined test user "admin" and the password "password".
 
 14. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
 

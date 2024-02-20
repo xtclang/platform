@@ -7,6 +7,8 @@ import common.WebHost;
 
 import common.model.AccountInfo;
 import common.model.ModuleInfo;
+import common.model.UserInfo;
+import common.model.UserRole;
 
 import web.*;
 import web.http.FormDataFile;
@@ -18,7 +20,7 @@ import web.security.Realm;
  * Dedicated service for user management.
  */
 @WebService("/user")
-service User
+service UserEndpoint
         extends CoreService {
     construct() {
         construct CoreService();
@@ -41,18 +43,23 @@ service User
     }
 
     /*
-     * Log in the specified user.
+     * Log in the specified user; choose an account and assign the corresponding role(s).
      */
     @Post("login/{userName}")
     @HttpsRequired
     SimpleResponse login(SessionData session, String userName, @BodyParam String password="") {
         if (realm.authenticate(userName, password)) {
             session.authenticate(userName);
-            Collection<String> accounts = accountManager.getAccounts(userName);
+            Collection<AccountInfo> accounts = accountManager.getAccounts(userName);
 
-            // TODO choose an account this user was last associated with
-            if (String accountName := accounts.any()) {
-                session.accountName = accountName;
+            // TODO choose an account this user was last associated with or present a choice back
+            if (AccountInfo account := accounts.any()) {
+                session.accountName = account.name;
+
+                assert UserInfo user := accountManager.getUser(userName);
+                if (UserRole userRole := account.users.get(user.id)) {
+                    session.roles = [userRole.name]; // TODO: allow multiple roles
+                }
             }
             return getUserId();
         }

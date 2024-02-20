@@ -5,6 +5,10 @@ import common.model.AccountInfo;
 import common.model.ModuleInfo;
 import common.model.WebAppInfo;
 
+import common.names;
+
+import crypto.CryptoPassword;
+
 import web.*;
 import web.responses.SimpleResponse;
 
@@ -17,18 +21,7 @@ service WebAppEndpoint
         extends CoreService {
 
     /**
-     * Return a JSON map of all webapps for given account.
-     */
-    @Get("all")
-    Map<String, WebAppInfo> getAvailable() {
-        if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
-            return accountInfo.webApps;
-        }
-        return [];
-    }
-
-    /**
-     * Return a JSON map of statuses for all webapps for given account.
+     * Return a JSON map of all webapps for all webapps for given account.
      */
     @Get("status")
     Map<String, WebAppInfo> checkStatus() {
@@ -38,7 +31,7 @@ service WebAppEndpoint
                 if (WebHost webHost := hostManager.getWebHost(deployment)) {
                     info = info.updateStatus(webHost.active);
                 }
-                status.put(deployment, info);
+                status.put(deployment, info.redact());
             }
             return status.freeze(inPlace=True);
         }
@@ -62,7 +55,10 @@ service WebAppEndpoint
                 break;
             }
 
-            if (accountInfo.webApps.contains(deployment)) {
+            // compute the full host name (e.g. "welcome.localhost.xqiz.it")
+            String hostName = $"{deployment}.{baseDomain}";
+
+            if (hostName.equals(names.PlatformUri) || accountInfo.webApps.contains(deployment)) {
                 (status, message) = (Conflict, $"Deployment already exists: '{deployment}'");
                 break;
             }
@@ -72,17 +68,19 @@ service WebAppEndpoint
                 break;
             }
 
-            // compute the full host name (e.g. "shop.acme.com.xqiz.it")
-            String hostName = $"{deployment}.{accountName}.{baseDomain}";
+            // create a random password to be used to access the webapp's keystore
+            @Inject Random random;
+            String         encrypted = accountManager.encrypt(random.int128().toString());
+            CryptoPassword cryptoPwd = accountManager.decrypt(encrypted);
 
             ErrorLog errors = new ErrorLog();
-            if (!hostManager.ensureCertificate(accountName, hostName, errors)) {
+            if (!hostManager.ensureCertificate(accountName, deployment, hostName, cryptoPwd, errors)) {
                 (status, message) = (Conflict, errors.collectErrors());
                 break;
             }
 
             accountManager.addOrUpdateWebApp(accountName,
-                new WebAppInfo(deployment, moduleName, hostName, False));
+                    new WebAppInfo(deployment, moduleName, hostName, encrypted, False));
 
             ControllerConfig.addStubRoute(hostName); // give them something better than 404 to look at
         } while (False);
@@ -138,7 +136,8 @@ service WebAppEndpoint
                 break;
             }
 
-            if (WebHost webHost := hostManager.createWebHost(httpServer, accountName, webAppInfo, errors)) {
+            if (WebHost webHost := hostManager.createWebHost(httpServer, accountName, webAppInfo,
+                    accountManager.decrypt(webAppInfo.password), errors)) {
                 if (webHost.activate(True, errors)) {
                     accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
                 } else {

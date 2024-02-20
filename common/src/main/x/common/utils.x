@@ -19,9 +19,10 @@ package utils {
      *
      * @param repository  the [ModuleRepository] to load the module(s) from
      * @param template    the [ModuleTemplate] for the "main" module
-     * @param appHomeDir  the "home" directory for the deployment (could be multiple for a module)
-     *                    (e.g. "~/xqiz.it/users/acme.com/host/banking)"
-     * @param buildDir    the directory for auto-generated modules (e.g. "~/xqiz.it/users/acme.com/build")
+     * @param deployDir   the "home" directory for the deployment
+     *                    (e.g. "~/xqiz.it/accounts/self/deploy/banking)"
+     * @param buildDir    the directory for auto-generated modules
+     *                    (e.g. "~/xqiz.it/accounts/self/build")
      * @param platform    True iff the loading module is one of the "core" platform modules
      *
      * @return True iff the container has been loaded successfully
@@ -30,7 +31,7 @@ package utils {
      *         loaded along the "main" container
      */
     static conditional (Container, AppHost[]) createContainer(
-                    ModuleRepository repository, ModuleTemplate template, Directory appHomeDir,
+                    ModuleRepository repository, ModuleTemplate template, Directory deployDir,
                     Directory buildDir, Boolean platform, Log errors) {
         DbHost[]     dbHosts;
         HostInjector injector;
@@ -41,17 +42,17 @@ package utils {
 
             for ((String dbPath, String dbModuleName) : dbNames) {
                 DbHost dbHost;
-                if (!(dbHost := createDbHost(repository, dbModuleName, "jsondb", appHomeDir, buildDir, errors))) {
+                if (!(dbHost := createDbHost(repository, dbModuleName, "jsondb", deployDir, buildDir, errors))) {
                     return False;
                 }
                 dbHosts += dbHost;
             }
             dbHosts.makeImmutable();
 
-            injector = createDbInjector(dbHosts, appHomeDir);
+            injector = createDbInjector(dbHosts, deployDir);
         } else {
             dbHosts  = [];
-            injector = new HostInjector(appHomeDir, platform);
+            injector = new HostInjector(deployDir, platform);
         }
 
         try {
@@ -89,18 +90,20 @@ package utils {
      * @param repository    the [ModuleRepository] to load the module(s) from
      * @param dbModuleName  the name of `Database` module (fully qualified)
      * @param dbImpl        the database implementation name (currently always "jsondb")
-     * @param appHomeDir    the application deployment directory (e.g. "~/xqiz.it/users/acme.com/host/banking")
-     * @param buildDir      the directory for auto-generated modules (e.g. "~/xqiz.it/users/acme.com/build")
+     * @param deployDir     the application deployment directory
+     *                      (e.g. "~/xqiz.it/accounts/self/deploy/banking")
+     * @param buildDir      the directory for auto-generated modules
+     *                      (e.g. "~/xqiz.it/accounts/self/build")
      *
      * @return True if the DbHost was successfully created; False otherwise (the errors are logged)
      * @return (optional) the DbHost
      */
     static conditional DbHost createDbHost(
             ModuleRepository repository, String dbModuleName, String dbImpl,
-            Directory appHomeDir, Directory buildDir, Log errors) {
+            Directory deployDir, Directory buildDir, Log errors) {
         import jsondb.tools.ModuleGenerator;
 
-        Directory       dbHomeDir = appHomeDir.dirFor(dbModuleName).ensure();
+        Directory       dbHomeDir = deployDir.dirFor(dbModuleName).ensure();
         DbHost          dbHost;
         ModuleTemplate  dbModuleTemplate;
         ModuleGenerator generator;
@@ -131,17 +134,17 @@ package utils {
     /**
      * Create a database [HostInjector].
      *
-     * @param dbHosts     the array of [DbHost]s for databases the Injector should be able to provide connections to
-     * @param appHomeDir  the "home" directory for the module (e.g. "~/xqiz.it/users/acme.com/host/shopping)"
+     * @param dbHosts    the array of [DbHost]s for databases the Injector should be able to provide connections to
+     * @param deployDir  the "home" directory for the deployment (e.g. "~/xqiz.it/accounts/self/deploy/shopping")
      *
      * @return a HostInjector that injects db connections based on the arrays of the specified DbHosts
      */
-    static HostInjector createDbInjector(DbHost[] dbHosts, Directory appHomeDir) {
+    static HostInjector createDbInjector(DbHost[] dbHosts, Directory deployDir) {
         import oodb.Connection;
         import oodb.RootSchema;
         import oodb.DBUser;
 
-        return new HostInjector(appHomeDir, False) {
+        return new HostInjector(deployDir, False) {
             @Override
             Supplier getResource(Type type, String name) {
                 if (type.is(Type<RootSchema>) || type.is(Type<Connection>)) {
@@ -197,11 +200,11 @@ package utils {
     }
 
     /**
-     * Ensure the user directory for the specified account.
+     * Ensure the "home" directory for the specified account.
      */
-    static Directory ensureUserDirectory(Directory usersDir, String accountName) {
+    static Directory ensureAccountHomeDirectory(Directory accountsDir, String accountName) {
         // TODO: validate/convert the name
-        return usersDir.dirFor(accountName).ensure();
+        return accountsDir.dirFor(accountName).ensure();
     }
 
 }

@@ -40,14 +40,14 @@ export const useWebAppStore = defineStore("webApp", {
           "bank1": {
             "deployment": "bank1",
             "moduleName": "bankStressTest.examples.org",
-            "hostName": "xtc-platform.xqiz.it",
-            "active": true,
+            "hostName": "bank1.localhost.xqiz.it",
+            "active": Math.random() > 0.5,
           },
           "bank2": {
             "deployment": "bank2",
             "moduleName": "bankStressTest.examples.org",
-            "hostName": "xtc-platform.xqiz.it",
-            "active": false,
+            "hostName": "bank2.localhost.xqiz.it",
+            "active": Math.random() > 0.5,
           },
         };
         this.enhance();
@@ -55,46 +55,24 @@ export const useWebAppStore = defineStore("webApp", {
         /*
          * fetch actual data
          */
-        this.$q.loading.show();
-        apiWebApp
-          .get("/all")
-          .then((response) => {
-            this.webAppsJSON = response.data;
-            this.enhance();
-          })
-          .catch((error) => {
-            console.log(error.response.data);
-            this.$q.notify({
-              color: "negative",
-              position: "top",
-              message: "Could not fetch webapps",
-              icon: "report_problem",
-            });
-          })
-          .finally(() => {
-            this.$q.loading.hide();
-          });
-      }
-    },
-
-    updateStatus() {
-      if (process.env.DEV) {
-        this.webAppsJSON = {
-          "bank1": {
-            "active": Math.random() > 0.5,
-          },
-          "bank2": {
-            "active": Math.random() > 0.5,
-          },
-        };
-        this.enhance();
-      } else {
         apiWebApp
           .get("/status")
           .then((response) => {
             this.webAppsJSON = response.data;
             this.enhance();
           })
+          .catch((error) => {
+            var response = error.response;
+            if (response != undefined) {
+              console.log(response.data);
+              this.$q.notify({
+                color: "negative",
+                position: "top",
+                message: "Could not fetch webapps",
+                icon: "report_problem",
+              });
+            }
+          });
       }
     },
 
@@ -147,13 +125,15 @@ export const useWebAppStore = defineStore("webApp", {
           })
           .catch((error) => {
             console.log(error.response.data);
-            this.$q.loading.hide();
             this.$q.notify({
               color: "negative",
               position: "top",
               message: "Could not remove the web application",
               icon: "report_problem",
             });
+          })
+          .finally(() => {
+            this.$q.loading.hide();
           });
       }
     },
@@ -175,13 +155,15 @@ export const useWebAppStore = defineStore("webApp", {
           })
           .catch((error) => {
             console.log(error.response.data);
-            this.$q.loading.hide();
             this.$q.notify({
               color: "negative",
               position: "top",
               message: error.response.data,
               icon: "report_problem",
             });
+          })
+          .finally(() => {
+            this.$q.loading.hide();
           });
       }
     },
@@ -203,13 +185,15 @@ export const useWebAppStore = defineStore("webApp", {
           })
           .catch((error) => {
             console.log(error.response.data);
-            this.$q.loading.hide();
             this.$q.notify({
               color: "negative",
               position: "top",
               message: "Could not stop the web application",
               icon: "report_problem",
             });
+          })
+          .finally(() => {
+            this.$q.loading.hide();
           });
       }
     },

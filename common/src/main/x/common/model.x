@@ -1,6 +1,6 @@
 package model {
-    typedef UInt as AccountId;
-    typedef UInt as UserId;
+    typedef Int as AccountId;
+    typedef Int as UserId;
 
     enum UserRole {Admin, Developer, Observer}
 
@@ -54,7 +54,11 @@ package model {
         }
     }
 
-    const UserInfo(UserId id, String name, String email);
+    const UserInfo(UserId id, String name, String email) {
+
+        UserInfo with(String? name = Null, String? email = Null) =
+            new UserInfo(id, name ?: this.name, email ?: this.email);
+    }
 
     enum ModuleType default(Generic) {Generic, Web, Db}
     const ModuleInfo(
@@ -80,12 +84,17 @@ package model {
         String  deployment, // the same module could be deployed multiple times
         String  moduleName, // qualified
         String  hostName,   // the full host name (e.g. "shop.acme.com.xqiz.it")
+        String  password,  // an encrypted password to the keystore for this deployment
         Boolean active) {
 
         WebAppInfo updateStatus(Boolean active) {
             return active == this.active
                 ? this
-                : new WebAppInfo(deployment, moduleName, hostName, active);
+                : new WebAppInfo(deployment, moduleName, hostName, password, active);
+        }
+
+        WebAppInfo redact() {
+            return new WebAppInfo(deployment, moduleName, hostName, "", active);
         }
     }
 }

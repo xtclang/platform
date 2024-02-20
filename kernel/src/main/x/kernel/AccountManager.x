@@ -15,21 +15,32 @@ import common.model.WebAppInfo;
 
 import common.utils;
 
+import crypto.CryptoPassword;
+import crypto.Decryptor;
+import crypto.NamedPassword;
+
 import oodb.DBMap;
 import oodb.DBUser;
 
+import platformDB.Connection;
+
+import web.codecs.Base64Format;
+
 
 /**
- * The module for basic hosting functionality.
+ * The account management service.
  */
 service AccountManager
         implements common.AccountManager {
 
     @Unassigned
-    DbHost platformDbHost;
+    private DbHost platformDbHost;
 
     @Unassigned
-    platformDB.Connection dbConnection;
+    private Connection dbConnection;
+
+    @Unassigned
+    private Decryptor decryptor;
 
     /**
      * Initialize the service.
@@ -37,54 +48,53 @@ service AccountManager
      * @param repository  the core [ModuleRepository]
      * @param homeDir     the platform home directory (e.g. "~/xqiz.it/platform/host")
      * @param buildDir    the directory to place auto-generated modules at  (e.g. "~/xqiz.it/platform/build")
+     * @param decryptor   the decryptor to use for encrypting/decrypting secrets
      * @param errors      the error log
      */
-    void init(ModuleRepository repository, Directory homeDir, Directory buildDir, Log errors) {
+    Connection init(ModuleRepository repository, Directory homeDir, Directory buildDir,
+              Decryptor decryptor, Log errors) {
         repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
-        assert platformDbHost := utils.createDbHost(repository, "platformDB.xqiz.it", "jsondb",
+        assert this.platformDbHost := utils.createDbHost(repository, "platformDB.xqiz.it", "jsondb",
                                                     homeDir, buildDir, errors);
 
         DBUser user = new oodb.model.User(1, "admin");
-        dbConnection = platformDbHost.ensureDatabase()(user).as(platformDB.Connection);
-
-        // TEMPORARY: TODO remove after "add user" functionality is implemented
-        DBMap<AccountId, AccountInfo> accounts = dbConnection.accounts;
-        DBMap<UserId, UserInfo>       users    = dbConnection.users;
-        if (!accounts.contains(1)) {
-            UserInfo admin = new UserInfo(1, "admin@acme.com", "john.doe@acme.com");
-            users.put(1, admin);
-            accounts.put(1, new AccountInfo(1, "acme.com", [], [], Map:[1 = Admin]));
-        }
-
-        if (!accounts.contains(2)) {
-            UserInfo admin = new UserInfo(2, "admin@cvs.com", "john.doe@cvs.com");
-            users.put(2, admin);
-            accounts.put(2, new AccountInfo(2, "cvs.com", [], [], Map:[2 = Admin]));
-        }
+        this.dbConnection = platformDbHost.ensureDatabase()(user).as(Connection);
+        this.decryptor    = decryptor;
+        return dbConnection;
     }
+
+    /**
+     * Check if the database is empty.
+     */
+    Boolean initialized.get() = !dbConnection.accounts.empty;
+
 
     // ----- common.AccountManager API -------------------------------------------------------------
 
     @Override
-    AccountInfo[] getAccounts() {
-        return dbConnection.accounts.values.toArray(Constant);
-    }
+    AccountInfo[] getAccounts() = dbConnection.accounts.values.toArray(Constant);
 
     @Override
-    Collection<String> getAccounts(String userName) {
+    conditional AccountInfo getAccount(String accountName) =
+        dbConnection.accounts.values.any(info -> info.name == accountName);
+
+    @Override
+    conditional AccountInfo createAccount(String accountName) =
+        dbConnection.accounts.create(accountName);
+
+    @Override
+    Boolean updateAccount(AccountInfo account) = dbConnection.accounts.update(account);
+
+    @Override
+    Collection<AccountInfo> getAccounts(String userName) {
         using (val tx = dbConnection.createTransaction()) {
             if (UserInfo userInfo := tx.users.values.any(info -> info.name == userName)) {
                 UserId userId = userInfo.id;
                 return tx.accounts.values.filter(info -> info.users.contains(userId))
-                                         .map   (info -> info.name).toArray(Constant);
+                                         .toArray(Constant);
             }
         return [];
         }
-    }
-
-    @Override
-    conditional AccountInfo getAccount(String accountName) {
-        return dbConnection.accounts.values.any(info -> info.name == accountName);
     }
 
     @Override
@@ -121,6 +131,28 @@ service AccountManager
                 tx.accounts.put(accountInfo.id, accountInfo.removeWebApp(appName));
             }
         }
+    }
+
+    @Override
+    conditional UserInfo getUser(String userName) =
+        dbConnection.users.values.any(info -> info.name == userName);
+
+    @Override
+    conditional UserInfo createUser(UserId userId, String userName, String email) =
+        dbConnection.users.create(userId, userName, email);
+
+    @Override
+    Boolean updateUser(UserInfo user) = dbConnection.users.update(user);
+
+    @Override
+    String encrypt(String password) =
+        Base64Format.Instance.encode(decryptor.encrypt(password.utf8()));
+
+    @Override
+    CryptoPassword decrypt(String text) {
+        String password = decryptor.decrypt(Base64Format.Instance.decode(text)).unpackUtf8();
+        CryptoPassword pwd = new NamedPassword("", password);
+        return &pwd.maskAs(CryptoPassword);
     }
 
     @Override

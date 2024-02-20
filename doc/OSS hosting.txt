@@ -1,0 +1,27 @@
+
+### OSS hosting (assuming renting VMs on Azure)
+
+    - there is one ond only one hosting domain, specified in the configuration file or during the first
+        startup, e.g.: "eastus.cloudapp.azure.com"; that must be accessible and controlled
+        by the customer, which means that the customer must be able to create DNS records for
+        names that end with "eastus.cloudapp.azure.com" associating those names with the same real
+        IP address; the hosting server will be bound to a name that starts with "xtc-platform"
+        and ends with the hosting domain (i.e.: "xtc-platform.eastus.cloudapp.azure.com")
+
+    - there is one ond only one account called "self", used for the hosting applications
+
+    - there is one and only one user called "admin", used for registering and administering
+      application deployments; the password for "admin" is selected during the first startup and
+      must be supplied later on; changing the password is possible later on using admin tools
+
+    - applications are deployed under subdomains that *must be* controlled by the customer,
+        e.g.: "products.eastus.cloudapp.azure.com"; the customer must be able to create DNS records
+        associating those names with the same IP address as the xtc-platform hosting address above
+
+    - the admin panel (UI) should allow:
+        - upload XTC modules
+        - registering XTC modules deployments under customer controlled sub-domain names
+        - configuring and deploying registered modules
+        - issuing tokens for REST based management API that allows
+            -- change the "admin" user password
+            -- define configuration parameters for registered applications

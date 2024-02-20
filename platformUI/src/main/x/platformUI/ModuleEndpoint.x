@@ -59,7 +59,7 @@ service ModuleEndpoint
 
         String[] messages = [];
         if (web.Body body ?= request.body) {
-            Directory libDir = hostManager.ensureUserLibDirectory(accountName);
+            Directory libDir = hostManager.ensureAccountLibDirectory(accountName);
 
             @Inject Container.Linker linker;
 
@@ -70,7 +70,7 @@ service ModuleEndpoint
 
                 try {
                     ModuleTemplate template   = linker.loadFileTemplate(file).mainModule;
-                    String         moduleName =  template.qualifiedName;
+                    String         moduleName = template.qualifiedName;
                     String         fileName   =  moduleName + ".xtc";
 
                     // save the file
@@ -134,7 +134,7 @@ service ModuleEndpoint
 
             accountManager.removeModule(accountName, moduleName);
 
-            Directory libDir = hostManager.ensureUserLibDirectory(accountName);
+            Directory libDir = hostManager.ensureAccountLibDirectory(accountName);
             if (File|Directory f := libDir.find(moduleName + ".xtc")) {
                 if (f.is(File)) {
                     f.delete();
@@ -153,7 +153,7 @@ service ModuleEndpoint
      */
     @Post("/resolve/{moduleName}")
     SimpleResponse resolve(String moduleName) {
-        Directory libDir = hostManager.ensureUserLibDirectory(accountName);
+        Directory libDir = hostManager.ensureAccountLibDirectory(accountName);
         try {
             accountManager.addOrUpdateModule(accountName, buildModuleInfo(libDir, moduleName));
             return new SimpleResponse(OK);
@@ -245,7 +245,9 @@ service ModuleEndpoint
                     moduleNames.contains(webHost.moduleName)) {
 
                     hostManager.removeWebHost(webHost);
-                    if (!hostManager.createWebHost(httpServer, accountName, info, errors)) {
+
+                    if (!hostManager.createWebHost(httpServer, accountName, info,
+                            accountManager.decrypt(info.password), errors)) {
                         webHost.log($"Error: Failed to redeploy {deployment.quoted()}; reason: {errors}\n");
 
                         accountManager.addOrUpdateWebApp(accountName, info.updateStatus(False));

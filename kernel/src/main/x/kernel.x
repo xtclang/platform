@@ -10,6 +10,7 @@
  * capabilities, the minimally required set of maximally restricted interfaces are injected.
  */
 module kernel.xqiz.it {
+    package auth   import webauth.xtclang.org;
     package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
     package jsondb import jsondb.xtclang.org;
@@ -25,13 +26,22 @@ module kernel.xqiz.it {
 
     import ecstasy.reflect.ModuleTemplate;
 
+    import auth.Configuration;
+    import auth.DBRealm;
+
     import common.ErrorLog;
     import common.HostManager;
 
     import common.names;
     import common.utils;
 
+    import platformDB.Connection;
+
+    import crypto.Algorithms;
     import crypto.CertificateManager;
+    import crypto.CryptoKey;
+    import crypto.Decryptor;
+    import crypto.KeyStore;
 
     import json.Doc;
     import json.Parser;
@@ -54,7 +64,7 @@ module kernel.xqiz.it {
 
         // ensure necessary directories
         Directory platformDir = homeDir.dirFor("xqiz.it/platform").ensure();
-        Directory usersDir    = homeDir.dirFor("xqiz.it/users").ensure();
+        Directory accountsDir = homeDir.dirFor("xqiz.it/accounts").ensure();
         Directory buildDir    = platformDir.dirFor("build").ensure();
         Directory hostDir     = platformDir.dirFor("host").ensure();
 
@@ -70,7 +80,7 @@ module kernel.xqiz.it {
                 if (configFile.exists) {
                     console.print($"Warning: Your local config file is out of date; replacing with the default");
                 }
-                Byte[] configData = configInit.contents;
+                immutable Byte[] configData = configInit.contents;
                 jsonConfig = configData.unpackUtf8();
                 configFile.contents = configData; // create a copy from the embedded resource
             }
@@ -100,24 +110,32 @@ module kernel.xqiz.it {
 
                 manager.createCertificate(storeFile, password, names.PlatformTlsKey, dName);
                 manager.createSymmetricKey(storeFile, password, names.CookieEncryptionKey);
+                manager.createSymmetricKey(storeFile, password, names.PasswordEncryptionKey);
                 }
 
-            // initialize the account manager
-            console.print($"Info: Starting the AccountManager..."); // inside the kernel for now
+            // initialize the account manager; it's inside the kernel for now, but we need to
+            // consider creating a separate container for it
+            console.print($"Info: Starting the AccountManager...");
+
+            @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
+            assert CryptoKey key := keystore.getKey(names.PasswordEncryptionKey) as
+                                    $"Key {names.PasswordEncryptionKey} is missing in the keystore";
+
+            @Inject Algorithms algorithms;
+            assert Decryptor decryptor := algorithms.decryptorFor("AES", key);
+
             AccountManager accountManager = new AccountManager();
-            accountManager.init(repository, hostDir, buildDir, errors);
+            Connection     connection     = accountManager.init(repository, hostDir, buildDir,
+                                                decryptor, errors);
 
             // create a container for the platformUI controller and configure it
             console.print($"Info: Starting the HostManager...");
-
-            import crypto.KeyStore;
-            @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
 
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
             if (Container  container :=
                     utils.createContainer(repository, hostModule, hostDir, buildDir, True, errors)) {
-                hostManager = container.invoke("configure", Tuple:(usersDir))[0].as(HostManager);
+                hostManager = container.invoke("configure", Tuple:(accountsDir))[0].as(HostManager);
             } else {
                 return;
             }
@@ -128,12 +146,38 @@ module kernel.xqiz.it {
             @Inject HttpServer server;
             server.configure(hostName, httpPort, httpsPort);
 
+            DBRealm    realm;
+            if (accountManager.initialized) {
+                realm = new DBRealm(names.PlatformRealm, connection);
+            } else {
+                String userName    = "admin";
+                String accountName = "self";
+
+                import common.model.AccountInfo;
+                import common.model.UserInfo;
+                using (val tx = connection.createTransaction()) {
+                    Configuration initConfig = new Configuration(
+                        initUserPass  = [userName=password],
+                        initRoleUsers = ["Admin"=[userName]]
+                        );
+
+                    realm = new DBRealm(names.PlatformRealm,
+                                rootSchema = connection, initConfig = initConfig);
+
+                    assert auth.User   user    := tx.authSchema.users.findByName(userName);
+                    assert AccountInfo account := accountManager.createAccount(accountName);
+                    assert UserInfo    admin   := accountManager.createUser(user.userId, userName,
+                                                    $"{userName}@{hostName}");
+                    assert accountManager.updateAccount(account.addOrUpdateUser(admin.id, Admin));
+                }
+            }
+
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
                     utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
 
                 container.invoke("configure",
-                        Tuple:(server, hostName, keystore, accountManager, hostManager, errors));
+                        Tuple:(server, hostName, keystore, realm, accountManager, hostManager, errors));
             } else {
                 return;
             }

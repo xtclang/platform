@@ -13,6 +13,7 @@ import common.utils;
 
 import crypto.Certificate;
 import crypto.CertificateManager;
+import crypto.CryptoPassword;
 import crypto.KeyStore;
 
 import xenia.HttpServer;
@@ -20,13 +21,13 @@ import xenia.HttpServer;
 /**
  * The module for basic hosting functionality.
  */
-service HostManager(Directory usersDir)
+service HostManager(Directory accountsDir)
         implements common.HostManager {
 
     /**
-     * The "users" directory.
+     * The "accounts" directory.
      */
-    private Directory usersDir;
+    private Directory accountsDir;
 
     /**
      * Deployed WebHosts keyed by the deployment name.
@@ -37,20 +38,21 @@ service HostManager(Directory usersDir)
     // ----- common.HostManager API ----------------------------------------------------------------
 
     @Override
-    Directory ensureUserDirectory(String accountName) {
+    Directory ensureAccountHomeDirectory(String accountName) {
         import ecstasy.fs.DirectoryFileStore;
 
-        Directory userDir = utils.ensureUserDirectory(usersDir, accountName);
+        Directory accountDir = utils.ensureAccountHomeDirectory(accountsDir, accountName);
 
         // make sure there is no way for them to get any higher that their "root" directory
-        return new DirectoryFileStore(userDir.ensure()).root;
+        return new DirectoryFileStore(accountDir.ensure()).root;
     }
 
     @Override
-    Boolean ensureCertificate(String accountName, String hostName, Log errors) {
-        Directory userDir = utils.ensureUserDirectory(usersDir, accountName);
-        File      store   = userDir.fileFor(KeyStoreName);
-        String    pwd     = accountName; // TODO: obtain the password from the "master" keystore
+    Boolean ensureCertificate(String accountName, String deployment, String hostName,
+                              CryptoPassword pwd, Log errors) {
+        Directory accountDir = utils.ensureAccountHomeDirectory(accountsDir, accountName);
+        Directory homeDir    = accountDir.dirFor($"deploy/{deployment}").ensure();
+        File      store      = homeDir.fileFor(KeyStoreName);
 
         try {
             if (store.exists) {
@@ -86,17 +88,17 @@ service HostManager(Directory usersDir)
 
     @Override
     conditional WebHost createWebHost(HttpServer httpServer, String accountName,
-                                      WebAppInfo webAppInfo, Log errors) {
+                                      WebAppInfo webAppInfo, CryptoPassword pwd, Log errors) {
         if (deployedWebHosts.contains(webAppInfo.deployment)) {
                 errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
                           );
             return False;
         }
 
-        Directory userDir  = utils.ensureUserDirectory(usersDir, accountName);
-        Directory libDir   = userDir.dirFor("lib").ensure();
-        Directory buildDir = userDir.dirFor("build").ensure();
-        Directory hostDir  = userDir.dirFor("host").ensure();
+        Directory accountDir = ensureAccountHomeDirectory(accountName);
+        Directory libDir     = ensureAccountLibDirectory(accountName);
+        Directory buildDir   = accountDir.dirFor("build").ensure();
+        Directory hostDir    = accountDir.dirFor("deploy").ensure();
 
         @Inject("repository") ModuleRepository coreRepo;
 
@@ -107,9 +109,7 @@ service HostManager(Directory usersDir)
         Directory homeDir    = hostDir.dirFor(deployment).ensure();
         WebHost   webHost    = new WebHost(httpServer, repository, accountName, webAppInfo, homeDir, buildDir);
 
-        File   store = userDir.fileFor(KeyStoreName);
-        String pwd   = accountName; // TODO: obtain the password from the "master" keystore
-
+        File     store = homeDir.fileFor(KeyStoreName);
         KeyStore keystore;
         try {
             @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore ks;
@@ -122,7 +122,7 @@ service HostManager(Directory usersDir)
         }
 
         String hostName = webAppInfo.hostName;
-        if (!ensureCertificate(accountName, hostName, errors)) {
+        if (!ensureCertificate(accountName, deployment, hostName, pwd, errors)) {
             return False;
         }
 
@@ -141,7 +141,15 @@ service HostManager(Directory usersDir)
             webHost.close();
         } catch (Exception ignore) {}
 
-        deployedWebHosts.remove(webHost.info.deployment);
+        String deployment = webHost.info.deployment;
+
+        deployedWebHosts.remove(deployment);
+
+        Directory accountDir = utils.ensureAccountHomeDirectory(accountsDir, webHost.account);
+        Directory homeDir    = accountDir.dirFor($"deploy/{deployment}");
+        if (homeDir.exists) {
+            homeDir.deleteRecursively();
+        }
     }
 
     @Override

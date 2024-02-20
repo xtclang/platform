@@ -195,7 +195,7 @@ export default defineComponent({
 
     onBeforeMount(() => {
       intervalId = setInterval(
-          () => webAppStore.updateStatus(),
+          () => webAppStore.updateWebApps(),
           5000);
 
       if (userStore.hasUser) {

@@ -10,8 +10,8 @@ module host.xqiz.it {
     /**
      * Bootstrapping: configure and return the HostManager.
      */
-    common.HostManager configure(Directory usersDir) {
-        HostManager mgr = new HostManager(usersDir);
+    common.HostManager configure(Directory accountsDir) {
+        HostManager mgr = new HostManager(accountsDir);
         return &mgr.maskAs(common.HostManager);
     }
 }

@@ -100,6 +100,8 @@ val yarnAddDependencies by tasks.registering(YarnTask::class) {
  * Task that defines the inputs and outputs for the Quasar webapp, and builds it. This means that the task
  * should detect, e.g. if someone changes index.html or a single Vue file, and then rerun the task. Otherwise
  * the task will be treated as "up to date".
+ *
+ * The quasar build creates the gui/dist/spa folder and files.
  */
 val yarnQuasarBuild by tasks.registering(YarnTask::class) {
     workingDir = gui
@@ -115,26 +117,35 @@ val yarnQuasarBuild by tasks.registering(YarnTask::class) {
     }
 }
 
+
 /**
  * Compile the XTC PlatformUI Module.
  */
 val compileXtc by tasks.existing {
-    dependsOn(verifySourceSets)
+    //dependsOn(verifySourceSets)
     dependsOn(yarnQuasarBuild)
 }
 
 val processResources by tasks.existing {
-    dependsOn(yarnQuasarBuild)
+    enabled = false
+    // TODO get rid of processResources from the XTC build cycle.
 }
 
-val verifySourceSets by tasks.registering {
-    dependsOn(processResources)
-    mustRunAfter(yarnQuasarBuild)
-    sourceSets.forEach {
-        logger.info("*** Source Set: $it")
-        it.resources.files.forEach {
-            logger.info("** Resource: $it")
-        }
+// This implicitly copies the yarnQuasarBuild outputs to platformUI/build/xtc/main/resources, which
+// is where the compileXtc tasks expects to find its resource path. Since the yarnQuasarBuild task
+// does not output its files in src/main/resources, which it should for Java or XTC, for the normal
+// process resources task to pick it up, we have add the paths where they end up as a resource directory
+// too. We do that in the source set configuration. Process resources then does any available transforms,
+// which here is the default identity transform, i.e. copy, to the build resources directory for the
+// source set main. That is what we want, because that is what compileXtc will use as its -r flag. In
+// XTC resources have to be processed before the build, since the build compiles them in. Any resource
+// processing hence haver to take place before the compileXtc task, and its sourceset resource outputs
+// (under build/sourceset/resources) by convention, will be fed into the XTC Compiler.
+val processXtcResources by tasks.existing {
+    dependsOn(yarnQuasarBuild)
+    inputs.files(yarnQuasarBuild.map { it.outputs.files })
+    doLast {
+        printTaskInputsAndOutputs()
     }
 }
 

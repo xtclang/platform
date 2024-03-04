@@ -116,6 +116,10 @@ Database
 Deployment                  ; intersection of code and domain
   Database[]
 
+  Database could be deployed as a named "stand alone"; other deployments could use it in a "shared"
+    mode
+  Tools should be able to access shared DB by the deployment name and a non-shared DB by the
+    qualified name (e.g. welcome1:welcomeDB)
 
     Session ->
                         Anon Org (implicit) - wonderful12345678.temp.xqiz.it

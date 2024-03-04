@@ -5,8 +5,6 @@ import common.model.AccountInfo;
 import common.model.ModuleInfo;
 import common.model.WebAppInfo;
 
-import common.names;
-
 import crypto.CryptoPassword;
 
 import web.*;
@@ -58,7 +56,7 @@ service WebAppEndpoint
             // compute the full host name (e.g. "welcome.localhost.xqiz.it")
             String hostName = $"{deployment}.{baseDomain}";
 
-            if (hostName.equals(names.PlatformUri) || accountInfo.webApps.contains(deployment)) {
+            if (hostName.equals(httpServer.bindAddr) || accountInfo.webApps.contains(deployment)) {
                 (status, message) = (Conflict, $"Deployment already exists: '{deployment}'");
                 break;
             }

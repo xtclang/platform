@@ -4,7 +4,7 @@
 #
 
 [versions]
-xdk = "0.4.431"
+xdk = "0.4.43"
 
 gradle-node = "7.0.1"
 node = "20.10.0"

@@ -1,3 +1,5 @@
+FROM gradle-8.6
+
 # Platform as a Service
 
 This is the public repository for the open source Ecstasy PaaS project, sponsored by [xqiz.it](http://xqiz.it).

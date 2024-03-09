@@ -78,6 +78,8 @@ as a container/Dockerfile/docker in the near future, so that you won't have to d
    you would need add an exception entry for `127.0.0.1` to your DNS Server settings: "Exceptions to DNS Rebind
    Protection" (Advanced - Network Settings - DNS Server)
 
+   TODO: Why not just add an /etc/host entry, or run a dns server in a co-deployed container?
+
 5. Create a self-signed certificate for the platform web server. For example:
 
 ```

@@ -1,0 +1,45 @@
+#
+# Platform independent Docker compose configuration that syncs out a git branch
+# (master is default) and/or a tag, and produced distribution installers for it.
+# This is equivalent to ./gradlew installDist, where all platform archives,
+# including Windows exe files, are built in the container.
+#
+# The build volume persists, and is rebuilt whenever it is detected that we
+# want to build a branch at a change that doesn't correspond to the last build
+# state. The cache volume also persiscat ~ts, so significant info is reused.
+# 
+
+version: '3.8'
+
+#
+# Set up secrets from the default locations, so that we can do things like
+# publications, artifact signing or other Gradle operations, where sensitive
+# information is stored outside the repository.
+#
+#secrets:
+#  gradle_properties:
+#    file: ~/.gradle/gradle.properties
+
+#volumes:
+#  cache:
+#  source:
+
+services:
+  platform:
+    image: ghcr.io/xtclang/xdk-platform:latest
+    build:
+      context: docker
+      dockerfile: Dockerfile.platform
+      args:
+        DOCKER_BUILDKIT: 1
+        PLATFORM_PASSWORD: ${PLATFORM_PASSWORD:-password}
+    env_file:
+      - docker/.env
+      - docker/.env.local
+    extra_hosts:
+      - "xtc-platform.localhost.xqiz.it:127.0.0.1"
+      - "xtc-platform.xqiz.it:127.0.0.10"
+    ports:
+        - "8080:8080"
+        - "8090:8090"
+    entrypoint: ['entrypoint-xtc-platform.sh']

@@ -38,6 +38,9 @@ check_name_resolution
 check_updated_source
 check_platform_build
 
+pushd $SRC_DIR
+./gradlew run
+
 # Pass any remaining args or CMD on to the run command.
 if [ -z "${@}" ]; then
     echo "No extra entrypoint arguments. Container exiting from $0."

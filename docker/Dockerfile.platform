@@ -16,23 +16,21 @@ ARG GITHUB_BRANCH_PLATFORM
 
 ENV XTC_USER=$XTC_USER
 ENV XTC_USER_HOME=$XTC_USER_HOME
-ENV XQIZIT_HOME=$XTC_USER_HOME/xqiz.it
+ENV XTC_VOLUME=$XTC_USER_HOME/xtc
+ENV XQIZIT_HOME=$XTC_VOLUME/xqiz.it
 ENV PLATFORM_HOME=$XQIZIT_HOME/platform
 ENV GITHUB_BRANCH_XVM=$GITHUB_BRANCH_XVM
 ENV GITHUB_BRANCH_PLATFORM=$GITHUB_BRANCH_PLATFORM
-#ENV GRADLE_USER_HOME=$XTC_USER_HOME/build/.gradle
+#ENV GRADLE_USER_HOME=$XTC_VOLUME/.gradle
 
 USER root
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
     iputils-ping jq sudo wget curl git openjdk-21-jdk
 
-RUN curl --silent --location https://deb.nodesource.com/setup_21.x | sudo bash -
-RUN apt-get -y --no-install-recommends install \
-    nodejs
-
-# TOOD: Figure out why this isn't working.
-# && npm -g install npm@${NPM_SAFE_VERSION} # && npm -g install yarn
+# Actually, we don't need a node installation. The Gradle plugin handles everything.
+#RUN curl --silent --location https://deb.nodesource.com/setup_21.x | sudo bash -
+#RUN apt-get -y --no-install-recommends install nodejs && npm -g install npm@${NPM_SAFE_VERSION} # && npm -g install yarn
 
 # Install dev tools. We should separate these out later.
 RUN apt-get install --no-install-recommends -y emacs-nox

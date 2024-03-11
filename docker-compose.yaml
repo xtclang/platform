@@ -23,7 +23,7 @@ secrets:
 # gradle_cache is placed under /.root
 # we also add a platform volume to reuse ~/xqiz.it
 volumes:
-  build:
+  persistent:
 
 services:
   platform:
@@ -39,7 +39,7 @@ services:
     secrets:
       - gradle_properties
     volumes:
-      - build:/cache
+      - persistent:/persistent
     env_file:
       - docker/.env
       - docker/.env.local

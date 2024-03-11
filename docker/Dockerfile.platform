@@ -79,7 +79,4 @@ RUN keytool \
 
 WORKDIR $XTC_USER_HOME
 
-#ADD https://api.github.com/repos/xtclang/platform/git/refs/heads/${GITHUB_BRANCH_PLATFORM} $HOME/github-version.json
-#RUN git clone --branch $GITHUB_BRANCH_PLATFORM --depth=1 https://github.com/xtclang/platform.git
-
 ENTRYPOINT ["entrypoint.sh"]

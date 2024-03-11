@@ -5,6 +5,15 @@
 # as
 echo "Entrypoint for Platform..."
 
+function check_name_resolution() {
+  ping -c 1 xtc-platform.localhost.xqiz.it
+  if [ $? != 0 ]; then
+    echo "Ping to localhost failed using xtc-platform.localhost.xqiz.it"
+    exit 1
+  fi
+  echo "xtc-platform.localhost.xqiz.it resolves and responds to ping."
+}
+
 # Under root build we have have src and .gradle
 
 export PLATFORM_DIR=$HOME/build
@@ -25,14 +34,11 @@ fi
 
 source /usr/local/bin/platform-build.sh
 
+check_name_resolution
 check_updated_source
+check_platform_build
 
-ping -c 1 xtc-platform.localhost.xqiz.it
-if [ $? != 0 ]; then
-  echo "Ping to localhost failed using xtc-platform.localhost.xqiz.it"
-  exit 1
-fi
-
+# Pass any remaining args or CMD on to the run command.
 if [ -z "${@}" ]; then
     echo "No extra entrypoint arguments. Container exiting from $0."
 else

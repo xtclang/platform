@@ -48,5 +48,5 @@ services:
       - "xtc-platform.xqiz.it:127.0.0.10"
     ports:
         - "8080:80"
-        #- "8090:90"
+        - "8090:443"
     entrypoint: ['entrypoint.sh']

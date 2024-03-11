@@ -9,21 +9,22 @@
  * available to the system, in order for it to work. Please see the README.md
  * on how to set this up, and why you have to do this.
  */
+
 pluginManagement {
     repositories {
-        val gitHubOnly: String? by settings
-        val mavenLocalOnly: String? by settings
+        val mavenLocalRepo: String? by settings
+        val xtclangGitHubRepo: String? by settings
 
         val gitHubUser: String? by settings
         val gitHubToken: String? by settings
         val gitHubUrl: String by settings
 
-        println("Plugin: resolving settings mavenLocalOnly=$mavenLocalOnly, gitHubOnly=$gitHubOnly")
-        if (mavenLocalOnly == "true" && gitHubOnly == mavenLocalOnly) {
-            throw GradleException("Error: mavenLocalOnly AND gitHubOnly are both set to true.")
+        println("Plugin: mavenLocal=$mavenLocalRepo, xtclangGitHubRepo=$xtclangGitHubRepo")
+        if (mavenLocalRepo != "true" && xtclangGitHubRepo != "true") {
+            throw GradleException("Error: either or both of mavenResolveFromMavenLocal and mavenResolveFromXtcGitHub must be set.")
         }
 
-        if (mavenLocalOnly != "true") {
+        if (xtclangGitHubRepo == "true") {
             maven {
                 url = uri(gitHubUrl)
                 credentials {
@@ -33,7 +34,7 @@ pluginManagement {
             }
         }
 
-        if (gitHubOnly != "true") {
+        if (mavenLocalRepo == "true") {
             // Define mavenLocal as an artifact repository (disabled by default)
             mavenLocal()
         }
@@ -53,19 +54,19 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         // Define XTC org GitHub Maven as a plugin repository
-        val gitHubOnly: String? by settings
-        val mavenLocalOnly: String? by settings
+        val mavenLocalRepo: String? by settings
+        val xtclangGitHubRepo: String? by settings
 
         val gitHubUser: String? by settings
         val gitHubToken: String? by settings
         val gitHubUrl: String by settings
 
-        println("Repos: resolving settings mavenLocalOnly=$mavenLocalOnly, gitHubOnly=$gitHubOnly")
-        if (mavenLocalOnly == "true" && gitHubOnly == mavenLocalOnly) {
-            throw GradleException("Error: mavenLocalOnly AND gitHubOnly are both set to true.")
+        println("Repos: mavenLocal=$mavenLocalRepo, xtclangGitHubRepo=$xtclangGitHubRepo")
+        if (mavenLocalRepo != "true" && xtclangGitHubRepo != "true") {
+            throw GradleException("Error: either or both of mavenResolveFromMavenLocal and mavenResolveFromXtcGitHub must be set.")
         }
 
-        if (mavenLocalOnly != "true") {
+        if (xtclangGitHubRepo == "true") {
             maven {
                 url = uri(gitHubUrl)
                 credentials {
@@ -75,7 +76,7 @@ dependencyResolutionManagement {
             }
         }
 
-        if (gitHubOnly != "true") {
+        if (mavenLocalRepo == "true") {
             // Define mavenLocal as an artifact repository (disabled by default)
             mavenLocal()
         }

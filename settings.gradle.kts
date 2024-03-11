@@ -18,6 +18,7 @@ pluginManagement {
         val gitHubToken: String? by settings
         val gitHubUrl: String by settings
 
+        println("Plugin: resolving settings mavenLocalOnly=$mavenLocalOnly, gitHubOnly=$gitHubOnly")
         if (mavenLocalOnly == "true" && gitHubOnly == mavenLocalOnly) {
             throw GradleException("Error: mavenLocalOnly AND gitHubOnly are both set to true.")
         }
@@ -59,6 +60,7 @@ dependencyResolutionManagement {
         val gitHubToken: String? by settings
         val gitHubUrl: String by settings
 
+        println("Repos: resolving settings mavenLocalOnly=$mavenLocalOnly, gitHubOnly=$gitHubOnly")
         if (mavenLocalOnly == "true" && gitHubOnly == mavenLocalOnly) {
             throw GradleException("Error: mavenLocalOnly AND gitHubOnly are both set to true.")
         }

@@ -16,13 +16,14 @@ version: '3.8'
 # publications, artifact signing or other Gradle operations, where sensitive
 # information is stored outside the repository.
 #
-#secrets:
-#  gradle_properties:
-#    file: ~/.gradle/gradle.properties
+secrets:
+  gradle_properties:
+    file: ~/.gradle/gradle.properties
 
-#volumes:
-#  cache:
-#  source:
+# gradle_cache is placed under /.root
+# we also add a platform volume to reuse ~/xqiz.it
+volumes:
+  build:
 
 services:
   platform:
@@ -35,6 +36,10 @@ services:
         PLATFORM_PASSWORD: ${PLATFORM_PASSWORD:-password}
         GITHUB_BRANCH_PLATFORM: ${GITHUB_BRANCH_PLATFORM:-platform-xtcplugin}
         GITHUB_BRANCH_XVM: ${GITHUB_BRANCH_XVM:-master}
+    secrets:
+      - gradle_properties
+    volumes:
+      - build:/cache
     env_file:
       - docker/.env
       - docker/.env.local
@@ -42,6 +47,6 @@ services:
       - "xtc-platform.localhost.xqiz.it:127.0.0.1"
       - "xtc-platform.xqiz.it:127.0.0.10"
     ports:
-        - "8080:8080"
-        - "8090:8090"
+        - "8080:80"
+        #- "8090:90"
     entrypoint: ['entrypoint.sh']

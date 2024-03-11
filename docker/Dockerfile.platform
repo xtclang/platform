@@ -4,38 +4,35 @@ FROM ubuntu:24.04
 ARG DOCKER_BUILDKIT=$DOCKER_BUILDKIT
 ENV DOCKER_BUILD_KIT=$DOCKER_BUILDKIT
 
-#ARG TARGETARCH
-#ARG BUILDARCH
-#ENV TARGETARCH=$TARGETARCH
-#ENV BUILDARCH=$BUILDARCH
-
-# Linux
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
 
 ARG XTC_USER=xtc
 ARG XTC_USER_HOME=/home/$XTC_USER
+ARG NPM_SAFE_VERSION='npm@10.4.0'
+ARG GITHUB_BRANCH_XVM
+ARG GITHUB_BRANCH_PLATFORM
 
 ENV XTC_USER=$XTC_USER
 ENV XTC_USER_HOME=$XTC_USER_HOME
 ENV XQIZIT_HOME=$XTC_USER_HOME/xqiz.it
 ENV PLATFORM_HOME=$XQIZIT_HOME/platform
-
-ARG NPM_SAFE_VERSION='npm@10.4.0'
+ENV GITHUB_BRANCH_XVM=$GITHUB_BRANCH_XVM
+ENV GITHUB_BRANCH_PLATFORM=$GITHUB_BRANCH_PLATFORM
 
 USER root
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    iputils-ping jq sudo wget curl openjdk-21-jdk
+    iputils-ping jq sudo wget curl git openjdk-21-jdk
 
 RUN curl --silent --location https://deb.nodesource.com/setup_21.x | sudo bash -
 RUN apt-get -y --no-install-recommends install \
-    nodejs # && npm -g install npm@${NPM_SAFE_VERSION} # && npm -g install yarn
+    nodejs
 
-COPY entrypoint-xtc-platform.sh /usr/local/bin
-#RUN echo >>/etc/hosts "127.0.0.1  xtc-platform.localhost.xqiz.it"
-#RUN echo >>/etc/hosts "127.0.0.10 xtc-platform.xqiz.it"
+# && npm -g install npm@${NPM_SAFE_VERSION} # && npm -g install yarn
+
+COPY entrypoint.sh /usr/local/bin
 
 RUN useradd -ms /bin/bash $XTC_USER \
     && passwd -d $XTC_USER \
@@ -78,4 +75,4 @@ RUN keytool \
     -storepass $PLATFORM_PASSWORD
 
 WORKDIR $XTC_USER_HOME
-ENTRYPOINT ["/usr/local/bin/entrypoint-xtc-platform.sh"]
+ENTRYPOINT ["entrypoint.sh"]

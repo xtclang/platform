@@ -33,6 +33,8 @@ services:
       args:
         DOCKER_BUILDKIT: 1
         PLATFORM_PASSWORD: ${PLATFORM_PASSWORD:-password}
+        GITHUB_BRANCH_PLATFORM: ${GITHUB_BRANCH_PLATFORM:-platform-xtcplugin}
+        GITHUB_BRANCH_XVM: ${GITHUB_BRANCH_XVM:-master}
     env_file:
       - docker/.env
       - docker/.env.local
@@ -42,4 +44,4 @@ services:
     ports:
         - "8080:8080"
         - "8090:8090"
-    entrypoint: ['entrypoint-xtc-platform.sh']
+    entrypoint: ['entrypoint.sh']

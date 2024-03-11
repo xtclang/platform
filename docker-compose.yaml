@@ -26,6 +26,7 @@ volumes:
   persistent:
 
 services:
+  # TODO: Create a platform that is more "dev container" style, and
   platform:
     image: ghcr.io/xtclang/xdk-platform:latest
     build:
@@ -35,7 +36,6 @@ services:
         DOCKER_BUILDKIT: 1
         PLATFORM_PASSWORD: ${PLATFORM_PASSWORD:-password}
         GITHUB_BRANCH_PLATFORM: ${GITHUB_BRANCH_PLATFORM:-platform-xtcplugin}
-        GITHUB_BRANCH_XVM: ${GITHUB_BRANCH_XVM:-master}
     secrets:
       - gradle_properties
     volumes:
@@ -43,10 +43,11 @@ services:
     env_file:
       - docker/.env
       - docker/.env.local
-    extra_hosts:
-      - "xtc-platform.localhost.xqiz.it:127.0.0.1"
-      - "xtc-platform.xqiz.it:127.0.0.10"
+    hostname: 'xtc-platform.localhost.xqiz.it'
+    #extra_hosts:
+    #  - "xtc-platform.localhost.xqiz.it:127.0.0.1"
+    #  - "xtc-platform.xqiz.it:127.0.0.10"
     ports:
-        - "8080:80"
-        - "8090:443"
+        - "8080:8080"
+        - "8090:8090"
     entrypoint: ['entrypoint.sh']

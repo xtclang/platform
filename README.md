@@ -51,7 +51,7 @@ as a container/Dockerfile/docker in the near future, so that you won't have to d
 1. Create `xqiz.it` subdirectory under the user home directory for the platform persistent data. The subdirectory "
    platform" will be used to keep the platform operational information and subdirectory "users" for hosted applications.
 
-2. Create a file `~/xqiz.it/port-forwarding.conf` with the following content:
+2. Create a file `~/xqiz.it/platform/port-forwarding.conf` with the following content:
 
 ```
    rdr pass on lo0 inet proto tcp from any to self port 80  -> 127.0.0.1 port 8080
@@ -103,14 +103,10 @@ as a container/Dockerfile/docker in the near future, so that you won't have to d
    inside your IDE, that you are sure knows about your wrapper script. Any IDE in which you import this project
    should pick that up and grab the appropriate runtimes and dependencies.
 
-```
-    xec -L lib/ lib/kernel.xtc [password]
-```
-
-10. *It is recommended that you *do not* keep a Gradle executable on your system path to build the project, but 
+   *It is recommended that you *do not* keep a Gradle executable on your system path to build the project, but 
    instead use the Gradle wrapper script (or its IDE integration) for every task you want to execute.* 
 
-11. Build and run the server.
+10.Build and run the server.
 
     You can provide the password for your keystore as a Gradle property, by adding a line on the form
     `keystorePassword=<your-password>` to the `$GRADLE_USER_HOME/gradle.properties`. This is 
@@ -126,7 +122,7 @@ Either build and run the server "the traditional way" (requires a local XDK inst
 
 ```
     ./gradlew build
-    xec --verbose -L ./build/platform/ kernel.xqiz.it 
+    xec --verbose -L ./build/platform/ kernel.xqiz.it [password] 
 ```
      
 or with the experimental: 
@@ -136,11 +132,8 @@ or with the experimental:
 ```
 
 Note: the ./gradlew run task described in this paragraph is not meant as a production way of running
-the platform. However, it can be quite handy to use for debugging purses, with "fork=false" in its
-xtcRun configuraiton. That way you can just execute the run task from IntelliJ in Debug mode, and
-just step into your executing platform server.
-
-TODO: ORG_GRADLE_PROJECT_keystorePassword=<your secret password> xec -L ./build/platform/ kernel
+the platform. However, it can be quite handy to use for debugging poses with the debug = true flag
+set in the XTC run configuration.
 
 12. Open the [locally hosted platform web page](https://xtc-platform.localhost.xqiz.it):
 

@@ -45,7 +45,7 @@ function check_updated_source() {
 }
 
 # Verify that the platform is built
-function build_platform() {
+function check_platform_build() {
   pushd $SRC_DIR
     ./gradlew build
   popd

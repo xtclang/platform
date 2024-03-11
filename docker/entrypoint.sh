@@ -9,7 +9,6 @@ echo "Entrypoint for Platform..."
 #echo "Done."
 
 #
-# TODO: This is insane. We should just be setting up a localhost network.
 # If we want xtc-platform.localhost.xqiz.it to pingback from the host, put it /etc/hosts
 #
 #   The domain name `xtc-platform.localhost.xqiz.it` should resolve to `127.0.0.1`. This allows the same xqiz.it
@@ -25,6 +24,10 @@ if [ $? != 0 ]; then
   echo "Ping to localhost failed using xtc-platform.localhost.xqiz.it"
   exit 1
 fi
+
+# TODO Here is where we really want snapshot releases.
+git clone --branch $GITHUB_BRANCH_PLATFORM --depth=1 https://github.com/xtclang/platform.git
+git clone --branch $GITHUB_BRANCH_XVM --depth=1 https://github.com/xtclang/xvm.git
 
 if [ -z "${@}" ]; then
     echo "No extra entrypoint arguments. Container exiting from $0."

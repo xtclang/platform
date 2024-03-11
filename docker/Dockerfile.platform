@@ -20,6 +20,7 @@ ENV XQIZIT_HOME=$XTC_USER_HOME/xqiz.it
 ENV PLATFORM_HOME=$XQIZIT_HOME/platform
 ENV GITHUB_BRANCH_XVM=$GITHUB_BRANCH_XVM
 ENV GITHUB_BRANCH_PLATFORM=$GITHUB_BRANCH_PLATFORM
+#ENV GRADLE_USER_HOME=$XTC_USER_HOME/build/.gradle
 
 USER root
 
@@ -30,9 +31,13 @@ RUN curl --silent --location https://deb.nodesource.com/setup_21.x | sudo bash -
 RUN apt-get -y --no-install-recommends install \
     nodejs
 
+# TOOD: Figure out why this isn't working.
 # && npm -g install npm@${NPM_SAFE_VERSION} # && npm -g install yarn
 
-COPY entrypoint.sh /usr/local/bin
+# Install dev tools. We should separate these out later.
+RUN apt-get install --no-install-recommends -y emacs-nox
+
+COPY *.sh /usr/local/bin
 
 RUN useradd -ms /bin/bash $XTC_USER \
     && passwd -d $XTC_USER \
@@ -43,13 +48,13 @@ RUN useradd -ms /bin/bash $XTC_USER \
 
 USER $XTC_USER
 
-# 1. Create xqiz.it subdirectory and config
+# From README.md: Create xqiz.it subdirectory and config
 RUN mkdir -p $PLATFORM_HOME && mkdir -p $XQIZIT_HOME/config
 
-# 2. Create port forwarding config.
+# From README.md: Create port forwarding config.
 COPY config/port-forwarding.conf $PLATFORM_HOME
 
-# 5. Create a self-signed certificate for the platform web server. For example:
+# From README.md create: a self-signed certificate for the platform web server. For example:
 ARG PLATFORM_PASSWORD
 ENV PLATFORM_PASSWORD=$PLATFORM_PASSWORD
 
@@ -64,7 +69,7 @@ RUN keytool \
     -storetype PKCS12 \
     -storepass $PLATFORM_PASSWORD
 
-# 6. Add a symmetric key to encode the cookies:
+# From README.md: Add a symmetric key to encode the cookies:
 RUN keytool \
     -genseckey \
     -alias cookies \
@@ -75,4 +80,8 @@ RUN keytool \
     -storepass $PLATFORM_PASSWORD
 
 WORKDIR $XTC_USER_HOME
+
+#ADD https://api.github.com/repos/xtclang/platform/git/refs/heads/${GITHUB_BRANCH_PLATFORM} $HOME/github-version.json
+#RUN git clone --branch $GITHUB_BRANCH_PLATFORM --depth=1 https://github.com/xtclang/platform.git
+
 ENTRYPOINT ["entrypoint.sh"]

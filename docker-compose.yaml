@@ -43,7 +43,7 @@ services:
     env_file:
       - docker/.env
       - docker/.env.local
-    hostname: 'xtc-platform.localhost.xqiz.it'
+    hostname: 'xtc-platform2.localhost.xqiz.it'
     #extra_hosts:
     #  - "xtc-platform.localhost.xqiz.it:127.0.0.1"
     #  - "xtc-platform.xqiz.it:127.0.0.10"

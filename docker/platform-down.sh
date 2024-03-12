@@ -8,4 +8,4 @@ else
 fi
 
 echo "Taking down platform: '$_platform'..."
-https://xtc-platform.localhost.xqiz.itecho "Done."
+https://xtc-platform2.localhost.xqiz.itecho "Done."

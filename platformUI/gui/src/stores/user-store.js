@@ -82,7 +82,7 @@ export const useUserStore = defineStore('user', {
         this.user = undefined;
       } else {
         apiUser
-          .put("/logout")
+          .post("/logout")
           .then(response => {
             this.user = undefined;
           })

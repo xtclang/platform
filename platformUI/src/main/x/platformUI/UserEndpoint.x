@@ -5,11 +5,6 @@ import ecstasy.reflect.ModuleTemplate;
 import common.ErrorLog;
 import common.WebHost;
 
-import common.model.AccountInfo;
-import common.model.ModuleInfo;
-import common.model.UserInfo;
-import common.model.UserRole;
-
 import web.*;
 import web.http.FormDataFile;
 import web.responses.SimpleResponse;
@@ -50,17 +45,6 @@ service UserEndpoint
     SimpleResponse login(SessionData session, String userName, @BodyParam String password="") {
         if (realm.authenticate(userName, password)) {
             session.authenticate(userName);
-            Collection<AccountInfo> accounts = accountManager.getAccounts(userName);
-
-            // TODO choose an account this user was last associated with or present a choice back
-            if (AccountInfo account := accounts.any()) {
-                session.accountName = account.name;
-
-                assert UserInfo user := accountManager.getUser(userName);
-                if (UserRole userRole := account.users.get(user.id)) {
-                    session.roles = [userRole.name]; // TODO: allow multiple roles
-                }
-            }
             return getUserId();
         }
         return new SimpleResponse(Unauthorized);
@@ -69,11 +53,10 @@ service UserEndpoint
     /*
      * Log out the current user.
      */
-    @Put("logout")
+    @Post("logout")
     @HttpsRequired
     HttpStatus signOut(SessionData session) {
         session.deauthenticate();
-        session.accountName = Null;
         return HttpStatus.NoContent;
     }
 }

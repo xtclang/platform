@@ -36,6 +36,6 @@ service CoreService {
      */
     String accountName.get() {
         assert SessionData session := this.session.is(SessionData);
-        return session.accountName? : "";
+        return session.accountName;
     }
 }

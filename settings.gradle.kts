@@ -21,7 +21,7 @@ pluginManagement {
 
         println("Plugin: mavenLocal=$mavenLocalRepo, xtclangGitHubRepo=$xtclangGitHubRepo")
         if (mavenLocalRepo != "true" && xtclangGitHubRepo != "true") {
-            throw GradleException("Error: either or both of mavenResolveFromMavenLocal and mavenResolveFromXtcGitHub must be set.")
+            throw GradleException("Error: either or both of mavenLocalRepo and xtclangGitHubRepo must be set.")
         }
 
         if (xtclangGitHubRepo == "true") {

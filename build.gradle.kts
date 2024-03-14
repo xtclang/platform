@@ -32,8 +32,48 @@ dependencies {
     xtcModule(project(":platformCLI")) // runtime library path
 }
 
-// TODO: Automatically run a pre-pass to verify that the XTC init script is in place (until we are
-//   on Maven Central (and have a new XDK release from "master"that supports the XTC Plugin).
+/**
+ * Gather all compiled XTC modules from subprojects into a single location: $rootProject/build/platform.
+ */
+val commonXtcOutputDir = layout.buildDirectory.dir("platform")
+
+allprojects {
+    tasks.withType<XtcCompileTask>().configureEach {
+        //outputs.dir(commonXtcOutputDir)
+        doLast {
+            copy {
+                val compilerOutput = outputs.files.asFileTree
+                compilerOutput.forEach {
+                    logger.lifecycle("XTC module output: ${it.absolutePath} -> ${commonXtcOutputDir.get().asFile.absolutePath}")
+                }
+                from(compilerOutput)
+                into(commonXtcOutputDir)
+            }
+        }
+    }
+}
+
+/**
+ * This is the run configuration, which configures all xtcRun taks for the main source set. (runXtc, runAllXtc)
+ * The DSL for modules to run is a list of "module { }" elements or a list of moduleName("...") statements.
+ * To look at the DSL for all parts of the XTC build, you can use your IDE and browse the implementing
+ * classes. For example, there should be a hint in IntelliJ with the type for the xtcRun element and
+ * the modules element (DefaultXtcRuntimeExtension and XtcRuntimeExtension.XtcRunModule, respectively).
+ * It is a good way to understand how the build DSL works, so you can add your own powerful XTC build
+ * syntax constructs and nice syntactic sugar/shorthand for things you feel should be simpler to write.
+ */
+xtcRun {
+    debug = false // Set to true to get the launcher to pause and wait for a debugger to attach.
+    verbose = true
+    stdin = System.`in` // Prevent Gradle from eating stdin; make it interactive with the Gradle process that executes the kernel.
+    module {
+        moduleName = "kernel"
+        moduleArg(passwordProvider)
+        //findProperty("keystorePassword")?.also {
+        //    moduleArg(it.toString())
+        //}
+    }
+}
 
 /**
  * Lazy password resolution provider.
@@ -65,43 +105,6 @@ dependencies {
 internal val passwordProvider: Provider<String> = provider {
     logger.lifecycle("Resolving password for XTC platform...")
     findProperty("keystorePassword")?.toString() ?: ""
-}
-
-/**
- * Gather all compiled XTC modules from subprojects into a single location: $rootProject/build/platform.
- */
-val commonXtcOutputDir = layout.buildDirectory.dir("platform")
-
-allprojects {
-    tasks.withType<XtcCompileTask>().configureEach {
-        doLast {
-            copy {
-                from(outputs.files.asFileTree)
-                into(commonXtcOutputDir)
-            }
-        }
-    }
-}
-
-/**
- * This is the run configuration, which configures all xtcRun taks for the main source set. (runXtc, runAllXtc)
- * The DSL for modules to run is a list of "module { }" elements or a list of moduleName("...") statements.
- * To look at the DSL for all parts of the XTC build, you can use your IDE and browse the implementing
- * classes. For example, there should be a hint in IntelliJ with the type for the xtcRun element and
- * the modules element (DefaultXtcRuntimeExtension and XtcRuntimeExtension.XtcRunModule, respectively).
- * It is a good way to understand how the build DSL works, so you can add your own powerful XTC build
- * syntax constructs and nice syntactic sugar/shorthand for things you feel should be simpler to write.
- */
-xtcRun {
-    verbose = true
-    //fork = false
-    stdin = System.`in` // Prevent Gradle from eating stdin; make it interactive with the Gradle process that executes the kernel.
-    module {
-        moduleName = "kernel"
-        findProperty("keystorePassword")?.also {
-            moduleArg(it.toString())
-        }
-    }
 }
 
 /**

@@ -67,7 +67,7 @@ as a container/Dockerfile/docker in the near future, so that you won't have to d
 4. Make sure you can ping the local platform address:
 
 ```
-   ping xtc-platform2.localhost.xqiz.it
+   ping xtc-platform.localhost.xqiz.it
 ```
 
    The domain name `xtc-platform.localhost.xqiz.it` should resolve to `127.0.0.1`. This allows the same xqiz.it

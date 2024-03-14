@@ -1,0 +1,7 @@
+FROM ghcr.io/xtclang/xdk-platform:latest as platform
+
+ARG GITHUB_BRANCH_PLATFORM
+ENV GITHUB_BRANCH_PLATFORM=$GITHUB_BRANCH_PLATFORM
+
+USER root
+

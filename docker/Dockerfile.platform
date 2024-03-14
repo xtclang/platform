@@ -1,8 +1,4 @@
-#FROM openjdk:21
-FROM ubuntu:24.04
-
-ARG DOCKER_BUILDKIT=$DOCKER_BUILDKIT
-ENV DOCKER_BUILD_KIT=$DOCKER_BUILDKIT
+FROM openjdk:21-jdk-slim-bookworm
 
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
@@ -10,30 +6,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ARG XTC_USER=xtc
 ARG XTC_USER_HOME=/home/$XTC_USER
-ARG NPM_SAFE_VERSION='npm@10.4.0'
-ARG GITHUB_BRANCH_XVM
-ARG GITHUB_BRANCH_PLATFORM
 
 ENV XTC_USER=$XTC_USER
 ENV XTC_USER_HOME=$XTC_USER_HOME
 ENV XQIZIT_HOME=$XTC_USER_HOME/xqiz.it
 ENV PLATFORM_HOME=$XQIZIT_HOME/platform
-ENV GITHUB_BRANCH_XVM=$GITHUB_BRANCH_XVM
-ENV GITHUB_BRANCH_PLATFORM=$GITHUB_BRANCH_PLATFORM
-
-USER root
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    iputils-ping jq sudo wget curl git openjdk-21-jdk
+    iputils-ping jq sudo wget curl git emacs-nox
 
-# Actually, we don't need a node installation. The Gradle plugin handles everything.
-#RUN curl --silent --location https://deb.nodesource.com/setup_21.x | sudo bash -
-#RUN apt-get -y --no-install-recommends install nodejs && npm -g install npm@${NPM_SAFE_VERSION} # && npm -g install yarn
-
-# Install dev tools. We should separate these out later.
-RUN apt-get install --no-install-recommends -y emacs-nox
-
-COPY *.sh /usr/local/bin
+COPY docker/scripts/*.sh /usr/local/bin
 
 RUN useradd -ms /bin/bash $XTC_USER \
     && passwd -d $XTC_USER \
@@ -44,11 +26,14 @@ RUN useradd -ms /bin/bash $XTC_USER \
 
 USER $XTC_USER
 
-# From README.md: Create xqiz.it subdirectory and config
-RUN mkdir -p $PLATFORM_HOME && mkdir -p $XQIZIT_HOME/config
+RUN mkdir -p $PLATFORM_HOME
+RUN mkdir -p $XTC_USER_HOME/lib/xdk
 
-# From README.md: Create port forwarding config.
-COPY config/port-forwarding.conf $PLATFORM_HOME
+# Copy the local build (todo could also bind mount it)
+COPY build/platform/* $XTC_USER_HOME/lib
+COPY build/xtc/xdk/lib/* $XTC_USER_HOME/lib/xdk
+
+# We should probably use a real XDK,
 
 # From README.md create: a self-signed certificate for the platform web server. For example:
 ARG PLATFORM_PASSWORD

@@ -52,3 +52,9 @@ prj/
 # Gradle caches
 #
 .gradle
+
+#
+# Local environment with secrets for Docker compose (or any other system specific thing that
+# should not go into source control)
+#
+.env.local

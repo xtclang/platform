@@ -29,21 +29,45 @@ services:
   # TODO: Create a platform that is more "dev container" style, and
   platform:
     image: ghcr.io/xtclang/xdk-platform:latest
+    env_file:
+      - .env.local
     build:
-      context: docker
-      dockerfile: Dockerfile.platform
+      context: .
+      dockerfile: docker/Dockerfile.platform
       args:
-        DOCKER_BUILDKIT: 1
         PLATFORM_PASSWORD: ${PLATFORM_PASSWORD:-password}
-        GITHUB_BRANCH_PLATFORM: ${GITHUB_BRANCH_PLATFORM:-platform-xtcplugin}
+    hostname: ${PLATFORM_HOSTNAME:-xtc-platform.local.xqiz.it}
+    ports:
+      - "8080:8080"
+      - "8090:8090"
+
+  #
+  # Container that grabs, updates and persists source code for 'platform'
+  # from GitHub, and enabled cached builds in a container.
+  #
+  # A third option would be to start a dev container where the root directory
+  # of the platform project just is symlinked, so you can build and test yourself
+  # in a normal environment but get deployed elsewhere.
+  #
+  dev:
+    image: ghcr.io/xtclang/xdk-platform-dev:latest
+    depends_on:
+      - platform
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.platform.dev
+      args:
+        #PLATFORM_PASSWORD: ${PLATFORM_PASSWORD:-password}
+        GITHUB_BRANCH_PLATFORM: $GITHUB_BRANCH_PLATFORM
+    environment:
+      DEV_CONTAINER: 1
     secrets:
       - gradle_properties
     volumes:
       - persistent:/persistent
     env_file:
-      - docker/.env
-      - docker/.env.local
-    hostname: 'xtc-platform2.localhost.xqiz.it'
+      - .env.local
+    hostname: ${PLATFORM_HOSTNAME:-xtc-platform.local-dev.xqiz.it}
     #extra_hosts:
     #  - "xtc-platform.localhost.xqiz.it:127.0.0.1"
     #  - "xtc-platform.xqiz.it:127.0.0.10"

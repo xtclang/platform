@@ -30,6 +30,7 @@ module platformUI.xqiz.it {
     import web.WebService;
 
     import web.security.Authenticator;
+    import web.security.TokenAuthenticator;
     import web.security.Realm;
 
     import xenia.HttpHandler;
@@ -49,10 +50,10 @@ module platformUI.xqiz.it {
             throw new IllegalState($"Invalid host address: {hostAddr.quoted()}");
         }
 
+        ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm);
+
         server.addRoute(hostAddr, new HttpHandler(server, this), keystore,
                 names.PlatformTlsKey, names.CookieEncryptionKey);
-
-        ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm);
 
         // create WebHosts for all active web applications
         @Inject Console console;
@@ -99,6 +100,13 @@ module platformUI.xqiz.it {
             }
             return super(defaultPage);
         }
+    }
+
+    /**
+     * WebApp.AuthenticatorFactory API.
+     */
+    Authenticator createAuthenticator() {
+        return new TokenAuthenticator(ControllerConfig.realm);
     }
 
     /**

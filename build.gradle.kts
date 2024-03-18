@@ -17,10 +17,11 @@ val build = tasks.register("build") {
     group       = "Build"
     description = "Build all"
 
-    dependsOn(project(":kernel")    .tasks["build"])
-    dependsOn(project(":host")      .tasks["build"])
-    dependsOn(project(":platformDB").tasks["build"])
-    dependsOn(project(":platformUI").tasks["build"])
+    dependsOn(project(":kernel")     .tasks["build"])
+    dependsOn(project(":host")       .tasks["build"])
+    dependsOn(project(":platformDB") .tasks["build"])
+    dependsOn(project(":platformUI") .tasks["build"])
+    dependsOn(project(":platformCLI").tasks["build"])
 }
 
 tasks.register("run") {

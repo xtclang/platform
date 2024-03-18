@@ -38,7 +38,7 @@ service UserEndpoint
     }
 
     /*
-     * Log in the specified user; choose an account and assign the corresponding role(s).
+     * Log in the specified user.
      */
     @Post("login/{userName}")
     @HttpsRequired
@@ -48,6 +48,31 @@ service UserEndpoint
             return getUserId();
         }
         return new SimpleResponse(Unauthorized);
+    }
+
+    /*
+     * Get the corrent account name.
+     */
+    @Get("account")
+    @LoginRequired
+    String account() {
+        return accountName;
+    }
+
+    /*
+     * Change the password.
+     */
+    @Put("password")
+    @LoginRequired
+    void setPassword(@BodyParam String password) {
+        import common.model.UserInfo;
+        import web.security.Realm.HashInfo;
+
+        String userId = session?.userId? : assert;
+        assert UserInfo userInfo := accountManager.getUser(userId);
+
+        (_, HashInfo pwdHashes) = realm.createHashes(userId, password);
+        accountManager.updateUser(userInfo, pwdHashes);
     }
 
     /*

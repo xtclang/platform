@@ -24,6 +24,8 @@ import oodb.DBUser;
 
 import platformDB.Connection;
 
+import web.security.Realm.HashInfo;
+
 import web.codecs.Base64Format;
 
 
@@ -142,7 +144,8 @@ service AccountManager
         dbConnection.users.create(userId, userName, email);
 
     @Override
-    Boolean updateUser(UserInfo user) = dbConnection.users.update(user);
+    Boolean updateUser(UserInfo user, HashInfo? pwdHashes = Null) =
+        dbConnection.users.update(user, pwdHashes);
 
     @Override
     String encrypt(String password) =

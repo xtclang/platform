@@ -22,7 +22,7 @@ mixin SessionData
     void sessionAuthenticated(String user) {
         Collection<AccountInfo> accounts = accountManager.getAccounts(user);
 
-        // TODO choose an account this user was last associated with or present a choice back
+        // TODO choose an account this user was last associated with
         if (AccountInfo account := accounts.any()) {
             accountName = account.name;
 

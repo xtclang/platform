@@ -6,9 +6,9 @@ module platformDB.xqiz.it {
     package auth   import webauth.xtclang.org;
     package oodb   import oodb.xtclang.org;
     package common import common.xqiz.it;
+    package web    import web.xtclang.org;
 
-    import auth.AuthSchema;
-    import auth.User;
+    import web.security.Realm.HashInfo;
 
     import common.model.AccountId;
     import common.model.AccountInfo;
@@ -103,9 +103,10 @@ module platformDB.xqiz.it {
         /**
          * @see [AccountManager.updateUser]
          */
-        Boolean update(UserInfo user) {
+        Boolean update(UserInfo user, HashInfo? pwdHashes = Null) {
+            UserId   userId = user.id;
             UserInfo current;
-            if (!(current := get(user.id))) {
+            if (!(current := get(userId))) {
                 return False;
             }
 
@@ -120,8 +121,12 @@ module platformDB.xqiz.it {
                 return False;
             }
 
-            // TODO: if (password != Null) update password
-            put(current.id, current.with(name, email));
+            if (pwdHashes != Null) {
+                auth.Users users = dbRoot.as(Schema).authSchema.users;
+                assert auth.User authUser := users.get(userId);
+                users.put(userId, authUser.with(passwordHashes=pwdHashes));
+            }
+            put(userId, current.with(name, email));
             return True;
         }
     }

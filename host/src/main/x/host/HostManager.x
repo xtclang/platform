@@ -141,11 +141,16 @@ service HostManager(Directory accountsDir)
             webHost.close();
         } catch (Exception ignore) {}
 
-        String deployment = webHost.info.deployment;
+        deployedWebHosts.remove(webHost.info.deployment);
+    }
 
-        deployedWebHosts.remove(deployment);
+    @Override
+    void removeDeployment(String accountName, String deployment) {
 
-        Directory accountDir = utils.ensureAccountHomeDirectory(accountsDir, webHost.account);
+        // TODO: revoke the certificate?
+
+        // remove the deployment data
+        Directory accountDir = utils.ensureAccountHomeDirectory(accountsDir, accountName);
         Directory homeDir    = accountDir.dirFor($"deploy/{deployment}");
         if (homeDir.exists) {
             homeDir.deleteRecursively();

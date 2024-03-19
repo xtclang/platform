@@ -83,7 +83,7 @@ service WebAppEndpoint
             ControllerConfig.addStubRoute(hostName); // give them something better than 404 to look at
         } while (False);
 
-        return new SimpleResponse(status, bytes=message?.utf8() : Null);
+        return new SimpleResponse(status, Text, bytes=message?.utf8() : Null);
     }
 
     /**
@@ -92,14 +92,18 @@ service WebAppEndpoint
     @Delete("/unregister/{deployment}")
     SimpleResponse unregister(String deployment) {
         SimpleResponse response = stopWebApp(deployment);
-        if (response.status == OK, WebHost webHost := hostManager.getWebHost(deployment)) {
+        if (response.status != OK) {
+            return response;
+        }
+
+        if (WebHost webHost := hostManager.getWebHost(deployment)) {
             hostManager.removeWebHost(webHost);
         }
 
-        // TODO: revoke the certificate?
+        hostManager.removeDeployment(accountName, deployment);
         accountManager.removeWebApp(accountName, deployment);
 
-        return response;
+        return new SimpleResponse(OK);
     }
 
     /**
@@ -148,7 +152,7 @@ service WebAppEndpoint
             }
         } while (False);
 
-        return new SimpleResponse(status, bytes=message?.utf8() : Null);
+        return new SimpleResponse(status, Text, bytes=message?.utf8() : Null);
     }
 
 //    /**
@@ -200,6 +204,6 @@ service WebAppEndpoint
             accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
         } while (False);
 
-        return new SimpleResponse(status, bytes=message?.utf8() : Null);
+        return new SimpleResponse(status, Text, bytes=message?.utf8() : Null);
     }
 }

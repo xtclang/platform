@@ -69,6 +69,11 @@ interface HostManager {
      */
     void removeWebHost(WebHost webHost);
 
+    /**
+     * Remove the specified deployment.
+     */
+    void removeDeployment(String accountName, String deployment);
+
 
     // ----- lifecycle -----------------------------------------------------------------------------
 

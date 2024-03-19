@@ -3,13 +3,18 @@
  */
 module platformCLI.xqiz.it
         incorporates TerminalApp("Platform command line tool", "Platform CLI>") {
-    package cli import cli.xtclang.org;
-    package net import net.xtclang.org;
-    package web import web.xtclang.org;
+    package cli  import cli.xtclang.org;
+    package json import json.xtclang.org;
+    package net  import net.xtclang.org;
+    package web  import web.xtclang.org;
 
     import cli.Command;
     import cli.Desc;
     import cli.TerminalApp;
+
+    import json.Doc;
+    import json.Parser;
+    import json.Printer;
 
     import net.Uri;
     import web.*;
@@ -102,7 +107,21 @@ module platformCLI.xqiz.it
             HttpStatus status   = response.status;
             if (status == OK) {
                 assert Body body ?= response.body;
-                return body.bytes.unpackUtf8(), status;
+                Byte[] bytes = body.bytes;
+                if (bytes.size == 0) {
+                    return "", status;
+                }
+
+                switch (body.mediaType) {
+                case Text:
+                    return bytes.unpackUtf8(), status;
+                case Json:
+                    String jsonString = bytes.unpackUtf8();
+                    Doc    doc        = new Parser(jsonString.toReader()).parseDoc();
+                    return Printer.PRETTY.render(doc), status;
+                default:
+                    return $"<Unsupported media type: {body.mediaType}>", status;
+                }
             } else {
                 platformCLI.print(response.toString());
                 return "", status;

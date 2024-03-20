@@ -155,21 +155,21 @@ service WebAppEndpoint
         return new SimpleResponse(status, Text, bytes=message?.utf8() : Null);
     }
 
-//    /**
-//     * Show the console's content (currently unused).
-//     */
-//    @Get("report/{deployment}")
-//    @Produces(Text)
-//    String report(String deployment) {
-//        if (WebHost webHost := hostManager.getWebHost(deployment)) {
-//            File consoleFile = webHost.homeDir.fileFor("console.log");
-//            if (consoleFile.exists && consoleFile.size > 0) {
-//                return consoleFile.contents.unpackUtf8();
-//            }
-//        }
-//        return "[empty]";
-//    }
-//
+    /**
+     * Show the app console's content.
+     */
+    @Get("appLog/{deployment}")
+    @Produces(Text)
+    String report(String deployment) {
+        if (WebHost webHost := hostManager.getWebHost(deployment)) {
+            File consoleFile = webHost.homeDir.fileFor("console.log");
+            if (consoleFile.exists && consoleFile.size > 0) {
+                return consoleFile.contents.unpackUtf8();
+            }
+        }
+        return "[empty]";
+    }
+
     /**
      * Handle a request to stop a deployment.
      */

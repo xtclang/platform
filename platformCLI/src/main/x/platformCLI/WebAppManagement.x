@@ -17,6 +17,11 @@ class WebAppManagement {
        return Gateway.sendRequest(POST, $"/webapp/start/{deploymentName}");
     }
 
+    @Command("app-log", "Show the app log file")
+    String showLog(String deploymentName) {
+       return Gateway.sendRequest(GET, $"/webapp/appLog/{deploymentName}");
+    }
+
     @Command("unregister", "Unregister an app")
     String unregister(String deploymentName) {
        return Gateway.sendRequest(DELETE, $"/webapp/unregister/{deploymentName}");

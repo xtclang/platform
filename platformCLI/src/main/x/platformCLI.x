@@ -24,9 +24,9 @@ module platformCLI.xqiz.it
     @Override
     void run(String[] args) {
         console.print("*** Platform Command Line Tool");
-        console.print($"Enter platform server URL [{PlatformURL}]:", True);
 
-        Uri platformUri = new Uri(readLine(PlatformURL));
+        Uri platformUri = new Uri(
+                readLine($"Enter platform server URL [{PlatformURL}]:", PlatformURL));
 
         String? scheme = platformUri.scheme;
         if (scheme == Null) {
@@ -61,8 +61,7 @@ module platformCLI.xqiz.it
         }
 
         void collectCredentials() {
-            console.print("User name [admin]: ", suppressNewline=True);
-            name = readLine("admin");
+            name = readLine("User name [admin]: ", "admin");
 
             setPassword(readPassword());
         }
@@ -70,8 +69,7 @@ module platformCLI.xqiz.it
         String readPassword() {
             String password;
             do {
-                console.print("Password: ", suppressNewline=True);
-                password = console.readLine(suppressEcho=True);
+                password = console.readLine("Password:", suppressEcho=True);
                 // TODO REMOVE
                 if (password == "") {
                     password = "password";
@@ -137,10 +135,10 @@ module platformCLI.xqiz.it
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    static String readLine(String defaultValue = "") {
+    static String readLine(String prompt, String defaultValue = "") {
         @Inject Console console;
 
-        String value = console.readLine().trim();
+        String value = console.readLine(prompt).trim();
         return value == "" ? defaultValue : value;
     }
 

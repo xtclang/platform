@@ -54,13 +54,9 @@ module kernel.xqiz.it {
         @Inject ModuleRepository repository;
 
         // get the password
-        String password;
-        if (args.size == 0) {
-            console.print("Enter password:");
-            password = console.readLine(suppressEcho=True);
-        } else {
-            password = args[0];
-        }
+        String password = args.size == 0
+                ? console.readLine("Enter password:", suppressEcho=True)
+                : args[0];
 
         // ensure necessary directories
         Directory platformDir = homeDir.dirFor("xqiz.it/platform").ensure();

@@ -44,46 +44,39 @@ service WebAppEndpoint
      */
     @Post("/register/{deployment}/{moduleName}")
     SimpleResponse register(String deployment, String moduleName) {
-        HttpStatus  status  = OK;
-        String?     message = Null;
-        do {
-            AccountInfo accountInfo;
-            if (!(accountInfo := accountManager.getAccount(accountName))) {
-                (status, message) = (Unauthorized, $"Account '{accountName}' is missing");
-                break;
-            }
+        AccountInfo accountInfo;
+        if (!(accountInfo := accountManager.getAccount(accountName))) {
+            return new SimpleResponse(Unauthorized, $"Account '{accountName}' is missing");
+        }
 
-            // compute the full host name (e.g. "welcome.localhost.xqiz.it")
-            String hostName = $"{deployment}.{baseDomain}";
+        // compute the full host name (e.g. "welcome.localhost.xqiz.it")
+        String hostName = $"{deployment}.{baseDomain}";
 
-            if (hostName.equals(httpServer.bindAddr) || accountInfo.webApps.contains(deployment)) {
-                (status, message) = (Conflict, $"Deployment already exists: '{deployment}'");
-                break;
-            }
+        if (hostName.equals(httpServer.bindAddr) || accountInfo.webApps.contains(deployment)) {
+            return new SimpleResponse(Conflict, $"Deployment already exists: '{deployment}'");
+        }
 
-            if (!accountInfo.modules.contains(moduleName)) {
-                (status, message) = (NotFound, $"Module is missing: '{moduleName}'");
-                break;
-            }
+        if (!accountInfo.modules.contains(moduleName)) {
+            return new SimpleResponse(NotFound, $"Module is missing: '{moduleName}'");
+        }
 
-            // create a random password to be used to access the webapp's keystore
-            @Inject Random random;
-            String         encrypted = accountManager.encrypt(random.int128().toString());
-            CryptoPassword cryptoPwd = accountManager.decrypt(encrypted);
+        // create a random password to be used to access the webapp's keystore
+        @Inject Random random;
+        String         encrypted = accountManager.encrypt(random.int128().toString());
+        CryptoPassword cryptoPwd = accountManager.decrypt(encrypted);
 
-            ErrorLog errors = new ErrorLog();
-            if (!hostManager.ensureCertificate(accountName, deployment, hostName, cryptoPwd, errors)) {
-                (status, message) = (Conflict, errors.collectErrors());
-                break;
-            }
+        ErrorLog errors = new ErrorLog();
+        if (!hostManager.ensureCertificate(accountName, deployment, hostName, cryptoPwd, errors)) {
+            return new SimpleResponse(Conflict, errors.collectErrors());
+        }
 
-            accountManager.addOrUpdateWebApp(accountName,
-                    new WebAppInfo(deployment, moduleName, hostName, encrypted, False));
+        accountManager.addOrUpdateWebApp(accountName,
+                new WebAppInfo(deployment, moduleName, hostName, encrypted, False));
 
-            ControllerConfig.addStubRoute(hostName); // give them something better than 404 to look at
-        } while (False);
-
-        return new SimpleResponse(status, Text, bytes=message?.utf8() : Null);
+        // the deployment has been registered, but not yet started; give them something better
+        // than "404: Page Not Found" to look at
+        ControllerConfig.addStubRoute(hostName);
+        return new SimpleResponse(OK);
     }
 
     /**
@@ -111,48 +104,34 @@ service WebAppEndpoint
      */
     @Post("/start/{deployment}")
     SimpleResponse startWebApp(String deployment) {
-        HttpStatus  status  = OK;
-        String?     message = Null;
-        do {
-            AccountInfo accountInfo;
-            if (!(accountInfo := accountManager.getAccount(accountName))) {
-                (status, message) = (Unauthorized, $"Account '{accountName}' is missing");
-                break;
-            }
+        AccountInfo accountInfo;
+        if (!(accountInfo := accountManager.getAccount(accountName))) {
+            return new SimpleResponse(Unauthorized, $"Account '{accountName}' is missing");
+        }
 
-            WebAppInfo webAppInfo;
-            if (!(webAppInfo := accountInfo.webApps.get(deployment))) {
-                (status, message) = (NotFound, $"Invalid deployment '{deployment}'");
-                break;
-            }
+        WebAppInfo webAppInfo;
+        if (!(webAppInfo := accountInfo.webApps.get(deployment))) {
+            return new SimpleResponse(NotFound, $"Invalid deployment '{deployment}'");
+        }
 
-            ErrorLog errors = new ErrorLog();
-            if (WebHost webHost := hostManager.getWebHost(deployment)) {
-                if (webHost.activate(True, errors)) {
-                    accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
-                } else {
-                    (status, message) = (Conflict, errors.collectErrors());
-                    hostManager.removeWebHost(webHost);
-                    webHost.deactivate(True);
-                }
-                break;
+        ErrorLog errors = new ErrorLog();
+        WebHost  webHost;
+        if (!(webHost := hostManager.getWebHost(deployment))) {
+            // create a new WebHost
+            if (!(webHost := hostManager.createWebHost(httpServer, accountName, webAppInfo,
+                    accountManager.decrypt(webAppInfo.password), errors))) {
+                return new SimpleResponse(Conflict, errors.collectErrors());
             }
+        }
 
-            if (WebHost webHost := hostManager.createWebHost(httpServer, accountName, webAppInfo,
-                    accountManager.decrypt(webAppInfo.password), errors)) {
-                if (webHost.activate(True, errors)) {
-                    accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
-                } else {
-                    (status, message) = (Conflict, errors.collectErrors());
-                    hostManager.removeWebHost(webHost);
-                    webHost.deactivate(True);
-                }
-            } else {
-                (status, message) = (Conflict, errors.collectErrors());
-            }
-        } while (False);
-
-        return new SimpleResponse(status, Text, bytes=message?.utf8() : Null);
+        if (webHost.activate(True, errors)) {
+            accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
+            return new SimpleResponse(OK);
+        } else {
+            hostManager.removeWebHost(webHost);
+            webHost.deactivate(True);
+            return new SimpleResponse(Conflict, errors.collectErrors());
+        }
     }
 
     /**
@@ -175,35 +154,27 @@ service WebAppEndpoint
      */
     @Post("/stop/{deployment}")
     SimpleResponse stopWebApp(String deployment) {
-        HttpStatus  status  = OK;
-        String?     message = Null;
-        do {
-            AccountInfo accountInfo;
-            if (!(accountInfo := accountManager.getAccount(accountName))) {
-                (status, message) = (NotFound, $"Account '{accountName}' is missing");
-                break;
-            }
+        AccountInfo accountInfo;
+        if (!(accountInfo := accountManager.getAccount(accountName))) {
+            return new SimpleResponse(NotFound, $"Account '{accountName}' is missing");
+        }
 
-            WebAppInfo webAppInfo;
-            if (!(webAppInfo := accountInfo.webApps.get(deployment))) {
-                (status, message) = (NotFound, $"Invalid deployment '{deployment}'");
-                break;
-            }
+        WebAppInfo webAppInfo;
+        if (!(webAppInfo := accountInfo.webApps.get(deployment))) {
+            return new SimpleResponse(NotFound, $"Invalid deployment '{deployment}'");
+        }
 
-            WebHost webHost;
-            if (!(webHost := hostManager.getWebHost(deployment))) {
-                if (webAppInfo.active) {
-                    // there's no host, but the deployment is marked as active; fix it
-                    accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
-                    }
-                (status, message) = (OK, "The application is not running");
-                break;
-            }
+        WebHost webHost;
+        if (!(webHost := hostManager.getWebHost(deployment))) {
+            if (webAppInfo.active) {
+                // there's no host, but the deployment is marked as active; fix it
+                accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
+                }
+            return new SimpleResponse(OK, "The application is not running");
+        }
 
-            webHost.deactivate(True);
-            accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
-        } while (False);
-
-        return new SimpleResponse(status, Text, bytes=message?.utf8() : Null);
+        webHost.deactivate(True);
+        accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
+        return new SimpleResponse(OK);
     }
 }

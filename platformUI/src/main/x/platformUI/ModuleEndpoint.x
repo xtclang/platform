@@ -158,7 +158,7 @@ service ModuleEndpoint
             accountManager.addOrUpdateModule(accountName, buildModuleInfo(libDir, moduleName));
             return new SimpleResponse(OK);
         } catch (Exception e) {
-            return new SimpleResponse(InternalServerError, bytes=e.message.utf8());
+            return new SimpleResponse(InternalServerError, e.message);
         }
     }
 

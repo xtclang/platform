@@ -126,8 +126,9 @@ module platformCLI.xqiz.it
             }
         }
 
-        String sendRequest(HttpMethod method, String path) {
-            return send(createRequest(method, path));
+        String sendRequest(HttpMethod method, String path,
+                           Object? content=Null, MediaType? mediaType=Null) {
+            return send(createRequest(method, path, content, mediaType));
         }
 
         String credentials() = $"{name}:{password}";

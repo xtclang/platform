@@ -1,9 +1,17 @@
+import ecstasy.mgmt.Container.InjectionKey;
+import ecstasy.mgmt.Container.Linker;
+import ecstasy.mgmt.ModuleRepository;
+
+import ecstasy.reflect.ModuleTemplate;
+
 import common.ErrorLog;
 import common.WebHost;
 
 import common.model.AccountInfo;
 import common.model.ModuleInfo;
 import common.model.WebAppInfo;
+
+import common.utils;
 
 import crypto.CryptoPassword;
 
@@ -80,6 +88,65 @@ service WebAppEndpoint
     }
 
     /**
+     * Collect an array of injections necessary for the specified deployment,
+     */
+    @Get("/injections/{deployment}")
+    SimpleResponse injections(String deployment) {
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+
+        Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
+        ModuleRepository accountRepo = utils.getModuleRepository(libDir);
+        ModuleTemplate   mainModule;
+        try {
+            mainModule = accountRepo.getResolvedModule(appInfo.moduleName);
+        } catch (Exception e) {
+            return new SimpleResponse(Conflict, $"Failed to load module: {appInfo.moduleName.quoted()}");
+        }
+
+        @Inject Linker linker;
+        InjectionKey[] injections = linker.collectInjections(mainModule);
+
+        import json.JsonArray;
+        JsonArray destringable = new JsonArray();
+
+        for (InjectionKey key : injections) {
+            if (key.type.isA(Destringable)) {
+                destringable += Map:["name"=key.name, "type"=key.type.toString()];
+            }
+        }
+
+        String jsonString = json.Printer.DEFAULT.render(destringable);
+        return new SimpleResponse(OK, Json, bytes=jsonString.utf8());
+    }
+
+    /**
+     * Retrieve an injection value.
+     */
+    @Get("/injections/{deployment}/{name}")
+    SimpleResponse getInjectionValue(String deployment, String name) {
+        TODO
+    }
+
+    /**
+     * Store an injection value.
+     */
+    @Put("/injections/{deployment}/{name}/{value}")
+    SimpleResponse setInjectionValue(String deployment, String name, @BodyParam String value) {
+        TODO
+    }
+
+    /**
+     * Remove an injection value.
+     */
+    @Delete("/injections/{deployment}/{name}")
+    SimpleResponse deleteInjectionValue(String deployment, String name) {
+        TODO
+    }
+
+    /**
      * Handle a request to unregister a deployment.
      */
     @Delete("/unregister/{deployment}")
@@ -104,28 +171,23 @@ service WebAppEndpoint
      */
     @Post("/start/{deployment}")
     SimpleResponse startWebApp(String deployment) {
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return new SimpleResponse(Unauthorized, $"Account '{accountName}' is missing");
-        }
-
-        WebAppInfo webAppInfo;
-        if (!(webAppInfo := accountInfo.webApps.get(deployment))) {
-            return new SimpleResponse(NotFound, $"Invalid deployment '{deployment}'");
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
         }
 
         ErrorLog errors = new ErrorLog();
         WebHost  webHost;
         if (!(webHost := hostManager.getWebHost(deployment))) {
             // create a new WebHost
-            if (!(webHost := hostManager.createWebHost(httpServer, accountName, webAppInfo,
-                    accountManager.decrypt(webAppInfo.password), errors))) {
+            if (!(webHost := hostManager.createWebHost(httpServer, accountName, appInfo,
+                    accountManager.decrypt(appInfo.password), errors))) {
                 return new SimpleResponse(Conflict, errors.collectErrors());
             }
         }
 
         if (webHost.activate(True, errors)) {
-            accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(True));
+            accountManager.addOrUpdateWebApp(accountName, appInfo.updateStatus(True));
             return new SimpleResponse(OK);
         } else {
             hostManager.removeWebHost(webHost);
@@ -154,27 +216,39 @@ service WebAppEndpoint
      */
     @Post("/stop/{deployment}")
     SimpleResponse stopWebApp(String deployment) {
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return new SimpleResponse(NotFound, $"Account '{accountName}' is missing");
-        }
-
-        WebAppInfo webAppInfo;
-        if (!(webAppInfo := accountInfo.webApps.get(deployment))) {
-            return new SimpleResponse(NotFound, $"Invalid deployment '{deployment}'");
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
         }
 
         WebHost webHost;
         if (!(webHost := hostManager.getWebHost(deployment))) {
-            if (webAppInfo.active) {
+            if (appInfo.active) {
                 // there's no host, but the deployment is marked as active; fix it
-                accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
+                accountManager.addOrUpdateWebApp(accountName, appInfo.updateStatus(False));
                 }
             return new SimpleResponse(OK, "The application is not running");
         }
 
         webHost.deactivate(True);
-        accountManager.addOrUpdateWebApp(accountName, webAppInfo.updateStatus(False));
+        accountManager.addOrUpdateWebApp(accountName, appInfo.updateStatus(False));
         return new SimpleResponse(OK);
+    }
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Get a WebAppInfo for the specified deployment.
+     */
+    (WebAppInfo | SimpleResponse) getWebInfo(String deployment) {
+        AccountInfo accountInfo;
+        if (!(accountInfo := accountManager.getAccount(accountName))) {
+            return new SimpleResponse(NotFound, $"Account '{accountName}' is missing");
+        }
+
+        if (WebAppInfo appInfo := accountInfo.webApps.get(deployment)) {
+            return appInfo;
+        }
+        return new SimpleResponse(NotFound, $"Unknown deployment '{deployment}'");
     }
 }

@@ -1,7 +1,5 @@
 import ecstasy.mgmt.Container;
 import ecstasy.mgmt.ModuleRepository;
-import ecstasy.mgmt.DirRepository;
-import ecstasy.mgmt.LinkedRepository;
 
 import ecstasy.reflect.ModuleTemplate;
 import ecstasy.reflect.TypeTemplate;
@@ -59,7 +57,8 @@ service ModuleEndpoint
 
         String[] messages = [];
         if (web.Body body ?= request.body) {
-            Directory libDir = hostManager.ensureAccountLibDirectory(accountName);
+            Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
+            ModuleRepository accountRepo = utils.getModuleRepository(libDir);
 
             @Inject Container.Linker linker;
 
@@ -89,14 +88,14 @@ service ModuleEndpoint
                         }
                     }
 
-                    ModuleInfo info = buildModuleInfo(libDir, moduleName);
+                    ModuleInfo info = buildModuleInfo(accountRepo, moduleName);
 
                     accountManager.addOrUpdateModule(accountName, info);
 
                     if (info.moduleType == Web) {
                         affectedWebModules += moduleName;
                     }
-                    affectedWebModules += updateDependencies(libDir, moduleName);
+                    affectedWebModules += updateDependencies(accountRepo, moduleName);
                 } catch (Exception e) {
                     file.delete();
                     messages += $"Invalid module file {fileData.fileName.quoted()}: {e.message}";
@@ -134,13 +133,14 @@ service ModuleEndpoint
 
             accountManager.removeModule(accountName, moduleName);
 
-            Directory libDir = hostManager.ensureAccountLibDirectory(accountName);
+            Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
+            ModuleRepository accountRepo = utils.getModuleRepository(libDir);
             if (File|Directory f := libDir.find(moduleName + ".xtc")) {
                 if (f.is(File)) {
                     f.delete();
                     // there could be un-deployed modules that depend on this one;
                     // mark them as "unresolved"
-                    updateDependencies(libDir, moduleName);
+                    updateDependencies(accountRepo, moduleName);
                 }
             return new SimpleResponse(OK);
             }
@@ -153,9 +153,10 @@ service ModuleEndpoint
      */
     @Post("/resolve/{moduleName}")
     SimpleResponse resolve(String moduleName) {
-        Directory libDir = hostManager.ensureAccountLibDirectory(accountName);
+        ModuleRepository accountRepo = utils.getModuleRepository(
+                hostManager.ensureAccountLibDirectory(accountName));
         try {
-            accountManager.addOrUpdateModule(accountName, buildModuleInfo(libDir, moduleName));
+            accountManager.addOrUpdateModule(accountName, buildModuleInfo(accountRepo, moduleName));
             return new SimpleResponse(OK);
         } catch (Exception e) {
             return new SimpleResponse(InternalServerError, e.message);
@@ -167,14 +168,14 @@ service ModuleEndpoint
      *
      * @return an array of affected WebModule names
      */
-    private String[] updateDependencies(Directory libDir, String moduleName) {
+    private String[] updateDependencies(ModuleRepository accountRepo, String moduleName) {
         String[] affectedNames = [];
         if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
             for (ModuleInfo moduleInfo : accountInfo.modules.values) {
                 for (RequiredModule dependent : moduleInfo.dependencies) {
                     if (dependent.name == moduleName) {
                         String     affectedName = moduleInfo.name;
-                        ModuleInfo newInfo      = buildModuleInfo(libDir, affectedName);
+                        ModuleInfo newInfo      = buildModuleInfo(accountRepo, affectedName);
 
                         accountManager.addOrUpdateModule(accountName, newInfo);
 
@@ -192,14 +193,9 @@ service ModuleEndpoint
     /**
      * Generate ModuleInfo for the specified module.
      */
-    private ModuleInfo buildModuleInfo(Directory libDir, String moduleName) {
+    private ModuleInfo buildModuleInfo(ModuleRepository accountRepo, String moduleName) {
+         // collect the dependencies (the module names the specified module depends on)
         RequiredModule[] dependencies = [];
-
-        // collect the dependencies (the module names the specified module depends on)
-        @Inject("repository") ModuleRepository coreRepo;
-        ModuleRepository accountRepo =
-            new LinkedRepository([coreRepo, new DirRepository(libDir)].freeze(True));
-
         if (ModuleTemplate moduleTemplate := accountRepo.getModule(moduleName)) {
             for ((_, String requiredName) : moduleTemplate.moduleNamesByPath) {
                 // everything depends on Ecstasy module; don't show it

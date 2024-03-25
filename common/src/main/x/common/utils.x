@@ -1,7 +1,9 @@
 import ecstasy.annotations.InjectedRef;
 
 import ecstasy.mgmt.Container;
+import ecstasy.mgmt.DirRepository;
 import ecstasy.mgmt.ModuleRepository;
+import ecstasy.mgmt.LinkedRepository;
 
 import ecstasy.reflect.ClassTemplate;
 import ecstasy.reflect.FileTemplate;
@@ -207,4 +209,11 @@ package utils {
         return accountsDir.dirFor(accountName).ensure();
     }
 
+    /**
+     * Assemble a module repository for the specified account lib directory.
+     */
+     static ModuleRepository getModuleRepository(Directory libDir) {
+        @Inject("repository") ModuleRepository coreRepo;
+        return new LinkedRepository([coreRepo, new DirRepository(libDir)].freeze(True));
+    }
 }

@@ -62,30 +62,32 @@ package model {
 
     enum ModuleType default(Generic) {Generic, Web, Db}
     const ModuleInfo(
-        String           name,       // qualified
-        Boolean          isResolved,
-        ModuleType       moduleType,
-        String[]         issues,
-        RequiredModule[] dependencies
-        ) {
-            /**
-             * @return True iff this module depends on the specified module
-             */
-            Boolean dependsOn(String moduleName) {
-                return dependencies.any(rm -> rm.name == moduleName);
-            }
+            String           name,       // qualified
+            Boolean          isResolved,
+            ModuleType       moduleType,
+            String[]         issues,
+            RequiredModule[] dependencies
+            ) {
+        /**
+         * @return True iff this module depends on the specified module
+         */
+        Boolean dependsOn(String moduleName) {
+            return dependencies.any(rm -> rm.name == moduleName);
         }
+    }
 
     const RequiredModule(
         String  name,      // qualified
         Boolean available);
 
     const WebAppInfo(
-        String  deployment, // the same module could be deployed multiple times
-        String  moduleName, // qualified
-        String  hostName,   // the full host name (e.g. "shop.acme.com.xqiz.it")
-        String  password,  // an encrypted password to the keystore for this deployment
-        Boolean active) {
+            String deployment, // the same module could be deployed multiple times
+            String moduleName, // qualified
+            String hostName,   // the full host name (e.g. "shop.acme.com.xqiz.it")
+            String password,   // an encrypted password to the keystore for this deployment
+
+            // Map<String, String> injections = [],
+            Boolean             active     = False) {
 
         WebAppInfo updateStatus(Boolean active) {
             return active == this.active

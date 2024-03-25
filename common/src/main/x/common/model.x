@@ -81,22 +81,37 @@ package model {
         Boolean available);
 
     const WebAppInfo(
-            String deployment, // the same module could be deployed multiple times
-            String moduleName, // qualified
-            String hostName,   // the full host name (e.g. "shop.acme.com.xqiz.it")
-            String password,   // an encrypted password to the keystore for this deployment
+            String     deployment,          // the same module could be deployed multiple times
+            String     moduleName,          // qualified
+            String     hostName,            // the full host name (e.g. "shop.acme.com.xqiz.it")
+            String     password,            // an encrypted password to the keystore for this deployment
+            Boolean    active     = False,
+            Injections injections = [],     // values for Destringable injection types
+            ) {
 
-            // Map<String, String> injections = [],
-            Boolean             active     = False) {
+        typedef Map<String, String> as Injections;
+
+        WebAppInfo with(
+            String?              hostName   = Null,
+            String?              password   = Null,
+            Boolean?             active     = Null,
+            Map<String, String>? injections = Null) {
+
+            return new WebAppInfo(deployment, moduleName,
+                hostName   ?: this.hostName,
+                password   ?: this.password,
+                active     ?: this.active,
+                injections ?: this.injections);
+        }
 
         WebAppInfo updateStatus(Boolean active) {
             return active == this.active
                 ? this
-                : new WebAppInfo(deployment, moduleName, hostName, password, active);
+                : this.with(active=active);
         }
 
         WebAppInfo redact() {
-            return new WebAppInfo(deployment, moduleName, hostName, "", active);
+            return this.with(password="");
         }
     }
 }

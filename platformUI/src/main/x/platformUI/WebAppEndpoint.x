@@ -127,15 +127,28 @@ service WebAppEndpoint
      */
     @Get("/injections/{deployment}/{name}")
     SimpleResponse getInjectionValue(String deployment, String name) {
-        TODO
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+        String value = "";
+        value := appInfo.injections.get(name);
+        return new SimpleResponse(OK, value);
     }
 
     /**
      * Store an injection value.
      */
-    @Put("/injections/{deployment}/{name}/{value}")
+    @Put("/injections/{deployment}/{name}")
     SimpleResponse setInjectionValue(String deployment, String name, @BodyParam String value) {
-        TODO
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+
+        WebAppInfo.Injections injections = appInfo.injections.put(name, value);
+        accountManager.addOrUpdateWebApp(accountName, appInfo.with(injections=injections));
+        return new SimpleResponse(OK);
     }
 
     /**
@@ -143,7 +156,13 @@ service WebAppEndpoint
      */
     @Delete("/injections/{deployment}/{name}")
     SimpleResponse deleteInjectionValue(String deployment, String name) {
-        TODO
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+        WebAppInfo.Injections injections = appInfo.injections.remove(name);
+        accountManager.addOrUpdateWebApp(accountName, appInfo.with(injections=injections));
+        return new SimpleResponse(OK);
     }
 
     /**

@@ -17,14 +17,20 @@ class WebAppManagement {
        return Gateway.sendRequest(GET, $"/webapp/injections/{deploymentName}");
     }
 
-    @Command("get-inject", "Retrieve an injection value")
-    void getInjectionValue(String deploymentName, String injectionName) {
-       return Gateway.sendRequest(GET, $"/webapp/injections/{deploymentName}/{injectionName}");
+    @Command("get-injection", "Retrieve an injection value")
+    String getInjectionValue(String deploymentName, String injectionName) {
+       String value = Gateway.sendRequest(GET, $"/webapp/injections/{deploymentName}/{injectionName}");
+       return value == "" ? "<empty>" : value;
     }
 
-    @Command("set-inject", "Specify an injection value")
+    @Command("set-injection", "Specify an injection value")
     void setInjectionValue(String deploymentName, String injectionName, String value) {
        Gateway.sendRequest(PUT, $"/webapp/injections/{deploymentName}/{injectionName}", value, Text);
+    }
+
+    @Command("remove-injection", "Remove an injection value")
+    void removeInjectionValue(String deploymentName, String injectionName) {
+       Gateway.sendRequest(DELETE, $"/webapp/injections/{deploymentName}/{injectionName}");
     }
 
     @Command("start", "Start an app")

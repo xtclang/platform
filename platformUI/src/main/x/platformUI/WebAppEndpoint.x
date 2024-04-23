@@ -1,5 +1,3 @@
-import ecstasy.mgmt.Container.InjectionKey;
-import ecstasy.mgmt.Container.Linker;
 import ecstasy.mgmt.ModuleRepository;
 
 import ecstasy.reflect.ModuleTemplate;
@@ -8,6 +6,7 @@ import common.ErrorLog;
 import common.WebHost;
 
 import common.model.AccountInfo;
+import common.model.InjectionKey;
 import common.model.ModuleInfo;
 import common.model.WebAppInfo;
 
@@ -68,6 +67,13 @@ service WebAppEndpoint
             return new SimpleResponse(NotFound, $"Module is missing: '{moduleName}'");
         }
 
+        Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
+        ModuleRepository accountRepo = utils.getModuleRepository(libDir);
+        InjectionKey[]   injectionKeys;
+        if (!(injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName))) {
+            return new SimpleResponse(Conflict, $"Failed to load module: {moduleName.quoted()}");
+        }
+
         // create a random password to be used to access the webapp's keystore
         @Inject Random random;
         String         encrypted = accountManager.encrypt(random.int128().toString());
@@ -78,11 +84,18 @@ service WebAppEndpoint
             return new SimpleResponse(Conflict, errors.collectErrors());
         }
 
+        WebAppInfo.Injections injections = [];
+        if (!injectionKeys.empty) {
+            injections = new ListMap();
+            for (InjectionKey key : injectionKeys) {
+                injections.put(key, "");
+            }
+        }
         accountManager.addOrUpdateWebApp(accountName,
-                new WebAppInfo(deployment, moduleName, hostName, encrypted, False));
+                new WebAppInfo(deployment, moduleName, hostName, encrypted, False, injections));
 
         // the deployment has been registered, but not yet started; give them something better
-        // than "404: Page Not Found" to look at
+        // than "HttpStatus 404: Page Not Found" to look at
         ControllerConfig.addStubRoute(hostName);
         return new SimpleResponse(OK);
     }
@@ -97,56 +110,63 @@ service WebAppEndpoint
             return appInfo;
         }
 
-        Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
-        ModuleRepository accountRepo = utils.getModuleRepository(libDir);
-        ModuleTemplate   mainModule;
-        try {
-            mainModule = accountRepo.getResolvedModule(appInfo.moduleName);
-        } catch (Exception e) {
-            return new SimpleResponse(Conflict, $"Failed to load module: {appInfo.moduleName.quoted()}");
-        }
-
-        @Inject Linker linker;
-        InjectionKey[] injections = linker.collectInjections(mainModule);
-
         import json.JsonArray;
-        JsonArray destringable = new JsonArray();
+        JsonArray keys = new JsonArray();
 
-        for (InjectionKey key : injections) {
-            if (key.type.isA(Destringable)) {
-                destringable += Map:["name"=key.name, "type"=key.type.toString()];
-            }
+        for (InjectionKey key : appInfo.injections.keys) {
+            keys += Map:["name"=key.name, "type"=key.type];
         }
 
-        String jsonString = json.Printer.DEFAULT.render(destringable);
+        String jsonString = json.Printer.DEFAULT.render(keys);
         return new SimpleResponse(OK, Json, bytes=jsonString.utf8());
     }
 
     /**
      * Retrieve an injection value.
      */
-    @Get("/injections/{deployment}/{name}")
-    SimpleResponse getInjectionValue(String deployment, String name) {
+    @Get("/injections/{deployment}/{name}{/type}")
+    SimpleResponse getInjectionValue(String deployment, String name, String type = "") {
         (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
-        String value = "";
-        value := appInfo.injections.get(name);
-        return new SimpleResponse(OK, value);
+        InjectionKey key;
+        if (type == "") {
+            if (!(key := appInfo.uniqueKey(name))) {
+                return new SimpleResponse(Conflict, $"Injection name {name.quoted()} is not unique");
+            }
+        } else {
+            key = new InjectionKey(name, type);
+        }
+
+        if (String value := appInfo.injections.get(key)) {
+            return new SimpleResponse(OK, value);
+        } else {
+            return new SimpleResponse(NotFound);
+        }
     }
 
     /**
      * Store an injection value.
      */
-    @Put("/injections/{deployment}/{name}")
-    SimpleResponse setInjectionValue(String deployment, String name, @BodyParam String value) {
+    @Put("/injections/{deployment}/{name}{/type}")
+    SimpleResponse setInjectionValue(String deployment, String name, @BodyParam String value,
+                                     String type = "") {
         (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
 
-        WebAppInfo.Injections injections = appInfo.injections.put(name, value);
+        InjectionKey key;
+        if (type == "") {
+            if (!(key := appInfo.uniqueKey(name))) {
+                return new SimpleResponse(Conflict, $"Injection name {name.quoted()} is not unique");
+            }
+        } else {
+            key = new InjectionKey(name, type);
+        }
+
+        WebAppInfo.Injections injections = appInfo.injections.put(key, value);
         accountManager.addOrUpdateWebApp(accountName, appInfo.with(injections=injections));
         return new SimpleResponse(OK);
     }
@@ -154,13 +174,23 @@ service WebAppEndpoint
     /**
      * Remove an injection value.
      */
-    @Delete("/injections/{deployment}/{name}")
-    SimpleResponse deleteInjectionValue(String deployment, String name) {
+    @Delete("/injections/{deployment}/{name}{/type}")
+    SimpleResponse deleteInjectionValue(String deployment, String name, String type = "") {
         (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
-        WebAppInfo.Injections injections = appInfo.injections.remove(name);
+
+        InjectionKey key;
+        if (type == "") {
+            if (!(key := appInfo.uniqueKey(name))) {
+                return new SimpleResponse(Conflict, $"Injection name {name.quoted()} is not unique");
+            }
+        } else {
+            key = new InjectionKey(name, type);
+        }
+
+        WebAppInfo.Injections injections = appInfo.injections.remove(key);
         accountManager.addOrUpdateWebApp(accountName, appInfo.with(injections=injections));
         return new SimpleResponse(OK);
     }

@@ -80,6 +80,8 @@ package model {
         String  name,      // qualified
         Boolean available);
 
+    const InjectionKey(String name, String type);
+
     const WebAppInfo(
             String     deployment,          // the same module could be deployed multiple times
             String     moduleName,          // qualified
@@ -89,13 +91,13 @@ package model {
             Injections injections = [],     // values for Destringable injection types
             ) {
 
-        typedef Map<String, String> as Injections;
+        typedef Map<InjectionKey, String> as Injections;
 
         WebAppInfo with(
-            String?              hostName   = Null,
-            String?              password   = Null,
-            Boolean?             active     = Null,
-            Map<String, String>? injections = Null) {
+            String?     hostName   = Null,
+            String?     password   = Null,
+            Boolean?    active     = Null,
+            Injections? injections = Null) {
 
             return new WebAppInfo(deployment, moduleName,
                 hostName   ?: this.hostName,
@@ -112,6 +114,23 @@ package model {
 
         WebAppInfo redact() {
             return this.with(password="");
+        }
+
+        /**
+         * Find a unique injection key for the given name.
+         */
+       conditional InjectionKey uniqueKey(String name) {
+            InjectionKey? unique = Null;
+            for (InjectionKey key : injections.keys) {
+                if (key.name == name) {
+                    if (unique == Null) {
+                        unique = key;
+                    } else {
+                        return False;
+                    }
+                }
+            }
+            return Nullable.notNull(unique);
         }
     }
 }

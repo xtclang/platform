@@ -216,4 +216,26 @@ package utils {
         @Inject("repository") ModuleRepository coreRepo;
         return new LinkedRepository([coreRepo, new DirRepository(libDir)].freeze(True));
     }
+
+    /**
+     * Collect all [destringable](Destringable) [model.InjectionKey]s from the specified module.
+     */
+    static conditional model.InjectionKey[] collectDestringableInjections(
+            ModuleRepository repository, String moduleName) {
+
+        ModuleTemplate mainModule;
+        try {
+            mainModule = repository.getResolvedModule(moduleName);
+        } catch (Exception e) {
+            return False;
+        }
+
+        import model.InjectionKey as Key;
+
+        @Inject Container.Linker linker;
+        Container.InjectionKey[] injections = linker.collectInjections(mainModule);
+
+        return True, injections.filter(ikey -> ikey.type.isA(Destringable))
+                               .map(ikey -> new Key(ikey.name, ikey.type.toString())).toArray();
+    }
 }

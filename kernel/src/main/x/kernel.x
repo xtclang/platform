@@ -15,6 +15,7 @@ module kernel.xqiz.it {
     package json   import json.xtclang.org;
     package jsondb import jsondb.xtclang.org;
     package oodb   import oodb.xtclang.org;
+    package net    import net.xtclang.org;
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 
@@ -45,6 +46,10 @@ module kernel.xqiz.it {
 
     import json.Doc;
     import json.Parser;
+
+    import net.IPAddress;
+
+    import web.http.HostInfo;
 
     import xenia.HttpServer;
 
@@ -140,7 +145,7 @@ module kernel.xqiz.it {
             console.print($"Info: Starting the platform UI controller...");
 
             @Inject HttpServer server;
-            server.configure(hostName, httpPort, httpsPort);
+            server.bind(new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort));
 
             DBRealm    realm;
             if (accountManager.initialized) {
@@ -178,7 +183,6 @@ module kernel.xqiz.it {
                 return;
             }
 
-            server.start();
             console.print($"Info: Started the XtcPlatform at https://{hostName}");
 
             // TODO create and configure the IO-manager, secret-manager, etc.

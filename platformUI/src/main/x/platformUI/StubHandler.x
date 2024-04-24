@@ -3,7 +3,7 @@ import crypto.Decryptor;
 import web.responses.SimpleResponse;
 
 import xenia.HttpServer.Handler;
-import xenia.HttpServer.RequestContext;
+import xenia.HttpServer.RequestInfo;
 import xenia.Http1Response;
 
 /**
@@ -30,14 +30,11 @@ service StubHandler
     // ----- Handler -------------------------------------------------------------------------------
 
     @Override
-    void configure(Decryptor decryptor) {}
-
-    @Override
-    void handle(RequestContext context, String uri, String method, Boolean tls) {
+    void handle(RequestInfo request) {
 
         (Int status, String[] names, String[] values, Byte[] body) =
             Http1Response.prepare(new SimpleResponse(OK, HTML, html.utf8()));
 
-        ControllerConfig.httpServer.send(context, status, names, values, body);
+        request.respond(status, names, values, body);
     }
 }

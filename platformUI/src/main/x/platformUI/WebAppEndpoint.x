@@ -59,7 +59,8 @@ service WebAppEndpoint
         // compute the full host name (e.g. "welcome.localhost.xqiz.it")
         String hostName = $"{deployment}.{baseDomain}";
 
-        if (hostName.equals(httpServer.bindAddr) || accountInfo.webApps.contains(deployment)) {
+        if (httpServer.routes.keys.any(route -> route.host.toString() == hostName) ||
+                accountInfo.webApps.contains(deployment)) {
             return new SimpleResponse(Conflict, $"Deployment already exists: '{deployment}'");
         }
 
@@ -206,7 +207,7 @@ service WebAppEndpoint
         }
 
         if (WebHost webHost := hostManager.getWebHost(deployment)) {
-            hostManager.removeWebHost(webHost);
+            hostManager.removeWebHost(httpServer, webHost);
         }
 
         hostManager.removeDeployment(accountName, deployment);
@@ -239,7 +240,7 @@ service WebAppEndpoint
             accountManager.addOrUpdateWebApp(accountName, appInfo.updateStatus(True));
             return new SimpleResponse(OK);
         } else {
-            hostManager.removeWebHost(webHost);
+            hostManager.removeWebHost(httpServer, webHost);
             webHost.deactivate(True);
             return new SimpleResponse(Conflict, errors.collectErrors());
         }

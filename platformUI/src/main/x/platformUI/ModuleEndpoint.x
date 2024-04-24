@@ -240,7 +240,7 @@ service ModuleEndpoint
                 if (WebHost webHost := hostManager.getWebHost(deployment),
                     moduleNames.contains(webHost.moduleName)) {
 
-                    hostManager.removeWebHost(webHost);
+                    hostManager.removeWebHost(httpServer, webHost);
 
                     if (!hostManager.createWebHost(httpServer, accountName, info,
                             accountManager.decrypt(info.password), errors)) {

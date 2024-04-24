@@ -16,6 +16,8 @@ import crypto.CertificateManager;
 import crypto.CryptoPassword;
 import crypto.KeyStore;
 
+import web.http.HostInfo;
+
 import xenia.HttpServer;
 
 /**
@@ -107,9 +109,8 @@ service HostManager(Directory accountsDir)
 
         String    deployment = webAppInfo.deployment;
         Directory homeDir    = hostDir.dirFor(deployment).ensure();
-        WebHost   webHost    = new WebHost(httpServer, repository, accountName, webAppInfo, homeDir, buildDir);
+        File      store      = homeDir.fileFor(KeyStoreName);
 
-        File     store = homeDir.fileFor(KeyStoreName);
         KeyStore keystore;
         try {
             @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore ks;
@@ -126,16 +127,19 @@ service HostManager(Directory accountsDir)
             return False;
         }
 
+        HostInfo route   = new HostInfo(hostName);
+        WebHost  webHost = new WebHost(route, repository, accountName, webAppInfo, homeDir, buildDir);
+
         deployedWebHosts.put(deployment, webHost);
 
-        httpServer.addRoute(hostName, webHost, keystore, hostName, names.CookieEncryptionKey);
+        httpServer.addRoute(route, webHost, keystore, hostName, names.CookieEncryptionKey);
 
         return True, webHost;
     }
 
     @Override
-    void removeWebHost(WebHost webHost) {
-        webHost.httpServer.removeRoute(webHost.info.hostName);
+    void removeWebHost(HttpServer httpServer, WebHost webHost) {
+        httpServer.removeRoute(webHost.info.hostName);
 
         try {
             webHost.close();

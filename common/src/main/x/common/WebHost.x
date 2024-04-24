@@ -9,10 +9,12 @@ import crypto.Decryptor;
 
 import web.HttpStatus;
 
+import web.http.HostInfo;
+
 import xenia.HttpHandler;
 import xenia.HttpServer;
 import xenia.HttpServer.Handler;
-import xenia.HttpServer.RequestContext;
+import xenia.HttpServer.RequestInfo;
 
 import common.model.WebAppInfo;
 
@@ -24,11 +26,11 @@ service WebHost
         extends AppHost
         implements Handler {
 
-    construct (HttpServer httpServer, ModuleRepository repository, String account, WebAppInfo info,
+    construct (HostInfo route, ModuleRepository repository, String account, WebAppInfo info,
                Directory homeDir, Directory buildDir) {
         construct AppHost(info.moduleName, homeDir);
 
-        this.httpServer = httpServer;
+        this.route      = route;
         this.repository = repository;
         this.account    = account;
         this.info       = info;
@@ -61,9 +63,9 @@ service WebHost
     AppHost[] dependencies = [];
 
     /**
-     * The HttpServer to use.
+     * The HostInfo that routes to this handler.
      */
-    HttpServer httpServer;
+    HostInfo route;
 
     /**
      * The underlying HttpHandler.
@@ -143,7 +145,7 @@ service WebHost
                     utils.createContainer(repository, webTemplate, homeDir, buildDir, False, errors)) {
 
                 try {
-                    Tuple       result  = container.invoke("createHandler_", Tuple:(httpServer));
+                    Tuple       result  = container.invoke("createHandler_", Tuple:(route));
                     HttpHandler handler = result[0].as(HttpHandler);
                     handler.configure(decryptor? : assert);
 
@@ -215,16 +217,18 @@ service WebHost
 
     // ----- Handler -------------------------------------------------------------------------------
 
-    @Override
+    /**
+     * This method is duck-typed into the Handler to support cookie encryption.
+     */
     void configure(Decryptor decryptor) {
         this.decryptor = decryptor;
     }
 
     @Override
-    void handle(RequestContext context, String uri, String method, Boolean tls) {
+    void handle(RequestInfo request) {
         if (deactivationProgress > 0) {
             // deactivation is in progress; would be nice to send back a corresponding page
-            httpServer.send(context, HttpStatus.ServiceUnavailable.code, [], [], []);
+            request.respond(HttpStatus.ServiceUnavailable.code, [], [], []);
             return;
         }
 
@@ -235,14 +239,14 @@ service WebHost
             if (!(handler := activate(False, errors))) {
                 log($"Error: Failed to activate: {errors}");
 
-                httpServer.send(context, HttpStatus.InternalServerError.code, [], [], []);
+                request.respond(HttpStatus.InternalServerError.code, [], [], []);
                 return;
             }
         }
 
         totalRequests++;
 
-        handler.handle^(context, uri, method, tls);
+        handler.handle^(request);
     }
 
 

@@ -29,6 +29,8 @@ module platformUI.xqiz.it {
     import web.WebApp;
     import web.WebService;
 
+    import web.http.HostInfo;
+
     import web.security.Authenticator;
     import web.security.TokenAuthenticator;
     import web.security.Realm;
@@ -52,7 +54,8 @@ module platformUI.xqiz.it {
 
         ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm);
 
-        server.addRoute(hostAddr, new HttpHandler(server, this), keystore,
+        HostInfo route = new HostInfo(hostAddr);
+        server.addRoute(route, new HttpHandler(route, this), keystore,
                 names.PlatformTlsKey, names.CookieEncryptionKey);
 
         // create WebHosts for all active web applications

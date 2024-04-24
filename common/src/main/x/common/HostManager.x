@@ -67,7 +67,7 @@ interface HostManager {
     /**
      * Remove the specified WebHost.
      */
-    void removeWebHost(WebHost webHost);
+    void removeWebHost(HttpServer httpServer, WebHost webHost);
 
     /**
      * Remove the specified deployment.

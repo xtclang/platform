@@ -6,14 +6,12 @@ val common = project(":common")
 
 val libDir = "${rootProject.projectDir}/lib"
 
-val guiDir     = "$projectDir/gui"
-val webContent = "$guiDir/dist"
+val guiDir     = "${rootProject.projectDir}/../platform-ui"
+val webContent = guiDir
 
 tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
-
-    delete(webContent)
 }
 
 tasks.register("build") {

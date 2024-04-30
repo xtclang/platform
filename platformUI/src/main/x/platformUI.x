@@ -91,7 +91,7 @@ module platformUI.xqiz.it {
     @WebService("/")
     @HttpsRequired
     service Content()
-            incorporates StaticContent(path, Directory:/spa) {
+            incorporates StaticContent(path, Directory:/build) {
         import web.Get;
         import web.ResponseOut;
 
@@ -149,7 +149,7 @@ module platformUI.xqiz.it {
          * Add a stub route for the specified deployment.
          */
         void addStubRoute(String hostName) {
-            StubHandler handler = new StubHandler(/spa/pages/not-deployed.html, ["%deployment%"=hostName]);
+            StubHandler handler = new StubHandler(/build/not-deployed.html, ["%deployment%"=hostName]);
 
             httpServer.addRoute(hostName, handler, keystore,
                     names.PlatformTlsKey, names.CookieEncryptionKey);

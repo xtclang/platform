@@ -275,8 +275,8 @@ module platformUI.xqiz.it {
      */
     @WebService("/")
     @HttpsRequired
-    service Content
-            incorporates StaticContent.Mixin(Directory:/spa) {
+    service Content()
+            incorporates StaticContent.Mixin(Directory:/build) {
         import web.Get;
         import web.ResponseOut;
 
@@ -321,6 +321,16 @@ module platformUI.xqiz.it {
             this.baseDomain     = baseDomain;
             this.keystore       = keystore;
             this.realm          = realm;
+        }
+
+        /**
+         * Add a stub route for the specified deployment.
+         */
+        void addStubRoute(String hostName) {
+            StubHandler handler = new StubHandler(/build/not-deployed.html, ["%deployment%"=hostName]);
+
+            httpServer.addRoute(hostName, handler, keystore,
+                    names.PlatformTlsKey, names.CookieEncryptionKey);
         }
     }
 }

@@ -40,7 +40,7 @@ service UserEndpoint
     /*
      * Log in the specified user.
      */
-    @Post("login/{userName}")
+    @Post("login{/userName}")
     @HttpsRequired
     SimpleResponse login(SessionData session, String userName, @BodyParam String password="") {
         if (realm.authenticate(userName, password)) {

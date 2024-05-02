@@ -105,7 +105,7 @@ service ModuleEndpoint
             if (allowRedeployment && affectedWebModules.size > 0) {
                 messages += $|Redeploying {affectedWebModules.toString(sep=",", pre="", post="")}
                             ;
-                redeploy(affectedWebModules);
+                redeploy^(accountRepo, affectedWebModules);
             }
         }
        return messages;
@@ -120,7 +120,7 @@ service ModuleEndpoint
      * @return `OK` if operation succeeded; `Conflict` if there are any active applications that
      *         depend on the module; `NotFound` if the module is missing
      */
-    @Delete("/delete/{moduleName}")
+    @Delete("/delete{/moduleName}")
     SimpleResponse deleteModule(String moduleName) {
         if (AccountInfo accountInfo := accountManager.getAccount(accountName),
             accountInfo.modules.contains(moduleName)) {
@@ -151,7 +151,7 @@ service ModuleEndpoint
     /**
      * Handles a request to resolve a module
      */
-    @Post("/resolve/{moduleName}")
+    @Post("/resolve{/moduleName}")
     SimpleResponse resolve(String moduleName) {
         ModuleRepository accountRepo = utils.getModuleRepository(
                 hostManager.ensureAccountLibDirectory(accountName));
@@ -230,9 +230,9 @@ service ModuleEndpoint
     /**
      * Redeploy all deployments that are based on the web module names in the specified set.
      *
-     * TODO GG: make this async
+     * Note: this method executes asynchronously.
      */
-    private void redeploy(Set<String> moduleNames) {
+    private void redeploy(ModuleRepository accountRepo, Set<String> moduleNames) {
         if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
 
             ErrorLog errors = new ErrorLog();
@@ -242,13 +242,38 @@ service ModuleEndpoint
 
                     hostManager.removeWebHost(httpServer, webHost);
 
-                    if (!hostManager.createWebHost(httpServer, accountName, info,
+                    WebAppInfo? newInfo = Null;
+
+                    import common.model.InjectionKey;
+                    import WebAppInfo.Injections;
+
+                    // adjust the injections map if necessary
+                    InjectionKey[] injectionKeys;
+                    if (injectionKeys :=
+                            utils.collectDestringableInjections(accountRepo, webHost.moduleName)) {
+
+                        Injections injections = info.injections;
+                        if (injectionKeys.as(Collection) != injections.keys.as(Collection)) {
+                            Injections newInjections = new ListMap();
+                            for (InjectionKey key : injectionKeys) {
+                                injections.put(key, injections.getOrDefault(key, ""));
+                            }
+                            newInfo = info.with(injections=newInjections);
+                        }
+                    }
+
+                    // redeploy if necessary
+                    if (info.active && !hostManager.createWebHost(httpServer, accountName, info,
                             accountManager.decrypt(info.password), errors)) {
                         webHost.log($"Error: Failed to redeploy {deployment.quoted()}; reason: {errors}\n");
 
-                        accountManager.addOrUpdateWebApp(accountName, info.updateStatus(False));
+                        newInfo = info.updateStatus(False);
                     }
                     errors.reset();
+
+                    if (newInfo != Null) {
+                        accountManager.addOrUpdateWebApp(accountName, newInfo);
+                    }
                 }
             }
         }

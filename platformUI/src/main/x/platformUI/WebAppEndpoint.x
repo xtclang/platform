@@ -28,7 +28,7 @@ service WebAppEndpoint
     /**
      * Return a JSON map of all webapps for all webapps for given account.
      */
-    @Get("status")
+    @Get("/status")
     Map<String, WebAppInfo> checkStatus() {
         if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
             HashMap<String, WebAppInfo> status = new HashMap();
@@ -44,12 +44,23 @@ service WebAppEndpoint
     }
 
     /**
+     * Get a WebAppInfo for the specified deployment.
+     */
+    @Get("/status{/deployment}")
+    (WebAppInfo | SimpleResponse) checkStatus(String deployment) {
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        return appInfo.is(SimpleResponse)
+                ? appInfo
+                : appInfo.redact();
+    }
+
+    /**
      * Handle a request to register a webapp for a module.
      * Assumptions:
      *  - many webapps can be registered from the same module with a different deployment
      *  - a deployment has one and only one webapp
      */
-    @Post("/register/{deployment}/{moduleName}")
+    @Post("/register{/deployment}{/moduleName}")
     SimpleResponse register(String deployment, String moduleName) {
         AccountInfo accountInfo;
         if (!(accountInfo := accountManager.getAccount(accountName))) {
@@ -104,7 +115,7 @@ service WebAppEndpoint
     /**
      * Collect an array of injections necessary for the specified deployment,
      */
-    @Get("/injections/{deployment}")
+    @Get("/injections{/deployment}")
     SimpleResponse injections(String deployment) {
         (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
@@ -125,7 +136,7 @@ service WebAppEndpoint
     /**
      * Retrieve an injection value.
      */
-    @Get("/injections/{deployment}/{name}{/type}")
+    @Get("/injections{/deployment}{/name}{/type}")
     SimpleResponse getInjectionValue(String deployment, String name, String type = "") {
         (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
@@ -150,7 +161,7 @@ service WebAppEndpoint
     /**
      * Store an injection value.
      */
-    @Put("/injections/{deployment}/{name}{/type}")
+    @Put("/injections{/deployment}{/name}{/type}")
     SimpleResponse setInjectionValue(String deployment, String name, @BodyParam String value,
                                      String type = "") {
         (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
@@ -175,7 +186,7 @@ service WebAppEndpoint
     /**
      * Remove an injection value.
      */
-    @Delete("/injections/{deployment}/{name}{/type}")
+    @Delete("/injections{/deployment}{/name}{/type}")
     SimpleResponse deleteInjectionValue(String deployment, String name, String type = "") {
         (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
@@ -199,7 +210,7 @@ service WebAppEndpoint
     /**
      * Handle a request to unregister a deployment.
      */
-    @Delete("/unregister/{deployment}")
+    @Delete("/unregister{/deployment}")
     SimpleResponse unregister(String deployment) {
         SimpleResponse response = stopWebApp(deployment);
         if (response.status != OK) {
@@ -219,7 +230,7 @@ service WebAppEndpoint
     /**
      * Handle a request to start a deployment.
      */
-    @Post("/start/{deployment}")
+    @Post("/start{/deployment}")
     SimpleResponse startWebApp(String deployment) {
         (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
@@ -249,7 +260,7 @@ service WebAppEndpoint
     /**
      * Show the app console's content.
      */
-    @Get("appLog/{deployment}")
+    @Get("appLog{/deployment}")
     @Produces(Text)
     String report(String deployment) {
         if (WebHost webHost := hostManager.getWebHost(deployment)) {
@@ -264,7 +275,7 @@ service WebAppEndpoint
     /**
      * Handle a request to stop a deployment.
      */
-    @Post("/stop/{deployment}")
+    @Post("/stop{/deployment}")
     SimpleResponse stopWebApp(String deployment) {
         (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {

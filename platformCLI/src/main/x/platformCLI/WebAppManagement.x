@@ -7,6 +7,11 @@ class WebAppManagement {
         return Gateway.sendRequest(GET, "/webapp/status");
     }
 
+    @Command("app", "Show the specified web app")
+    String appInfo(String deploymentName) {
+        return Gateway.sendRequest(GET, $"/webapp/status/{deploymentName}");
+    }
+
     @Command("register", "Register an app")
     String register(String deploymentName, String moduleName) {
         return Gateway.sendRequest(POST, $"/webapp/register/{deploymentName}/{moduleName}");

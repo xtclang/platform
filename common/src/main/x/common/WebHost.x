@@ -26,14 +26,14 @@ service WebHost
         extends AppHost
         implements Handler {
 
-    construct (HostInfo route, ModuleRepository repository, String account, WebAppInfo info,
+    construct (HostInfo route, ModuleRepository repository, String account, WebAppInfo appInfo,
                Directory homeDir, Directory buildDir) {
-        construct AppHost(info.moduleName, homeDir);
+        construct AppHost(appInfo.moduleName, homeDir);
 
         this.route      = route;
         this.repository = repository;
         this.account    = account;
-        this.info       = info;
+        this.appInfo    = appInfo;
         this.buildDir   = buildDir;
     }
 
@@ -50,7 +50,7 @@ service WebHost
     /**
      * The web application details.
      */
-    WebAppInfo info;
+    WebAppInfo appInfo;
 
     /**
      * The build directory.
@@ -141,8 +141,8 @@ service WebHost
         ModuleGenerator generator = new ModuleGenerator(mainModule);
         if (ModuleTemplate webTemplate := generator.ensureWebModule(repository, buildDir, errors)) {
             Container container;
-            if ((container, dependencies) :=
-                    utils.createContainer(repository, webTemplate, homeDir, buildDir, False, errors)) {
+            if ((container, dependencies) := utils.createContainer(
+                        repository, webTemplate, homeDir, buildDir, False, appInfo.injections, errors)) {
 
                 try {
                     Tuple       result  = container.invoke("createHandler_", Tuple:(route));

@@ -12,6 +12,8 @@ import ecstasy.reflect.TypeTemplate;
 
 import ecstasy.text.Log;
 
+import model.Injections;
+
 /**
  * The package for helper functions.
  */
@@ -26,6 +28,8 @@ package utils {
      * @param buildDir    the directory for auto-generated modules
      *                    (e.g. "~/xqiz.it/accounts/self/build")
      * @param platform    True iff the loading module is one of the "core" platform modules
+     * @param injections  the custom injections
+     * @param errors      the logger to report errors to
      *
      * @return True iff the container has been loaded successfully
      * @return (optional) the Container
@@ -34,7 +38,7 @@ package utils {
      */
     static conditional (Container, AppHost[]) createContainer(
                     ModuleRepository repository, ModuleTemplate template, Directory deployDir,
-                    Directory buildDir, Boolean platform, Log errors) {
+                    Directory buildDir, Boolean platform, Injections injections, Log errors) {
         DbHost[]     dbHosts;
         HostInjector injector;
 
@@ -44,17 +48,18 @@ package utils {
 
             for ((String dbPath, String dbModuleName) : dbNames) {
                 DbHost dbHost;
-                if (!(dbHost := createDbHost(repository, dbModuleName, "jsondb", deployDir, buildDir, errors))) {
+                if (!(dbHost := createDbHost(
+                        repository, dbModuleName, "jsondb", deployDir, buildDir, injections, errors))) {
                     return False;
                 }
                 dbHosts += dbHost;
             }
             dbHosts.makeImmutable();
 
-            injector = createDbInjector(dbHosts, deployDir);
+            injector = createDbInjector(dbHosts, deployDir, injections);
         } else {
             dbHosts  = [];
-            injector = new HostInjector(deployDir, platform);
+            injector = new HostInjector(deployDir, platform, injections);
         }
 
         try {
@@ -96,13 +101,15 @@ package utils {
      *                      (e.g. "~/xqiz.it/accounts/self/deploy/banking")
      * @param buildDir      the directory for auto-generated modules
      *                      (e.g. "~/xqiz.it/accounts/self/build")
+     * @param injections    the custom injections
+     * @param errors        the logger to report errors to
      *
      * @return True if the DbHost was successfully created; False otherwise (the errors are logged)
      * @return (optional) the DbHost
      */
     static conditional DbHost createDbHost(
             ModuleRepository repository, String dbModuleName, String dbImpl,
-            Directory deployDir, Directory buildDir, Log errors) {
+            Directory deployDir, Directory buildDir, Injections injections, Log errors) {
         import jsondb.tools.ModuleGenerator;
 
         Directory       dbHomeDir = deployDir.dirFor(dbModuleName).ensure();
@@ -128,7 +135,7 @@ package utils {
         }
 
         dbHost.container = new Container(dbModuleTemplate, Lightweight, repository,
-                                new HostInjector(dbHomeDir, False));
+                                new HostInjector(dbHomeDir, False, injections));
         dbHost.makeImmutable();
         return True, dbHost;
     }
@@ -136,17 +143,20 @@ package utils {
     /**
      * Create a database [HostInjector].
      *
-     * @param dbHosts    the array of [DbHost]s for databases the Injector should be able to provide connections to
-     * @param deployDir  the "home" directory for the deployment (e.g. "~/xqiz.it/accounts/self/deploy/shopping")
+     * @param dbHosts     the array of [DbHost]s for databases the Injector should be able to provide
+     *                    connections to
+     * @param deployDir   the "home" directory for the deployment
+     *                    (e.g. "~/xqiz.it/accounts/self/deploy/shopping")
+     * @param injections  the custom injections
      *
      * @return a HostInjector that injects db connections based on the arrays of the specified DbHosts
      */
-    static HostInjector createDbInjector(DbHost[] dbHosts, Directory deployDir) {
+    static HostInjector createDbInjector(DbHost[] dbHosts, Directory deployDir, Injections injections) {
         import oodb.Connection;
         import oodb.RootSchema;
         import oodb.DBUser;
 
-        return new HostInjector(deployDir, False) {
+        return new HostInjector(deployDir, False, injections) {
             @Override
             Supplier getResource(Type type, String name) {
                 if (type.is(Type<RootSchema>) || type.is(Type<Connection>)) {

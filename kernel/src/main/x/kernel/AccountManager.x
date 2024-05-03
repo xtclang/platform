@@ -57,7 +57,7 @@ service AccountManager
               Decryptor decryptor, Log errors) {
         repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
         assert this.platformDbHost := utils.createDbHost(repository, "platformDB.xqiz.it", "jsondb",
-                                                    homeDir, buildDir, errors);
+                                                    homeDir, buildDir, [], errors);
 
         DBUser user = new oodb.model.User(1, "admin");
         this.dbConnection = platformDbHost.ensureDatabase()(user).as(Connection);

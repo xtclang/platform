@@ -82,6 +82,8 @@ package model {
 
     const InjectionKey(String name, String type);
 
+    typedef Map<InjectionKey, String> as Injections;
+
     const WebAppInfo(
             String     deployment,          // the same module could be deployed multiple times
             String     moduleName,          // qualified
@@ -90,8 +92,6 @@ package model {
             Boolean    active     = False,
             Injections injections = [],     // values for Destringable injection types
             ) {
-
-        typedef Map<InjectionKey, String> as Injections;
 
         WebAppInfo with(
             String?     hostName   = Null,
@@ -119,7 +119,7 @@ package model {
         /**
          * Find a unique injection key for the given name.
          */
-       conditional InjectionKey uniqueKey(String name) {
+        conditional InjectionKey uniqueKey(String name) {
             InjectionKey? unique = Null;
             for (InjectionKey key : injections.keys) {
                 if (key.name == name) {

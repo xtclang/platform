@@ -50,6 +50,11 @@ class WebAppManagement {
         return Gateway.sendRequest(POST, $"/webapp/start/{deploymentName}");
     }
 
+    @Command("stop", "Stop the app")
+    String stop(String deploymentName) {
+        return Gateway.sendRequest(POST, $"/webapp/stop/{deploymentName}");
+    }
+
     @Command("app-log", "Show the app log file")
     String showLog(String deploymentName) {
         return Gateway.sendRequest(GET, $"/webapp/appLog/{deploymentName}");

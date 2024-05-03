@@ -245,7 +245,7 @@ service ModuleEndpoint
                     WebAppInfo? newInfo = Null;
 
                     import common.model.InjectionKey;
-                    import WebAppInfo.Injections;
+                    import common.model.Injections;
 
                     // adjust the injections map if necessary
                     InjectionKey[] injectionKeys;

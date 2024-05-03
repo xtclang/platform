@@ -11,10 +11,13 @@ import crypto.KeyStore;
 
 import web.security.Authenticator;
 
+import model.InjectionKey;
+import model.Injections;
+
 /**
  * The ResourceProvider used for hosted containers.
  */
-service HostInjector(Directory appHomeDir, Boolean platform)
+service HostInjector(Directory appHomeDir, Boolean platform, Injections injections)
         implements ResourceProvider {
 
     @Lazy FileStore store.calc() {
@@ -168,12 +171,17 @@ service HostInjector(Directory appHomeDir, Boolean platform)
         default:
             if (platform) {
                 @Inject ecstasy.reflect.Injector injector;
-
                 return (InjectedRef.Options opts) -> injector.inject(type, name, opts);
                 }
 
+            // see utils.collectDestringableInjections()
+            if (String value := injections.get(new InjectionKey(name, type.toString()))) {
+                assert type.is(Type<Destringable>) as $|Type is not Destringable: "{type}"
+                                                       ;
+                return new type.DataType(value);
+            }
             return (InjectedRef.Options address) ->
-                throw new Exception($|Invalid resource: type="{type}", name="{name}"
+                throw new Exception($|Invalid resource: name="{name}", type="{type}"
                                    );
         }
     }

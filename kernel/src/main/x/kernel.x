@@ -135,7 +135,7 @@ module kernel.xqiz.it {
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
             if (Container  container :=
-                    utils.createContainer(repository, hostModule, hostDir, buildDir, True, errors)) {
+                    utils.createContainer(repository, hostModule, hostDir, buildDir, True, [], errors)) {
                 hostManager = container.invoke("configure", Tuple:(accountsDir))[0].as(HostManager);
             } else {
                 return;
@@ -175,7 +175,7 @@ module kernel.xqiz.it {
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
-                    utils.createContainer(repository, uiModule, hostDir, buildDir, True, errors)) {
+                    utils.createContainer(repository, uiModule, hostDir, buildDir, True, [], errors)) {
 
                 container.invoke("configure",
                         Tuple:(server, hostName, keystore, realm, accountManager, hostManager, errors));

@@ -139,13 +139,13 @@ service HostManager(Directory accountsDir)
 
     @Override
     void removeWebHost(HttpServer httpServer, WebHost webHost) {
-        httpServer.removeRoute(webHost.info.hostName);
+        httpServer.removeRoute(webHost.appInfo.hostName);
 
         try {
             webHost.close();
         } catch (Exception ignore) {}
 
-        deployedWebHosts.remove(webHost.info.deployment);
+        deployedWebHosts.remove(webHost.appInfo.deployment);
     }
 
     @Override

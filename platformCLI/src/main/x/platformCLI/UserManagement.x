@@ -7,9 +7,19 @@ class UserManagement {
        return Gateway.sendRequest(GET, "/user/account");
     }
 
-    @Command("reset", "Reset the credentials and the session cookies")
-    void reset() {
-        String newPassword = Gateway.readPassword();
+    @Command("password", "Change the credentials and the session cookies")
+    void changePassword() {
+        String newPassword;
+        do {
+            @Inject Console console;
+
+            newPassword = console.readLine("New password:", suppressEcho=True);
+            if (newPassword == "") {
+                platformCLI.print("Cancelled");
+                return;
+            }
+
+        } while (newPassword != console.readLine("Confirm password:", suppressEcho=True));
 
         RequestOut request = Gateway.createRequest(PUT, "/user/password", newPassword, Text);
         (_, HttpStatus status) = Gateway.send(request);

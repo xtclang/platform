@@ -51,7 +51,7 @@ service UserEndpoint
     }
 
     /*
-     * Get the corrent account name.
+     * Get the current account name.
      */
     @Get("account")
     @LoginRequired

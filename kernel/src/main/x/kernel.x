@@ -147,7 +147,7 @@ module kernel.xqiz.it {
             @Inject HttpServer server;
             server.bind(new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort));
 
-            DBRealm    realm;
+            DBRealm realm;
             if (accountManager.initialized) {
                 realm = new DBRealm(names.PlatformRealm, connection);
             } else {

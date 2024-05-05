@@ -117,20 +117,31 @@ package model {
         }
 
         /**
-         * Find a unique injection key for the given name.
+         * Get an existing injection key for the given name and an optional type name.
+         *
+         * @return the existing key or an error message
          */
-        conditional InjectionKey uniqueKey(String name) {
-            InjectionKey? unique = Null;
-            for (InjectionKey key : injections.keys) {
-                if (key.name == name) {
-                    if (unique == Null) {
-                        unique = key;
-                    } else {
-                        return False;
+        InjectionKey|String findKey(String name, String type) {
+            if (type == "") {
+                InjectionKey? unique = Null;
+                for (InjectionKey key : injections.keys) {
+                    if (key.name == name) {
+                        if (unique == Null) {
+                            unique = key;
+                        } else {
+                            return $"Injection name {name.quoted()} is not unique";
+                        }
                     }
                 }
+                return unique == Null
+                        ? $"Invalid injection name: {name.quoted()}"
+                        : unique;
+            } else {
+                InjectionKey key = new InjectionKey(name, type);
+                return injections.contains(key)
+                        ? key
+                        : $"Invalid injection: \"{name}/{type}\"";
             }
-            return Nullable.notNull(unique);
         }
     }
 }

@@ -144,20 +144,14 @@ service WebAppEndpoint
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
-        InjectionKey key;
-        if (type == "") {
-            if (!(key := appInfo.uniqueKey(name))) {
-                return new SimpleResponse(Conflict, $"Injection name {name.quoted()} is not unique");
-            }
-        } else {
-            key = new InjectionKey(name, type);
+
+        InjectionKey|String key = appInfo.findKey(name, type);
+        if (key.is(String)) {
+            return new SimpleResponse(Conflict, key);
         }
 
-        if (String value := appInfo.injections.get(key)) {
-            return new SimpleResponse(OK, value);
-        } else {
-            return new SimpleResponse(NotFound);
-        }
+        assert String value := appInfo.injections.get(key);
+        return new SimpleResponse(OK, value);
     }
 
     /**
@@ -171,13 +165,9 @@ service WebAppEndpoint
             return appInfo;
         }
 
-        InjectionKey key;
-        if (type == "") {
-            if (!(key := appInfo.uniqueKey(name))) {
-                return new SimpleResponse(Conflict, $"Injection name {name.quoted()} is not unique");
-            }
-        } else {
-            key = new InjectionKey(name, type);
+        InjectionKey|String key = appInfo.findKey(name, type);
+        if (key.is(String)) {
+            return new SimpleResponse(Conflict, key);
         }
 
         Injections injections = appInfo.injections.put(key, value);
@@ -203,13 +193,9 @@ service WebAppEndpoint
             return appInfo;
         }
 
-        InjectionKey key;
-        if (type == "") {
-            if (!(key := appInfo.uniqueKey(name))) {
-                return new SimpleResponse(Conflict, $"Injection name {name.quoted()} is not unique");
-            }
-        } else {
-            key = new InjectionKey(name, type);
+        InjectionKey|String key = appInfo.findKey(name, type);
+        if (key.is(String)) {
+            return new SimpleResponse(Conflict, key);
         }
 
         Injections injections = appInfo.injections.remove(key);

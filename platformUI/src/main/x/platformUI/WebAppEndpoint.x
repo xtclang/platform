@@ -69,7 +69,14 @@ service WebAppEndpoint
         }
 
         // compute the full host name (e.g. "welcome.localhost.xqiz.it")
-        String hostName = $"{deployment}.{baseDomain}";
+        String hostName = $"{deployment}.{baseDomain}".toLowercase();
+
+        // make sure the name could be used as an "authority" part of the uri
+        try {
+            new net.Uri($"http://user@{hostName}:80/");
+        } catch (Exception e) {
+            return new SimpleResponse(Unauthorized, $"Invalid deployment name {deployment}.quoted()");
+        }
 
         if (httpServer.routes.keys.any(route -> route.host.toString() == hostName) ||
                 accountInfo.webApps.contains(deployment)) {

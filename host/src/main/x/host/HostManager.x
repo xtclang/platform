@@ -78,7 +78,7 @@ service HostManager(Directory accountsDir)
             manager.createCertificate(store, pwd, hostName, dName);
             return True;
         } catch (Exception e) {
-            errors.add($"Error: Failed to obtain a certificate for {hostName.quoted}: {e.message}");
+            errors.add($"Error: Failed to obtain a certificate for {hostName.quoted()}: {e.message}");
             return False;
         }
     }

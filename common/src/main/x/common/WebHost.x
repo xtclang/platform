@@ -132,7 +132,7 @@ service WebHost
 
         String moduleName = mainModule.qualifiedName;
         if (!utils.isWebModule(mainModule)) {
-            errors.add($"Error: Module {moduleName.quoted} is not a WebApp");
+            errors.add($"Error: Module {moduleName.quoted()} is not a WebApp");
             return False;
         }
 

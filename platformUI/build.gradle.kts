@@ -6,7 +6,7 @@ val common = project(":common")
 
 val libDir = "${rootProject.projectDir}/lib"
 
-val guiDir     = "${rootProject.projectDir}/../platform-ui"
+val guiDir     = "${rootProject.projectDir}/../xqizit-spa"
 val webContent = guiDir
 
 tasks.register("clean") {

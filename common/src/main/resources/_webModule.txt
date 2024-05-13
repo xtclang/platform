@@ -1,13 +1,14 @@
-module %appName%_web%qualifier%
-    {
+module %appName%_web%qualifier% {
     package web_   import web.xtclang.org;
     package xenia_ import xenia.xtclang.org;
 
     package hosted_ import %appName%%qualifier%;
 
-    xenia_.HttpHandler createHandler_(web_.http.HostInfo route)
-        {
+    xenia_.HttpHandler createHandler_(
+            web_.http.HostInfo route,
+            Map<Class<web_.WebService>, web_.WebService.Constructor> extras = []) {
+
         assert Module webApp := hosted_.isModuleImport(), webApp.is(web_.WebApp);
-        return new xenia_.HttpHandler(route, webApp);
-        }
+        return new xenia_.HttpHandler(route, webApp, extras);
     }
+}

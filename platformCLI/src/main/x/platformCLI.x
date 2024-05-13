@@ -26,7 +26,7 @@ module platformCLI.xqiz.it
         console.print("*** Platform Command Line Tool");
 
         Uri platformUri = new Uri(
-                readLine($"Enter platform server URL [{PlatformURL}]:", PlatformURL));
+                readLine($"Enter platform server URL [{PlatformURL}]: ", PlatformURL));
 
         String? scheme = platformUri.scheme;
         if (scheme == Null) {

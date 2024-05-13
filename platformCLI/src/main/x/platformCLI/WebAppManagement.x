@@ -61,7 +61,14 @@ class WebAppManagement {
     }
 
     @Command("unregister", "Unregister an app")
-    String unregister(String deploymentName) {
+    String unregister(String deploymentName, Boolean force = False) {
+        if (!force) {
+            String ack = readLine(
+                    "Are you sure? All the application data will be deleted. [yes/no]: ", "no");
+            if (!ack.startsWith("y")) {
+                return "";
+            }
+        }
         return Gateway.sendRequest(DELETE, $"/webapp/unregister/{deploymentName}");
     }
 }

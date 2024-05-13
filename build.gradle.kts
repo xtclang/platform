@@ -22,6 +22,7 @@ val build = tasks.register("build") {
     dependsOn(project(":platformDB") .tasks["build"])
     dependsOn(project(":platformUI") .tasks["build"])
     dependsOn(project(":platformCLI").tasks["build"])
+    dependsOn(project(":stub")       .tasks["build"])
 }
 
 tasks.register("run") {

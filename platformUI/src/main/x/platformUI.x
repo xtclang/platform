@@ -3,8 +3,9 @@
  */
 @WebApp
 module platformUI.xqiz.it {
-    package auth   import webauth.xtclang.org;
     package common import common.xqiz.it;
+
+    package auth   import webauth.xtclang.org;
     package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
     package web    import web.xtclang.org;
@@ -62,18 +63,22 @@ module platformUI.xqiz.it {
         @Inject Console console;
 
         for (AccountInfo accountInfo : accountManager.getAccounts()) {
-            for (WebAppInfo webAppInfo : accountInfo.webApps.values) {
-                if (webAppInfo.active) {
-                    if (WebHost webHost :=
-                        hostManager.createWebHost(server, accountInfo.name, webAppInfo,
-                                accountManager.decrypt(webAppInfo.password), errors)) {
-                        console.print($|Info: Initialized deployment: "{webAppInfo.hostName}" \
-                                       |of "{webAppInfo.moduleName}"
+            String accountName = accountInfo.name;
+            for (WebAppInfo appInfo : accountInfo.webApps.values) {
+                if (appInfo.active) {
+                    if (hostManager.createWebHost(server, accountName, appInfo,
+                            accountManager.decrypt(appInfo.password), errors)) {
+                        console.print($|Info: Initialized deployment: "{appInfo.hostName}" \
+                                       |of "{appInfo.moduleName}"
                                      );
+                    } else {
+                        accountManager.addOrUpdateWebApp(accountName, appInfo.updateStatus(False));
+                        hostManager.addStubRoute(server, accountName, appInfo);
+                        console.print($|Warning: Failed to initialize deployment: "{appInfo.hostName}" \
+                                       |of "{appInfo.moduleName}"
+                                     );
+                        errors.reportAll(msg -> console.print(msg));
                     }
-                    // there must be an error logged
-                } else {
-                    ControllerConfig.addStubRoute(webAppInfo.hostName);
                 }
             }
         }
@@ -143,16 +148,6 @@ module platformUI.xqiz.it {
             this.baseDomain     = baseDomain;
             this.keystore       = keystore;
             this.realm          = realm;
-        }
-
-        /**
-         * Add a stub route for the specified deployment.
-         */
-        void addStubRoute(String hostName) {
-            StubHandler handler = new StubHandler(/spa/pages/not-deployed.html, ["%deployment%"=hostName]);
-
-            httpServer.addRoute(hostName, handler, keystore,
-                    names.PlatformTlsKey, names.CookieEncryptionKey);
         }
     }
 }

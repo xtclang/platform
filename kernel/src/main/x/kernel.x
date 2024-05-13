@@ -144,9 +144,6 @@ module kernel.xqiz.it {
             // create a container for the platformUI controller and configure it
             console.print($"Info: Starting the platform UI controller...");
 
-            @Inject HttpServer server;
-            server.bind(new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort));
-
             DBRealm realm;
             if (accountManager.initialized) {
                 realm = new DBRealm(names.PlatformRealm, connection);
@@ -176,6 +173,9 @@ module kernel.xqiz.it {
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
                     utils.createContainer(repository, uiModule, hostDir, buildDir, True, [], errors)) {
+
+                @Inject HttpServer server;
+                server.bind(new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort));
 
                 container.invoke("configure",
                         Tuple:(server, hostName, keystore, realm, accountManager, hostManager, errors));

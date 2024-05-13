@@ -89,19 +89,22 @@ package model {
             String     moduleName,          // qualified
             String     hostName,            // the full host name (e.g. "shop.acme.com.xqiz.it")
             String     password,            // an encrypted password to the keystore for this deployment
-            Boolean    active     = False,
+            String     provider   = "self", // the name of the certificate provider
+            Boolean    active     = False,  // if Treu, the app should be automatically started
             Injections injections = [],     // values for Destringable injection types
             ) {
 
         WebAppInfo with(
             String?     hostName   = Null,
             String?     password   = Null,
+            String?     provider   = Null,
             Boolean?    active     = Null,
             Injections? injections = Null) {
 
             return new WebAppInfo(deployment, moduleName,
                 hostName   ?: this.hostName,
                 password   ?: this.password,
+                provider   ?: this.provider,
                 active     ?: this.active,
                 injections ?: this.injections);
         }

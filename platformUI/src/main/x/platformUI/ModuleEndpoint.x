@@ -265,7 +265,8 @@ service ModuleEndpoint
                     // redeploy if necessary
                     if (info.active && !hostManager.createWebHost(httpServer, accountName, info,
                             accountManager.decrypt(info.password), errors)) {
-                        webHost.log($"Error: Failed to redeploy {deployment.quoted()}; reason: {errors}\n");
+                        String hostName = info.hostName;
+                        webHost.log($"Error: Failed to redeploy {hostName.quoted()}; reason: {errors}\n");
 
                         newInfo = info.updateStatus(False);
                     }

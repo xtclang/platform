@@ -5,6 +5,7 @@ import ecstasy.reflect.ModuleTemplate;
 
 import ecstasy.text.Log;
 
+import crypto.CryptoPassword;
 import crypto.Decryptor;
 
 import web.HttpStatus;
@@ -12,6 +13,7 @@ import web.HttpStatus;
 import web.http.HostInfo;
 
 import xenia.HttpHandler;
+import xenia.HttpHandler.CatalogExtras;
 import xenia.HttpServer;
 import xenia.HttpServer.Handler;
 import xenia.HttpServer.RequestInfo;
@@ -27,13 +29,15 @@ service WebHost
         implements Handler {
 
     construct (HostInfo route, ModuleRepository repository, String account, WebAppInfo appInfo,
-               Directory homeDir, Directory buildDir) {
+               CryptoPassword pwd, CatalogExtras extras, Directory homeDir, Directory buildDir) {
         construct AppHost(appInfo.moduleName, homeDir);
 
         this.route      = route;
         this.repository = repository;
         this.account    = account;
         this.appInfo    = appInfo;
+        this.pwd        = pwd;
+        this.extras     = extras;
         this.buildDir   = buildDir;
     }
 
@@ -51,6 +55,19 @@ service WebHost
      * The web application details.
      */
     WebAppInfo appInfo;
+
+    /**
+     * The password to use for the keystore.
+     */
+    CryptoPassword pwd;
+
+    /**
+     * A map of WebService classes for processing requests for the paths not handled by the web app
+     * itself.
+     *
+     * @see [HttpHandler]
+     */
+    CatalogExtras extras;
 
     /**
      * The build directory.
@@ -147,7 +164,7 @@ service WebHost
                 try {
                     Tuple       result  = container.invoke("createHandler_", Tuple:(route));
                     HttpHandler handler = result[0].as(HttpHandler);
-                    handler.configure(decryptor? : assert);
+                    handler.configure(decryptor? : assert as "Decryptor is missing");
 
                     this.container = container;
                     this.handler   = handler;
@@ -159,7 +176,7 @@ service WebHost
 
                     return True, handler;
                 } catch (Exception e) {
-                    errors.add(e.toString());
+                    errors.add(e.message);
                     container.kill();
                 }
             }

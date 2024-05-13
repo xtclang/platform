@@ -1,14 +1,11 @@
 import ecstasy.mgmt.ModuleRepository;
 
-import ecstasy.reflect.ModuleTemplate;
-
 import common.ErrorLog;
 import common.WebHost;
 
 import common.model.AccountInfo;
 import common.model.InjectionKey;
 import common.model.Injections;
-import common.model.ModuleInfo;
 import common.model.WebAppInfo;
 
 import common.utils;
@@ -61,8 +58,9 @@ service WebAppEndpoint
      *  - many webapps can be registered from the same module with a different deployment
      *  - a deployment has one and only one webapp
      */
-    @Post("/register{/deployment}{/moduleName}")
-    (WebAppInfo | SimpleResponse) register(String deployment, String moduleName) {
+    @Post("/register{/deployment}{/moduleName}{/provider}")
+    (WebAppInfo | SimpleResponse) register(String deployment, String moduleName,
+                                           String provider = "self") {
         AccountInfo accountInfo;
         if (!(accountInfo := accountManager.getAccount(accountName))) {
             return new SimpleResponse(Unauthorized, $"Account '{accountName}' is missing");
@@ -89,36 +87,62 @@ service WebAppEndpoint
 
         Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
         ModuleRepository accountRepo = utils.getModuleRepository(libDir);
-        InjectionKey[]   injectionKeys;
-        if (!(injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName))) {
+        Injections       injections;
+
+        if (InjectionKey[] injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName)) {
+            if (injectionKeys.empty) {
+                injections = [];
+            } else {
+                injections = new ListMap();
+                for (InjectionKey key : injectionKeys) {
+                    injections.put(key, "");
+                }
+            }
+        } else {
             return new SimpleResponse(Conflict, $"Failed to load module: {moduleName.quoted()}");
         }
 
         // create a random password to be used to access the webapp's keystore
         @Inject Random random;
-        String         encrypted = accountManager.encrypt(random.int128().toString());
+        String         encrypted = accountManager.encrypt(random.uint128().toString());
         CryptoPassword cryptoPwd = accountManager.decrypt(encrypted);
 
+        WebAppInfo appInfo = new WebAppInfo(
+                deployment, moduleName, hostName, encrypted, provider, False, injections);
+
+        // the deployment is not active; the "stub" will serve the ACME protocol challenge requests
+        // as well as give them something better than "HttpStatus 404: Page Not Found" to look at
+        hostManager.addStubRoute(httpServer, accountName, appInfo, cryptoPwd);
+
         ErrorLog errors = new ErrorLog();
-        if (!hostManager.ensureCertificate(accountName, deployment, hostName, cryptoPwd, errors)) {
+        if (!hostManager.ensureCertificate(accountName, appInfo, cryptoPwd, errors)) {
+            httpServer.removeRoute(hostName);
             return new SimpleResponse(Conflict, errors.collectErrors());
         }
 
-        Injections injections = [];
-        if (!injectionKeys.empty) {
-            injections = new ListMap();
-            for (InjectionKey key : injectionKeys) {
-                injections.put(key, "");
-            }
-        }
-        WebAppInfo appInfo =
-                new WebAppInfo(deployment, moduleName, hostName, encrypted, False, injections);
         accountManager.addOrUpdateWebApp(accountName, appInfo);
 
-        // the deployment has been registered, but not yet started; give them something better
-        // than "HttpStatus 404: Page Not Found" to look at
-        ControllerConfig.addStubRoute(hostName);
         return appInfo.redact();
+    }
+
+    /**
+     * Handle a request to unregister a deployment and remove all the associated data.
+     */
+    @Delete("/unregister{/deployment}")
+    SimpleResponse unregister(String deployment) {
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+
+        removeWebHost(deployment);
+        httpServer.removeRoute(appInfo.hostName);
+
+        hostManager.removeDeployment(accountName, deployment, appInfo.hostName,
+                accountManager.decrypt(appInfo.password));
+        accountManager.removeWebApp(accountName, deployment);
+
+        return new SimpleResponse(OK);
     }
 
     /**
@@ -211,24 +235,6 @@ service WebAppEndpoint
     }
 
     /**
-     * Handle a request to unregister a deployment.
-     */
-    @Delete("/unregister{/deployment}")
-    SimpleResponse unregister(String deployment) {
-        SimpleResponse response = stopWebApp(deployment);
-        if (response.status != OK) {
-            return response;
-        }
-
-        removeWebHost(deployment);
-
-        hostManager.removeDeployment(accountName, deployment);
-        accountManager.removeWebApp(accountName, deployment);
-
-        return new SimpleResponse(OK);
-    }
-
-    /**
      * Handle a request to start a deployment.
      */
     @Post("/start{/deployment}")
@@ -238,18 +244,24 @@ service WebAppEndpoint
             return appInfo;
         }
 
+        // make sure all injections are specified
+        if (appInfo.injections.values.any(v -> v == "")) {
+            return new SimpleResponse(Conflict, "Unspecified injections");
+        }
+
         ErrorLog errors = new ErrorLog();
         WebHost  webHost;
+
+        CreateWebHost:
         if (!(webHost := hostManager.getWebHost(deployment))) {
-            // make sure all injections are specified
-            if (appInfo.injections.values.any(v -> v == "")) {
-                return new SimpleResponse(Conflict, "Unspecified injections");
-            }
-            // create a new WebHost
-            if (!(webHost := hostManager.createWebHost(httpServer, accountName, appInfo,
-                    accountManager.decrypt(appInfo.password), errors))) {
-                return new SimpleResponse(Conflict, errors.collectErrors());
-            }
+            CryptoPassword pwd = accountManager.decrypt(appInfo.password);
+
+            if (hostManager.ensureCertificate(accountName, appInfo, pwd, errors),
+                webHost := hostManager.createWebHost(httpServer, accountName, appInfo, pwd, errors)) {
+                    break CreateWebHost;
+                }
+            hostManager.addStubRoute(httpServer, accountName, appInfo);
+            return new SimpleResponse(Conflict, errors.collectErrors());
         }
 
         if (webHost.activate(True, errors)) {
@@ -277,7 +289,8 @@ service WebAppEndpoint
             accountManager.addOrUpdateWebApp(accountName, appInfo.updateStatus(False));
 
             // leave the webapp stub active
-            ControllerConfig.addStubRoute(appInfo.hostName);
+            hostManager.addStubRoute(httpServer, accountName, appInfo,
+                    accountManager.decrypt(appInfo.password));
             return new SimpleResponse(OK);
         } else {
             if (appInfo.active) {

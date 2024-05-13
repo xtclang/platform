@@ -16,8 +16,12 @@ import crypto.CertificateManager;
 import crypto.CryptoPassword;
 import crypto.KeyStore;
 
+import web.WebApp;
+import web.WebService;
+
 import web.http.HostInfo;
 
+import xenia.HttpHandler;
 import xenia.HttpServer;
 
 /**
@@ -36,6 +40,11 @@ service HostManager(Directory accountsDir)
      */
     private Map<String, WebHost> deployedWebHosts = new HashMap();
 
+    /**
+     * The key store name to use.
+     */
+    static String KeyStoreName = "keystore.p12";
+
 
     // ----- common.HostManager API ----------------------------------------------------------------
 
@@ -50,14 +59,17 @@ service HostManager(Directory accountsDir)
     }
 
     @Override
-    Boolean ensureCertificate(String accountName, String deployment, String hostName,
-                              CryptoPassword pwd, Log errors) {
-        Directory accountDir = utils.ensureAccountHomeDirectory(accountsDir, accountName);
-        Directory homeDir    = accountDir.dirFor($"deploy/{deployment}").ensure();
-        File      store      = homeDir.fileFor(KeyStoreName);
+    Boolean ensureCertificate(String accountName, WebAppInfo appInfo, CryptoPassword pwd, Log errors) {
+
+        (Directory homeDir, Boolean newHome) =
+                ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
+
+        String  hostName = appInfo.hostName;
+        File    store    = homeDir.fileFor(KeyStoreName);
+        Boolean newStore = !store.exists;
 
         try {
-            if (store.exists) {
+            if (!newStore) {
                 @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
 
                 if (Certificate cert := keystore.getCertificate(hostName), cert.valid) {
@@ -66,10 +78,9 @@ service HostManager(Directory accountsDir)
             }
 
             // create or renew the certificate
-            @Inject CertificateManager manager;
-
-            if (!store.exists) {
-                // create a cookie encryption key
+            @Inject(opts=appInfo.provider) CertificateManager manager;
+            if (newStore) {
+                // create a new store with a cookie encryption key
                 manager.createSymmetricKey(store, pwd, names.CookieEncryptionKey);
             }
 
@@ -78,9 +89,48 @@ service HostManager(Directory accountsDir)
             manager.createCertificate(store, pwd, hostName, dName);
             return True;
         } catch (Exception e) {
+            try {
+                if (newStore) {
+                    store.delete();
+                }
+
+                Boolean keepLogs = True; // TODO soft code?
+                if (newHome && !keepLogs) {
+                    homeDir.deleteRecursively();
+                }
+            } catch (Exception ignore) {}
+
             errors.add($"Error: Failed to obtain a certificate for {hostName.quoted()}: {e.message}");
             return False;
         }
+    }
+
+    @Override
+    void addStubRoute(HttpServer httpServer, String accountName, WebAppInfo appInfo,
+                      CryptoPassword? pwd = Null) {
+        Directory homeDir  = ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
+        File      store    = homeDir.fileFor(KeyStoreName);
+        String    hostName = appInfo.hostName;
+
+        assert Module stubApp := stub.isModuleImport(), stubApp.is(WebApp);
+
+        HttpHandler.CatalogExtras extras =
+            [
+            stub.Unavailable   = () -> new stub.Unavailable(["%deployment%"=hostName]),
+            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor("_temp").ensure())
+            ];
+
+        HttpHandler handler = new HttpHandler(new HostInfo(hostName), stubApp, extras);
+        if (store.exists && pwd != Null) {
+            try {
+                @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+
+                httpServer.addRoute(hostName, handler, keystore,
+                    tlsKey=hostName, cookieKey = names.CookieEncryptionKey);
+                return;
+            } catch (Exception ignore) {}
+        }
+        httpServer.addRoute(hostName, handler);
     }
 
     @Override
@@ -92,15 +142,13 @@ service HostManager(Directory accountsDir)
     conditional WebHost createWebHost(HttpServer httpServer, String accountName,
                                       WebAppInfo webAppInfo, CryptoPassword pwd, Log errors) {
         if (deployedWebHosts.contains(webAppInfo.deployment)) {
-                errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
-                          );
+            errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
+                      );
             return False;
         }
 
-        Directory accountDir = ensureAccountHomeDirectory(accountName);
-        Directory libDir     = ensureAccountLibDirectory(accountName);
-        Directory buildDir   = accountDir.dirFor("build").ensure();
-        Directory hostDir    = accountDir.dirFor("deploy").ensure();
+        Directory libDir   = ensureAccountLibDirectory(accountName);
+        Directory buildDir = ensureAccountBuildDirectory(accountName);
 
         @Inject("repository") ModuleRepository coreRepo;
 
@@ -108,7 +156,7 @@ service HostManager(Directory accountsDir)
         ModuleRepository   repository = new LinkedRepository(baseRepos.freeze(True));
 
         String    deployment = webAppInfo.deployment;
-        Directory homeDir    = hostDir.dirFor(deployment).ensure();
+        Directory homeDir    = ensureDeploymentHomeDirectory(accountName, deployment);
         File      store      = homeDir.fileFor(KeyStoreName);
 
         KeyStore keystore;
@@ -122,24 +170,27 @@ service HostManager(Directory accountsDir)
             return False;
         }
 
-        String hostName = webAppInfo.hostName;
-        if (!ensureCertificate(accountName, deployment, hostName, pwd, errors)) {
-            return False;
-        }
+        // TODO: where to get the ports from; should that be a part of WebInfo?
+        String   hostName                = webAppInfo.hostName;
+        HostInfo route                   = new HostInfo(hostName);
+        HttpHandler.CatalogExtras extras =
+            [
+            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor("_temp").ensure())
+            ];
 
-        HostInfo route   = new HostInfo(hostName);
-        WebHost  webHost = new WebHost(route, repository, accountName, webAppInfo, homeDir, buildDir);
-
+        WebHost webHost = new WebHost(route, repository, accountName, webAppInfo, pwd, extras,
+                                      homeDir, buildDir);
         deployedWebHosts.put(deployment, webHost);
-
-        httpServer.addRoute(route, webHost, keystore, hostName, names.CookieEncryptionKey);
+        httpServer.addRoute(hostName, webHost, keystore,
+                tlsKey=hostName, cookieKey = names.CookieEncryptionKey);
 
         return True, webHost;
     }
 
     @Override
     void removeWebHost(HttpServer httpServer, WebHost webHost) {
-        httpServer.removeRoute(webHost.appInfo.hostName);
+        // leave the webapp stub active
+        addStubRoute(httpServer, webHost.account, webHost.appInfo, webHost.pwd);
 
         try {
             webHost.close();
@@ -149,15 +200,33 @@ service HostManager(Directory accountsDir)
     }
 
     @Override
-    void removeDeployment(String accountName, String deployment) {
-
-        // TODO: revoke the certificate?
-
+    void removeDeployment(String accountName, String deployment,
+                          String hostName, CryptoPassword pwd) {
         // remove the deployment data
-        Directory accountDir = utils.ensureAccountHomeDirectory(accountsDir, accountName);
-        Directory homeDir    = accountDir.dirFor($"deploy/{deployment}");
+        Directory homeDir = ensureDeploymentHomeDirectory(accountName, deployment);
+        File      store   = homeDir.ensure().fileFor(KeyStoreName);
+
+        try {
+            // revoke the certificate (in case of a future hostName reuse)
+            if (store.exists) {
+                @Inject CertificateManager manager;
+                manager.revokeCertificate(store, pwd, hostName);
+                store.delete();
+            }
+        } catch (Exception ignore) {}
+
+        Boolean keepLogs = True; // TODO soft code?
         if (homeDir.exists) {
-            homeDir.deleteRecursively();
+            if (keepLogs) {
+//                TODO GG: implement filesRecursively()
+//                for (File file : homeDir.filesRecursively()) {
+//                    if (!file.name.endsWith(".log")) {
+//                        file.delete();
+//                    }
+                // TODO: remove empty directories
+            } else {
+                homeDir.deleteRecursively();
+            }
         }
     }
 
@@ -177,9 +246,4 @@ service HostManager(Directory accountsDir)
         }
         return True;
     }
-
-
-    // ----- helpers -------------------------------------------------------------------------------
-
-    static String KeyStoreName = "keystore.p12";
 }

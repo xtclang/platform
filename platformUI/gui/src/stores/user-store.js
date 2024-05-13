@@ -9,7 +9,7 @@ export const useUserStore = defineStore('user', {
   }),
 
   getters: {
-    hasUser: (state) => state.user != null
+    hasUser: (state) => state.user
   },
 
   actions: {

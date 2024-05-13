@@ -33,7 +33,8 @@ echo "*** Creating a CSR:
 #eval "$cmd"
 
 # send the request to Let's Encrypt
-# add the following line for staging:  --server https://acme-staging-v02.api.letsencrypt.org/directory\
+# add the following line for staging:
+#   --staging or --server https://acme-staging-v02.api.letsencrypt.org/directory
 
 cmd="certbot certonly --manual --preferred-challenges dns\
   --config-dir config --work-dir work --logs-dir logs\

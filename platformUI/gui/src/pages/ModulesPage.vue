@@ -250,7 +250,7 @@ export default defineComponent({
     watch(
       () => userStore.user,
       () => {
-        if (userStore.user != undefined) {
+        if (userStore.hasUser) {
           moduleStore.updateModules();
         }
       }

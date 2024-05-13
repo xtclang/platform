@@ -195,7 +195,10 @@ export default defineComponent({
 
     onBeforeMount(() => {
       intervalId = setInterval(
-          () => webAppStore.updateWebApps(),
+          () => {
+            if (userStore.hasUser) {
+                webAppStore.updateWebApps()
+            }},
           5000);
 
       if (userStore.hasUser) {
@@ -235,7 +238,7 @@ export default defineComponent({
     watch(
       () => userStore.user,
       () => {
-        if (userStore.user != undefined) {
+        if (userStore.hasUser) {
           webAppStore.updateWebApps();
         }
       }

@@ -11,6 +11,10 @@
 
 *** scp -r ~/Development/platform/lib/* ops@linux31:~/xqiz.it/lib
 
+# ensure that "openssl" and "keytool" are installed
+# install the "certbot"
+    sudo apt install certbot
+
 # obtained a certificate for host.xqiz.it
 ~/Development/platform/bin/addLocalCert.sh host $password
 

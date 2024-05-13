@@ -159,11 +159,9 @@ package utils {
         return new HostInjector(deployDir, False, injections) {
             @Override
             Supplier getResource(Type type, String name) {
-                if (type.is(Type<RootSchema>) || type.is(Type<Connection>)) {
-                    Type schemaType;
-                    if (type.is(Type<RootSchema>)) {
-                        schemaType = type;
-                    } else {
+                if (type.is(Type<RootSchema>)) {
+                    Type schemaType = type;
+                    if (type.is(Type<Connection>)) {
                         assert schemaType := type.resolveFormalType("Schema");
                     }
 

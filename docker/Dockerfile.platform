@@ -1,0 +1,65 @@
+FROM openjdk:21-jdk-slim-bookworm
+
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+ENV DEBIAN_FRONTEND=noninteractive
+
+ARG XTC_USER=xtc
+ARG XTC_USER_HOME=/home/$XTC_USER
+
+ENV XTC_USER=$XTC_USER
+ENV XTC_USER_HOME=$XTC_USER_HOME
+ENV XQIZIT_HOME=$XTC_USER_HOME/xqiz.it
+ENV PLATFORM_HOME=$XQIZIT_HOME/platform
+
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    iputils-ping jq sudo wget curl git emacs-nox
+
+COPY docker/scripts/*.sh /usr/local/bin
+
+RUN useradd -ms /bin/bash $XTC_USER \
+    && passwd -d $XTC_USER \
+    && passwd -d root \
+    && usermod -aG sudo $XTC_USER \
+    && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
+    && chown -R $XTC_USER:$XTC_USER $XTC_USER_HOME
+
+USER $XTC_USER
+
+RUN mkdir -p $PLATFORM_HOME
+RUN mkdir -p $XTC_USER_HOME/lib/xdk
+
+# Copy the local build (todo could also bind mount it)
+COPY build/platform/* $XTC_USER_HOME/lib
+COPY build/xtc/xdk/lib/* $XTC_USER_HOME/lib/xdk
+
+# We should probably use a real XDK,
+
+# From README.md create: a self-signed certificate for the platform web server. For example:
+ARG PLATFORM_PASSWORD
+ENV PLATFORM_PASSWORD=$PLATFORM_PASSWORD
+
+RUN keytool \
+    -genkeypair \
+    -alias platform \
+    -keyalg RSA \
+    -keysize 2048 \
+    -validity 365 \
+    -dname "OU=Platform, O=${XTC_USER}, C=US" \
+    -keystore ${PLATFORM_HOME}/certs.p12 \
+    -storetype PKCS12 \
+    -storepass $PLATFORM_PASSWORD
+
+# From README.md: Add a symmetric key to encode the cookies:
+RUN keytool \
+    -genseckey \
+    -alias cookies \
+    -keyalg AES \
+    -keysize 256 \
+    -keystore ${PLATFORM_HOME}/certs.p12 \
+    -storetype PKCS12 \
+    -storepass $PLATFORM_PASSWORD
+
+WORKDIR $XTC_USER_HOME
+
+ENTRYPOINT ["entrypoint.sh"]

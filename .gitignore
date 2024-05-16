@@ -1,5 +1,6 @@
-# Logs and databases #
-######################
+#
+# Logs and databases 
+#
 *.log
 *.out
 *.tmp
@@ -7,8 +8,9 @@
 *.sql
 *.sqlite
 
+#
 # OS generated files #
-######################
+#
 .DS_Store
 .DS_Store?
 ._*
@@ -17,20 +19,41 @@
 ehthumbs.db
 Thumbs.db
 
-# build directory #
-###################
+#
+# Build directories
+#
 build/
+
+#
+# Module aggregation directory:
+#
+# While we can still collect everyting into a common lib folder, as a final build step,
+# if we want, the 'standard' Maven style way would be to just build and run the project.
+# Every component declaratively states its dependencies to build and/or run, and any
+# task using these dependencies gets them lazily resolved, and exactly what it needs,
+# nothing more. We will likely implement a distribution config for XTC applications
+# like this, of course, so that the old "lib" folder is some kind of versioned
+# publishable artifact)
+#
 lib/
 
-# xdk directory #
-###################
+#
+# XDK directory
+#
 xdk/
 
-# user-specific project files #
-###############################
+#
+# User-specific project files
+#
 prj/
 .idea/
 
-# Gradle-specific project files #
-#################################
+#
+# Gradle caches
+#
 .gradle
+
+#
+# Local environment fike for docker/docker compose that may contain secrets
+#
+.env.local

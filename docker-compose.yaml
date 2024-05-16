@@ -1,0 +1,77 @@
+#
+# Platform independent Docker compose configuration that syncs out a git branch
+# (master is default) and/or a tag, and produced distribution installers for it.
+# This is equivalent to ./gradlew installDist, where all platform archives,
+# including Windows exe files, are built in the container.
+#
+# The build volume persists, and is rebuilt whenever it is detected that we
+# want to build a branch at a change that doesn't correspond to the last build
+# state. The cache volume also persiscat ~ts, so significant info is reused.
+# 
+
+version: '3.8'
+
+#
+# Set up secrets from the default locations, so that we can do things like
+# publications, artifact signing or other Gradle operations, where sensitive
+# information is stored outside the repository.
+#
+secrets:
+  gradle_properties:
+    file: ~/.gradle/gradle.properties
+
+# gradle_cache is placed under /.root
+# we also add a platform volume to reuse ~/xqiz.it
+volumes:
+  persistent:
+
+services:
+  # TODO: Create a platform that is more "dev container" style, and
+  platform:
+    image: ghcr.io/xtclang/xdk-platform:latest
+    env_file:
+      - .env.local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.platform
+      args:
+        PLATFORM_PASSWORD: ${PLATFORM_PASSWORD:-password}
+    hostname: ${PLATFORM_HOSTNAME:-xtc-platform.local.xqiz.it}
+    ports:
+      - "8080:8080"
+      - "8090:8090"
+
+  #
+  # Container that grabs, updates and persists source code for 'platform'
+  # from GitHub, and enabled cached builds in a container.
+  #
+  # A third option would be to start a dev container where the root directory
+  # of the platform project just is symlinked, so you can build and test yourself
+  # in a normal environment but get deployed elsewhere.
+  #
+  dev:
+    image: ghcr.io/xtclang/xdk-platform-dev:latest
+    depends_on:
+      - platform
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.platform.dev
+      args:
+        #PLATFORM_PASSWORD: ${PLATFORM_PASSWORD:-password}
+        GITHUB_BRANCH_PLATFORM: $GITHUB_BRANCH_PLATFORM
+    environment:
+      DEV_CONTAINER: 1
+    secrets:
+      - gradle_properties
+    volumes:
+      - persistent:/persistent
+    env_file:
+      - .env.local
+    hostname: ${PLATFORM_HOSTNAME:-xtc-platform.local-dev.xqiz.it}
+    #extra_hosts:
+    #  - "xtc-platform.localhost.xqiz.it:127.0.0.1"
+    #  - "xtc-platform.xqiz.it:127.0.0.10"
+    ports:
+        - "8080:8080"
+        - "8090:8090"
+    entrypoint: ['entrypoint.sh']

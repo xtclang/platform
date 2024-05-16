@@ -1,0 +1,27 @@
+#
+# This is the only file in the project where we keep version information and artifact
+# names for our plugins and dependencies.
+#
+
+[versions]
+xdk = "0.4.43"
+
+gradle-node = "7.0.1"
+node = "20.10.0"
+npm = "10.4.0"
+yarn = "1.22.21"
+tasktree = "2.1.1"
+
+[plugins]
+xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xdk" }
+node = { id = "com.github.node-gradle.node", version.ref = "gradle-node" }
+
+# taskTree is a helper that we can use to view task dependencies
+#   for example: ./gradlew run taskTree, or ./gradle run taskTree --with-inputs --with-outputs
+tasktree = { id = "com.dorongold.task-tree", version.ref = "tasktree" }
+
+[libraries]
+xdk = { group = "org.xtclang", name = "xdk", version.ref = "xdk" }
+
+[bundles]
+# No bundles so far

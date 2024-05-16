@@ -32,6 +32,6 @@ package names {
     /**
      * The platform landing page URI.
      */
-    static String PlatformUri = "xtc-platform.localhost.xqiz.it";
+    static String PlatformUri = "xtc-platform2.localhost.xqiz.it";
 
 }

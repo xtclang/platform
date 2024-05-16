@@ -43,7 +43,7 @@ module platformUI.xqiz.it {
      */
     void configure(HttpServer server, String hostAddr, KeyStore keystore, Realm realm,
                    AccountManager accountManager, HostManager hostManager, ErrorLog errors) {
-        // the 'hostAddr' is a full URI of the platform server, e.g. "xtc-platform.localhost.xqiz.it";
+        // the 'hostAddr' is a full URI of the platform server, e.g. "xtc-platform2.localhost.xqiz.it";
         // we need to extract the base domain ("localhost.xqiz.it")
         String baseDomain;
         if (Int dot := hostAddr.indexOf('.')) {

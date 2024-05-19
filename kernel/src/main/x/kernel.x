@@ -94,9 +94,11 @@ module kernel.xqiz.it {
 
         ErrorLog errors = new ErrorLog();
         try {
-            String hostName  = config.getOrDefault("hostName",  names.PlatformUri).as(String);
-            UInt16 httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
-            UInt16 httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
+            String      hostName  = config.getOrDefault("hostName",  names.PlatformUri).as(String);
+            UInt16      httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
+            UInt16      httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
+            IPAddress[] proxies   = config.getOrDefault("proxies",   [])  .as(Doc[])
+                                          .map(addr -> new IPAddress(addr.as(String))).toArray();
 
             File storeFile = platformDir.fileFor(names.PlatformKeyStore);
             if (!storeFile.exists)
@@ -174,8 +176,15 @@ module kernel.xqiz.it {
             if (Container  container :=
                     utils.createContainer(repository, uiModule, hostDir, buildDir, True, [], errors)) {
 
+                import HttpServer.ProxyCheck;
+
+                HostInfo   binding   = new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort);
+                ProxyCheck isTrusted = proxies.empty
+                        ? HttpServer.NoTrustedProxies
+                        : (ip -> proxies.contains(ip));
+
                 @Inject HttpServer server;
-                server.bind(new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort));
+                server.bind(binding, isTrusted);
 
                 container.invoke("configure",
                         Tuple:(server, hostName, keystore, realm, accountManager, hostManager, errors));

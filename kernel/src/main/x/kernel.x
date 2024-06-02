@@ -101,8 +101,21 @@ module kernel.xqiz.it {
                                           .map(addr -> new IPAddress(addr.as(String))).toArray();
 
             File storeFile = platformDir.fileFor(names.PlatformKeyStore);
-            if (!storeFile.exists)
-                {
+            if (storeFile.exists) {
+                // check if both cookie and password encryption keys exist
+                @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
+                Boolean cookieKey   = keystore.getKey(names.CookieEncryptionKey);
+                Boolean passwordKey = keystore.getKey(names.PasswordEncryptionKey);
+                if (!cookieKey || !passwordKey) {
+                    @Inject CertificateManager manager;
+                    if (!cookieKey) {
+                        manager.createSymmetricKey(storeFile, password, names.CookieEncryptionKey);
+                    }
+                    if (!passwordKey) {
+                        manager.createSymmetricKey(storeFile, password, names.PasswordEncryptionKey);
+                    }
+                }
+            } else {
                 console.print($|Warning: *** The platform keystore does not exist; creating a new one\
                                | with a self-signed certificate for the platform web server.
                                |Warning: *** The password you have provided will be used to encrypt it.

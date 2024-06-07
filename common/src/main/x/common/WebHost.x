@@ -162,7 +162,7 @@ service WebHost
                         repository, webTemplate, homeDir, buildDir, False, appInfo.injections, errors)) {
 
                 try {
-                    Tuple       result  = container.invoke("createHandler_", Tuple:(route));
+                    Tuple       result  = container.invoke("createHandler_", Tuple:(route, extras));
                     HttpHandler handler = result[0].as(HttpHandler);
                     handler.configure(decryptor? : assert as "Decryptor is missing");
 

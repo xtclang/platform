@@ -2,6 +2,7 @@ import ecstasy.text.Log;
 
 import common.model.WebAppInfo;
 
+import crypto.Certificate;
 import crypto.CryptoPassword;
 
 import xenia.HttpServer;
@@ -50,7 +51,7 @@ interface HostManager {
 
     /**
      * Ensure there is a keystore for the specified web app that contains a private key, a
-     * certificate for the specified host name and a symmetrical key for cookie encryption.
+     * certificate for the application host name and a symmetrical key for cookie encryption.
      *
      * @param accountName  the account the web app belongs to
      * @param webAppInfo   the web application info
@@ -58,9 +59,10 @@ interface HostManager {
      * @param errors       the logger to report errors to
      *
      * @return True iff the certificate exists and is valid; otherwise an error is logged
-     * @return (conditional) the keystore file
+     * @return (conditional) the certificate
      */
-    Boolean ensureCertificate(String accountName, WebAppInfo appInfo, CryptoPassword pwd, Log errors);
+    conditional Certificate ensureCertificate(String accountName, WebAppInfo appInfo,
+                                              CryptoPassword pwd, Log errors);
 
     /**
      * Add a stub route for the specified web app.

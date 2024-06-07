@@ -48,7 +48,7 @@ module stub.xqiz.it {
     /**
      * The WebService for ACME protocol requests from "Let's Encrypt".
      */
-    @WebService("/.wellKnown/acmeChallenge")
+    @WebService("/.well-known/acme-challenge")
     service AcmeChallenge
             incorporates StaticContent {
 

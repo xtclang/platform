@@ -10,6 +10,7 @@ import common.model.WebAppInfo;
 
 import common.utils;
 
+import crypto.Certificate;
 import crypto.CryptoPassword;
 
 import web.*;
@@ -235,6 +236,30 @@ service WebAppEndpoint
     }
 
     /**
+     * Handle a request to renew the certificate.
+     */
+    @Post("/renew{/deployment}{/provider}")
+    SimpleResponse renewCertificate(String deployment, String provider = "self") {
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+
+        if (provider != appInfo.provider) {
+            appInfo = appInfo.with(provider=provider);
+        }
+
+        CryptoPassword pwd   = accountManager.decrypt(appInfo.password);
+        ErrorLog      errors = new ErrorLog();
+
+        if (Certificate cert := hostManager.ensureCertificate(accountName, appInfo, pwd, errors)) {
+            return new SimpleResponse(OK, cert.toString());
+        } else {
+            return new SimpleResponse(Conflict, errors.collectErrors());
+        }
+    }
+
+    /**
      * Handle a request to start a deployment.
      */
     @Post("/start{/deployment}")
@@ -256,11 +281,11 @@ service WebAppEndpoint
         if (!(webHost := hostManager.getWebHost(deployment))) {
             CryptoPassword pwd = accountManager.decrypt(appInfo.password);
 
+            // at this point the application is registered, therefore there is an active stub route
             if (hostManager.ensureCertificate(accountName, appInfo, pwd, errors),
                 webHost := hostManager.createWebHost(httpServer, accountName, appInfo, pwd, errors)) {
                     break CreateWebHost;
                 }
-            hostManager.addStubRoute(httpServer, accountName, appInfo);
             return new SimpleResponse(Conflict, errors.collectErrors());
         }
 

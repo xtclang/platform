@@ -59,7 +59,8 @@ service HostManager(Directory accountsDir)
     }
 
     @Override
-    Boolean ensureCertificate(String accountName, WebAppInfo appInfo, CryptoPassword pwd, Log errors) {
+    conditional Certificate ensureCertificate(String accountName, WebAppInfo appInfo,
+                                              CryptoPassword pwd, Log errors) {
 
         (Directory homeDir, Boolean newHome) =
                 ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
@@ -72,8 +73,21 @@ service HostManager(Directory accountsDir)
             if (!newStore) {
                 @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
 
-                if (Certificate cert := keystore.getCertificate(hostName), cert.valid) {
-                    return True;
+                CheckValid:
+                if (Certificate cert := keystore.getCertificate(hostName)) {
+                    if (appInfo.provider != "self" &&
+                            cert.issuer.splitMap().getOrDefault("CN", "") == appInfo.hostName) {
+                        // the current certificate is self-issued; replace with a real one
+                        break CheckValid;
+                    }
+
+                    @Inject Clock clock;
+                    Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
+                    if (daysLeft < 14) {
+                        // less than two weeks left - renew the certificate
+                        break CheckValid;
+                    }
+                    return True, cert;
                 }
             }
 
@@ -87,7 +101,10 @@ service HostManager(Directory accountsDir)
             // use the host name as a name for the certificate
             String dName = CertificateManager.distinguishedName(hostName, org=accountName);
             manager.createCertificate(store, pwd, hostName, dName);
-            return True;
+
+            @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+            assert Certificate cert := keystore.getCertificate(hostName), cert.valid;
+            return True, cert;
         } catch (Exception e) {
             try {
                 if (newStore) {
@@ -146,7 +163,7 @@ service HostManager(Directory accountsDir)
                       );
             return False;
         }
-
+assert:debug;
         Directory libDir   = ensureAccountLibDirectory(accountName);
         Directory buildDir = ensureAccountBuildDirectory(accountName);
 

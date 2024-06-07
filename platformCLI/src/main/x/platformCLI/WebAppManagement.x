@@ -13,8 +13,8 @@ class WebAppManagement {
     }
 
     @Command("register", "Register an app")
-    String register(String deploymentName, String moduleName) {
-        return Gateway.sendRequest(POST, $"/webapp/register/{deploymentName}/{moduleName}");
+    String register(String deploymentName, String moduleName, String provider = "self") {
+        return Gateway.sendRequest(POST, $"/webapp/register/{deploymentName}/{moduleName}/{provider}");
     }
 
     @Command("injections", "Get a list of injection that may need to be supplied")
@@ -43,6 +43,11 @@ class WebAppManagement {
                               String injectionType = "") {
         Gateway.sendRequest(DELETE,
                 $"/webapp/injections/{deploymentName}/{injectionName}/{injectionType}");
+    }
+
+    @Command("renew", "Renew the certificate")
+    String renew(String deploymentName, String provider = "self") {
+        return Gateway.sendRequest(POST, $"/webapp/renew/{deploymentName}/{provider}");
     }
 
     @Command("start", "Start an app")

@@ -163,7 +163,7 @@ service HostManager(Directory accountsDir)
                       );
             return False;
         }
-assert:debug;
+
         Directory libDir   = ensureAccountLibDirectory(accountName);
         Directory buildDir = ensureAccountBuildDirectory(accountName);
 

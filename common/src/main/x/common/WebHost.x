@@ -176,7 +176,7 @@ service WebHost
 
                     return True, handler;
                 } catch (Exception e) {
-                    errors.add(e.message);
+                    errors.add($"Error: Failed to create a container; {e}");
                     container.kill();
                 }
             }
@@ -254,7 +254,7 @@ service WebHost
             Log errors = new ErrorLog();
 
             if (!(handler := activate(False, errors))) {
-                log($"Error: Failed to activate: {errors}");
+                errors.reportAll(log);
 
                 request.respond(HttpStatus.InternalServerError.code, [], [], []);
                 return;

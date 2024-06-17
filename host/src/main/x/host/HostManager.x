@@ -134,7 +134,7 @@ service HostManager(Directory accountsDir)
         HttpHandler.CatalogExtras extras =
             [
             stub.Unavailable   = () -> new stub.Unavailable(["%deployment%"=hostName]),
-            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor("_temp").ensure())
+            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor(".challenge").ensure())
             ];
 
         HttpHandler handler = new HttpHandler(new HostInfo(hostName), stubApp, extras);
@@ -187,12 +187,14 @@ service HostManager(Directory accountsDir)
             return False;
         }
 
-        // TODO: where to get the ports from; should that be a part of WebInfo?
-        String   hostName                = webAppInfo.hostName;
-        HostInfo route                   = new HostInfo(hostName);
+        String   hostName = webAppInfo.hostName;
+        HostInfo route    = new HostInfo(hostName);
+
+        // by convention, the "root" directory for ACME challenges is a ".challenge" sub-directory
+        // of the directory containing the keystore itself, which in our case is `homeDir`
         HttpHandler.CatalogExtras extras =
             [
-            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor("_temp").ensure())
+            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor(".challenge").ensure())
             ];
 
         WebHost webHost = new WebHost(route, repository, accountName, webAppInfo, pwd, extras,

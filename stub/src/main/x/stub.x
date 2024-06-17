@@ -60,9 +60,11 @@ module stub.xqiz.it {
 
         @Override
         @Get("{path}")
+        @SessionOptional
         conditional ResponseOut getResource(String path) {
-            console.print($"### challenge: {path=}"); // TODO REMOVE
-            return super(path);
+            console.print($"### challenge: {path}"); // TODO REMOVE
+
+            return super($".well-known/acme-challenge/{path}");
         }
     }
 }

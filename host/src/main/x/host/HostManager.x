@@ -143,7 +143,7 @@ service HostManager(Directory accountsDir)
                 @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
 
                 httpServer.addRoute(hostName, handler, keystore,
-                    tlsKey=hostName, cookieKey = names.CookieEncryptionKey);
+                    tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
                 return;
             } catch (Exception ignore) {}
         }
@@ -201,7 +201,7 @@ service HostManager(Directory accountsDir)
                                       homeDir, buildDir);
         deployedWebHosts.put(deployment, webHost);
         httpServer.addRoute(hostName, webHost, keystore,
-                tlsKey=hostName, cookieKey = names.CookieEncryptionKey);
+                tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
 
         return True, webHost;
     }

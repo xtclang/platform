@@ -15,6 +15,8 @@ import common.model.WebAppInfo;
 
 import common.utils;
 
+import convert.formats.Base64Format;
+
 import crypto.CryptoPassword;
 import crypto.Decryptor;
 import crypto.NamedPassword;
@@ -25,8 +27,6 @@ import oodb.DBUser;
 import platformDB.Connection;
 
 import web.security.Realm.HashInfo;
-
-import web.codecs.Base64Format;
 
 
 /**

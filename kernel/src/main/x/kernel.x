@@ -10,14 +10,15 @@
  * capabilities, the minimally required set of maximally restricted interfaces are injected.
  */
 module kernel.xqiz.it {
-    package auth   import webauth.xtclang.org;
-    package crypto import crypto.xtclang.org;
-    package json   import json.xtclang.org;
-    package jsondb import jsondb.xtclang.org;
-    package oodb   import oodb.xtclang.org;
-    package net    import net.xtclang.org;
-    package web    import web.xtclang.org;
-    package xenia  import xenia.xtclang.org;
+    package auth    import webauth.xtclang.org;
+    package convert import convert.xtclang.org;
+    package crypto  import crypto.xtclang.org;
+    package json    import json.xtclang.org;
+    package jsondb  import jsondb.xtclang.org;
+    package oodb    import oodb.xtclang.org;
+    package net     import net.xtclang.org;
+    package web     import web.xtclang.org;
+    package xenia   import xenia.xtclang.org;
 
     package common      import common.xqiz.it;
     package platformDB  import platformDB.xqiz.it;

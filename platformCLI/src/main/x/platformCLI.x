@@ -3,10 +3,11 @@
  */
 module platformCLI.xqiz.it
         incorporates TerminalApp("Platform command line tool", "Platform CLI>") {
-    package cli  import cli.xtclang.org;
-    package json import json.xtclang.org;
-    package net  import net.xtclang.org;
-    package web  import web.xtclang.org;
+    package cli     import cli.xtclang.org;
+    package convert import convert.xtclang.org;
+    package json    import json.xtclang.org;
+    package net     import net.xtclang.org;
+    package web     import web.xtclang.org;
 
     import cli.Command;
     import cli.Desc;
@@ -86,8 +87,8 @@ module platformCLI.xqiz.it
 
         RequestOut createRequest(HttpMethod method, String path,
                                  Object? content=Null, MediaType? mediaType=Null) {
-            import web.codecs.Base64Format;
-            import web.codecs.Utf8Codec;
+            import convert.formats.Base64Format;
+            import convert.codecs.Utf8Codec;
 
             String authorization = $|Bearer \
                                     |{Base64Format.Instance.encode(

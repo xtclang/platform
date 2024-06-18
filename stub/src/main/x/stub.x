@@ -60,7 +60,7 @@ module stub.xqiz.it {
 
         @Override
         @Get("{path}")
-        @SessionOptional
+//        @SessionOptional
         conditional ResponseOut getResource(String path) {
             console.print($"### challenge: {path}"); // TODO REMOVE
 

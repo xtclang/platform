@@ -175,7 +175,6 @@ service HostManager(Directory accountsDir, Uri[] receivers)
             if (response.status != OK) {
                 @Inject Console console;
                 console.print($"Failed to update proxy {receiverUri}");
-                continue;
             }
         }
     }
@@ -291,6 +290,11 @@ service HostManager(Directory accountsDir, Uri[] receivers)
                 store.delete();
             }
         } catch (Exception ignore) {}
+
+        // notify the receivers
+        for (Uri receiverUri : receivers) {
+            client.delete(receiverUri.with(path=$"/nginx/{hostName}"));
+        }
 
         Boolean keepLogs = True; // TODO soft code?
         if (homeDir.exists) {

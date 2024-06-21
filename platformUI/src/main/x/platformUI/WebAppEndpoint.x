@@ -253,6 +253,7 @@ service WebAppEndpoint
         ErrorLog      errors = new ErrorLog();
 
         if (Certificate cert := hostManager.ensureCertificate(accountName, appInfo, pwd, errors)) {
+            accountManager.addOrUpdateWebApp(accountName, appInfo);
             return new SimpleResponse(OK, cert.toString());
         } else {
             return new SimpleResponse(Conflict, errors.collectErrors());

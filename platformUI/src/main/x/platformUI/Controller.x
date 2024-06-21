@@ -14,8 +14,10 @@ service Controller
     @Post("shutdown")
     @LoginOptional // TODO: TEMPORARY: only the admin can shutdown the host
     HttpStatus shutdown() {
-        @Inject Timer timer;
+        @Inject Console console;
+        console.print($"Info: Shutting down...");
 
+        @Inject Timer timer;
         if (!hostManager.shutdown()) {
             // wait a second (TODO: repeat a couple of times)
             timer.schedule(Second, () ->

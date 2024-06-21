@@ -11,11 +11,18 @@ import common.model.WebAppInfo;
 import common.names;
 import common.utils;
 
+import convert.formats.Base64Format;
+
 import crypto.Certificate;
 import crypto.CertificateManager;
 import crypto.CryptoPassword;
 import crypto.KeyStore;
 
+import net.Uri;
+
+import web.Client;
+import web.HttpClient;
+import web.ResponseIn;
 import web.WebApp;
 import web.WebService;
 
@@ -27,7 +34,7 @@ import xenia.HttpServer;
 /**
  * The module for basic hosting functionality.
  */
-service HostManager(Directory accountsDir)
+service HostManager(Directory accountsDir, Uri[] receivers)
         implements common.HostManager {
 
     /**
@@ -36,9 +43,19 @@ service HostManager(Directory accountsDir)
     private Directory accountsDir;
 
     /**
+     * The receivers associated with proxy servers.
+     */
+    private Uri[] receivers;
+
+    /**
      * Deployed WebHosts keyed by the deployment name.
      */
     private Map<String, WebHost> deployedWebHosts = new HashMap();
+
+    /**
+     * The client used to talk to external services.
+     */
+    @Lazy Client client.calc() = new HttpClient();
 
     /**
      * The key store name to use.
@@ -61,7 +78,6 @@ service HostManager(Directory accountsDir)
     @Override
     conditional Certificate ensureCertificate(String accountName, WebAppInfo appInfo,
                                               CryptoPassword pwd, Log errors) {
-
         (Directory homeDir, Boolean newHome) =
                 ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
 
@@ -83,10 +99,13 @@ service HostManager(Directory accountsDir)
 
                     @Inject Clock clock;
                     Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
-                    if (daysLeft < 14) {
-                        // less than two weeks left - renew the certificate
+                    if (appInfo.provider == "self" || daysLeft < 14) {
+                        // self-issued or less than two weeks left - renew the certificate
                         break CheckValid;
                     }
+                    // TODO: there's probably no reason to update the receivers; need to figure out
+                    //       a way to optimize this out
+                    updateProxyConfig(hostName, keystore, pwd);
                     return True, cert;
                 }
             }
@@ -104,6 +123,7 @@ service HostManager(Directory accountsDir)
 
             @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
             assert Certificate cert := keystore.getCertificate(hostName), cert.valid;
+            updateProxyConfig(hostName, keystore, pwd);
             return True, cert;
         } catch (Exception e) {
             try {
@@ -119,6 +139,44 @@ service HostManager(Directory accountsDir)
 
             errors.add($"Error: Failed to obtain a certificate for {hostName.quoted()}: {e.message}");
             return False;
+        }
+    }
+
+    /**
+     * For every proxy, there might be a receiver associated with it. Send the corresponding
+     * updates.
+     */
+    private void updateProxyConfig(String hostName, KeyStore keystore, CryptoPassword pwd) {
+        @Inject CertificateManager manager;
+
+        for (Uri receiverUri : receivers) {
+            Byte[] bytes  = manager.extractKey(keystore, pwd, hostName);
+            String pemKey = $|-----BEGIN PRIVATE KEY-----
+                             |{Base64Format.Instance.encode(bytes, pad=True, lineLength=64)}
+                             |-----END PRIVATE KEY-----
+                             |
+                             ;
+            ResponseIn response = client.put(
+                    receiverUri.with(path=$"/nginx/{hostName}/key"), pemKey, Text);
+
+            if (response.status == OK) {
+                StringBuffer pemCert = new StringBuffer();
+                for (Certificate cert : keystore.getCertificateChain(hostName)) {
+                    pemCert.append(
+                            $|-----BEGIN CERTIFICATE-----
+                             |{Base64Format.Instance.encode(cert.toDerBytes(), pad=True, lineLength=64)}
+                             |-----END CERTIFICATE-----
+                             |
+                             );
+                }
+                response = client.put(
+                    receiverUri.with(path=$"/nginx/{hostName}/cert"), pemCert.toString(), Text);
+            }
+            if (response.status != OK) {
+                @Inject Console console;
+                console.print($"Failed to update proxy {receiverUri}");
+                continue;
+            }
         }
     }
 
@@ -181,8 +239,8 @@ service HostManager(Directory accountsDir)
             @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore ks;
             keystore = ks;
         } catch (Exception e) {
-            errors.add($|Error: {store.exists ? "Corrupted" : "Missing"} keystore: "{store}";\
-                        | application "{deployment}" for account "{accountName}" needs to be redeployed
+            errors.add($|Error: {store.exists ? "Corrupted" : "Missing"} keystore: "{store}"; \
+                        |application "{deployment}" for account "{accountName}" needs to be redeployed
                       );
             return False;
         }

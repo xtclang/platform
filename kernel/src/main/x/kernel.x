@@ -49,6 +49,7 @@ module kernel.xqiz.it {
     import json.Parser;
 
     import net.IPAddress;
+    import net.Uri;
 
     import web.http.HostInfo;
 
@@ -76,15 +77,18 @@ module kernel.xqiz.it {
             File   configFile = platformDir.fileFor("cfg.json");
             File   configInit = /cfg.json;
             String jsonConfig;
-            if (configFile.exists && configFile.modified > configInit.modified) {
+            if (configFile.exists) {
+                if (configFile.modified <= configInit.modified) {
+                    console.print($|Warning: Your local config file is out of date; \
+                                   |please make sure it confirms to the current structure
+                                 );
+                }
                 jsonConfig = configFile.contents.unpackUtf8();
             } else {
-                if (configFile.exists) {
-                    console.print($"Warning: Your local config file is out of date; replacing with the default");
-                }
+                // create a copy from the embedded resource
                 immutable Byte[] configData = configInit.contents;
                 jsonConfig = configData.unpackUtf8();
-                configFile.contents = configData; // create a copy from the embedded resource
+                configFile.contents = configData;
             }
 
             config = new Parser(jsonConfig.toReader()).parseDoc().as(Map<String, Doc>);
@@ -152,7 +156,13 @@ module kernel.xqiz.it {
             HostManager    hostManager;
             if (Container  container :=
                     utils.createContainer(repository, hostModule, hostDir, buildDir, True, [], errors)) {
-                hostManager = container.invoke("configure", Tuple:(accountsDir))[0].as(HostManager);
+                // TODO: we should either soft-code the receiver's protocol and port or
+                //       have the configuration supply the receivers' URI, from which we would
+                //       compute the proxy addresses
+                Uri[] receivers = new Uri[proxies.size]
+                        (i -> new Uri(scheme="http", ip=proxies[i], port=8081)).freeze(inPlace=True);
+                hostManager = container.invoke("configure", Tuple:(accountsDir, receivers))[0].
+                                as(HostManager);
             } else {
                 return;
             }

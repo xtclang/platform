@@ -299,12 +299,12 @@ service HostManager(Directory accountsDir, Uri[] receivers)
         Boolean keepLogs = True; // TODO soft code?
         if (homeDir.exists) {
             if (keepLogs) {
-//                TODO GG: implement filesRecursively()
-//                for (File file : homeDir.filesRecursively()) {
-//                    if (!file.name.endsWith(".log")) {
-//                        file.delete();
-//                    }
+                for (File file : homeDir.filesRecursively()) {
+                    if (!file.name.endsWith(".log")) {
+                        file.delete();
+                    }
                 // TODO: remove empty directories
+                }
             } else {
                 homeDir.deleteRecursively();
             }

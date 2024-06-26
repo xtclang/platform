@@ -160,7 +160,7 @@ module kernel.xqiz.it {
                 //       have the configuration supply the receivers' URI, from which we would
                 //       compute the proxy addresses
                 Uri[] receivers = new Uri[proxies.size]
-                        (i -> new Uri(scheme="http", ip=proxies[i], port=8081)).freeze(inPlace=True);
+                        (i -> new Uri(scheme="https", ip=proxies[i], port=8091)).freeze(inPlace=True);
                 hostManager = container.invoke("configure", Tuple:(accountsDir, receivers))[0].
                                 as(HostManager);
             } else {

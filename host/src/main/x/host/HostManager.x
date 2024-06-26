@@ -58,6 +58,11 @@ service HostManager(Directory accountsDir, Uri[] receivers)
     @Lazy Client client.calc() = new HttpClient();
 
     /**
+     * The timeout duration for receivers' updates.
+     */
+    static Duration receiverTimeout = Duration.ofSeconds(5);
+
+    /**
      * The key store name to use.
      */
     static String KeyStoreName = "keystore.p12";
@@ -105,7 +110,7 @@ service HostManager(Directory accountsDir, Uri[] receivers)
                     }
                     // TODO: there's probably no reason to update the receivers; need to figure out
                     //       a way to optimize this out
-                    updateProxyConfig(hostName, keystore, pwd);
+                    updateProxyConfig(hostName, homeDir, keystore, pwd);
                     return True, cert;
                 }
             }
@@ -123,7 +128,7 @@ service HostManager(Directory accountsDir, Uri[] receivers)
 
             @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
             assert Certificate cert := keystore.getCertificate(hostName), cert.valid;
-            updateProxyConfig(hostName, keystore, pwd);
+            updateProxyConfig(hostName, homeDir, keystore, pwd);
             return True, cert;
         } catch (Exception e) {
             try {
@@ -146,7 +151,8 @@ service HostManager(Directory accountsDir, Uri[] receivers)
      * For every proxy, there might be a receiver associated with it. Send the corresponding
      * updates.
      */
-    private void updateProxyConfig(String hostName, KeyStore keystore, CryptoPassword pwd) {
+    private void updateProxyConfig(String hostName, Directory homeDir,
+                                   KeyStore keystore, CryptoPassword pwd) {
         @Inject CertificateManager manager;
 
         for (Uri receiverUri : receivers) {
@@ -156,25 +162,32 @@ service HostManager(Directory accountsDir, Uri[] receivers)
                              |-----END PRIVATE KEY-----
                              |
                              ;
-            ResponseIn response = client.put(
-                    receiverUri.with(path=$"/nginx/{hostName}/key"), pemKey, Text);
 
-            if (response.status == OK) {
-                StringBuffer pemCert = new StringBuffer();
-                for (Certificate cert : keystore.getCertificateChain(hostName)) {
-                    pemCert.append(
-                            $|-----BEGIN CERTIFICATE-----
-                             |{Base64Format.Instance.encode(cert.toDerBytes(), pad=True, lineLength=64)}
-                             |-----END CERTIFICATE-----
-                             |
-                             );
+            Boolean success;
+            try (val t = new Timeout(receiverTimeout)) {
+                ResponseIn response = client.put(
+                        receiverUri.with(path=$"/nginx/{hostName}/key"), pemKey, Text);
+
+                if (response.status == OK) {
+                    StringBuffer pemCert = new StringBuffer();
+                    for (Certificate cert : keystore.getCertificateChain(hostName)) {
+                        pemCert.append(
+                                $|-----BEGIN CERTIFICATE-----
+                                 |{Base64Format.Instance.encode(cert.toDerBytes(), pad=True, lineLength=64)}
+                                 |-----END CERTIFICATE-----
+                                 |
+                                 );
+                    }
+                    response = client.put(
+                        receiverUri.with(path=$"/nginx/{hostName}/cert"), pemCert.toString(), Text);
                 }
-                response = client.put(
-                    receiverUri.with(path=$"/nginx/{hostName}/cert"), pemCert.toString(), Text);
+                success = response.status == OK;
+            } catch (Exception e) {
+                success = False;
             }
-            if (response.status != OK) {
-                @Inject Console console;
-                console.print($"Failed to update proxy {receiverUri}");
+
+            if (!success) {
+                log(homeDir, $"Failed to update the proxy server at {receiverUri}");
             }
         }
     }
@@ -291,12 +304,24 @@ service HostManager(Directory accountsDir, Uri[] receivers)
             }
         } catch (Exception ignore) {}
 
+        Boolean keepLogs = True; // TODO soft code?
+
         // notify the receivers
         for (Uri receiverUri : receivers) {
-            client.delete(receiverUri.with(path=$"/nginx/{hostName}"));
+            using (new Timeout(receiverTimeout)) {
+                ResponseIn response = client.delete^(receiverUri.with(path=$"/nginx/{hostName}"));
+                if (keepLogs) {
+                    &response.whenComplete((r, e) -> {
+                        if (e != Null) {
+                            log(homeDir, $|Failed to remove "{hostName}" route from the proxy \
+                                          |server "{receiverUri}"
+                            );
+                        }
+                    });
+                }
+            }
         }
 
-        Boolean keepLogs = True; // TODO soft code?
         if (homeDir.exists) {
             if (keepLogs) {
                 for (File file : homeDir.filesRecursively()) {
@@ -326,5 +351,12 @@ service HostManager(Directory accountsDir, Uri[] receivers)
             webHost.close();
         }
         return True;
+    }
+
+    /**
+     * Log the specified message to the application "console" file.
+     */
+    void log(Directory homeDir, String message) {
+        homeDir.fileFor("console.log").append(utils.NewLine).append(message.utf8());
     }
 }

@@ -55,7 +55,7 @@ service HostInjector(Directory appHomeDir, Boolean platform, Injections injectio
         void write(String s, Boolean suppressNewline) {
             consoleFile.append(s.utf8());
             if (!suppressNewline) {
-                consoleFile.append(['\n'.toByte()]);
+                consoleFile.append(utils.NewLine);
             }
         }
     }

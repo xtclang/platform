@@ -246,4 +246,6 @@ package utils {
         return True, injections.filter(ikey -> ikey.type.isA(Destringable))
                                .map(ikey -> new Key(ikey.name, ikey.type.toString())).toArray();
     }
+
+    static Byte[] NewLine = ['\n'.toByte()];
 }

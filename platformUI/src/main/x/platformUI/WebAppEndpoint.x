@@ -330,14 +330,21 @@ service WebAppEndpoint
     /**
      * Show the app console's content.
      */
-    @Get("appLog{/deployment}")
+    @Get("logs{/deployment}{/dbName}")
     @Produces(Text)
-    String report(String deployment) {
-        if (WebHost webHost := hostManager.getWebHost(deployment)) {
-            File consoleFile = webHost.homeDir.fileFor("console.log");
-            if (consoleFile.exists && consoleFile.size > 0) {
-                return consoleFile.contents.unpackUtf8();
-            }
+    String report(String deployment, String dbName = "") {
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return "[unknown]";
+        }
+
+        Directory homeDir = hostManager.ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
+        if (dbName != "") {
+            homeDir = homeDir.dirFor(dbName);
+        }
+        File console = homeDir.fileFor("console.log");
+        if (console.exists && console.size > 0) {
+            return console.contents.unpackUtf8();
         }
         return "[empty]";
     }

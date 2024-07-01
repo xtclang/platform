@@ -149,7 +149,9 @@ module kernel.xqiz.it {
             Connection     connection     = accountManager.init(repository, hostDir, buildDir,
                                                 decryptor, errors);
 
-            // create a container for the platformUI controller and configure it
+            @Inject(resourceName="server") HttpServer httpServer;
+
+            // create a container for the host manager and configure it
             console.print($"Info: Starting the HostManager...");
 
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
@@ -161,7 +163,7 @@ module kernel.xqiz.it {
                 //       compute the proxy addresses
                 Uri[] receivers = new Uri[proxies.size]
                         (i -> new Uri(scheme="https", ip=proxies[i], port=8091)).freeze(inPlace=True);
-                hostManager = container.invoke("configure", Tuple:(accountsDir, receivers))[0].
+                hostManager = container.invoke("configure", Tuple:(httpServer, accountsDir, receivers))[0].
                                 as(HostManager);
             } else {
                 return;
@@ -207,11 +209,10 @@ module kernel.xqiz.it {
                         ? HttpServer.NoTrustedProxies
                         : (ip -> proxies.contains(ip));
 
-                @Inject HttpServer server;
-                server.bind(binding, isTrusted);
+                httpServer.bind(binding, isTrusted);
 
                 container.invoke("configure",
-                        Tuple:(server, hostName, keystore, realm, accountManager, hostManager, errors));
+                        Tuple:(httpServer, hostName, keystore, realm, accountManager, hostManager, errors));
             } else {
                 return;
             }

@@ -66,14 +66,14 @@ module platformUI.xqiz.it {
             String accountName = accountInfo.name;
             for (WebAppInfo appInfo : accountInfo.webApps.values) {
                 if (appInfo.active) {
-                    if (hostManager.createWebHost(server, accountName, appInfo,
+                    if (hostManager.createWebHost(accountName, appInfo,
                             accountManager.decrypt(appInfo.password), errors)) {
                         console.print($|Info: Initialized deployment: "{appInfo.hostName}" \
                                        |of "{appInfo.moduleName}"
                                      );
                     } else {
                         accountManager.addOrUpdateWebApp(accountName, appInfo.updateStatus(False));
-                        hostManager.addStubRoute(server, accountName, appInfo);
+                        hostManager.addStubRoute(accountName, appInfo);
                         console.print($|Warning: Failed to initialize deployment: "{appInfo.hostName}" \
                                        |of "{appInfo.moduleName}"
                                      );

@@ -34,8 +34,13 @@ import xenia.HttpServer;
 /**
  * The module for basic hosting functionality.
  */
-service HostManager(Directory accountsDir, Uri[] receivers)
+service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receivers)
         implements common.HostManager {
+
+    /**
+     * The HttpServer that should be used by the manager.
+     */
+    private HttpServer httpServer;
 
     /**
      * The "accounts" directory.
@@ -193,8 +198,7 @@ service HostManager(Directory accountsDir, Uri[] receivers)
     }
 
     @Override
-    void addStubRoute(HttpServer httpServer, String accountName, WebAppInfo appInfo,
-                      CryptoPassword? pwd = Null) {
+    void addStubRoute(String accountName, WebAppInfo appInfo, CryptoPassword? pwd = Null) {
         Directory homeDir  = ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
         File      store    = homeDir.fileFor(KeyStoreName);
         String    hostName = appInfo.hostName;
@@ -226,8 +230,8 @@ service HostManager(Directory accountsDir, Uri[] receivers)
     }
 
     @Override
-    conditional WebHost createWebHost(HttpServer httpServer, String accountName,
-                                      WebAppInfo webAppInfo, CryptoPassword pwd, Log errors) {
+    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd,
+                                      Log errors) {
         if (deployedWebHosts.contains(webAppInfo.deployment)) {
             errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
                       );
@@ -277,9 +281,9 @@ service HostManager(Directory accountsDir, Uri[] receivers)
     }
 
     @Override
-    void removeWebHost(HttpServer httpServer, WebHost webHost) {
+    void removeWebHost(WebHost webHost) {
         // leave the webapp stub active
-        addStubRoute(httpServer, webHost.account, webHost.appInfo, webHost.pwd);
+        addStubRoute(webHost.account, webHost.appInfo, webHost.pwd);
 
         try {
             webHost.close();

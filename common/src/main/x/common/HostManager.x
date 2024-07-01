@@ -5,8 +5,6 @@ import common.model.WebAppInfo;
 import crypto.Certificate;
 import crypto.CryptoPassword;
 
-import xenia.HttpServer;
-
 
 /**
  * The Host Manager API.
@@ -67,13 +65,11 @@ interface HostManager {
     /**
      * Add a stub route for the specified web app.
      *
-     * @param httpServer   the HttpServer to use
      * @param accountName  the account name
      * @param webAppInfo   the web application info
      * @param pwd          (optional) the password to use for the keystore
      */
-    void addStubRoute(HttpServer httpServer, String accountName, WebAppInfo appInfo,
-                      CryptoPassword? pwd = Null);
+    void addStubRoute(String accountName, WebAppInfo appInfo, CryptoPassword? pwd = Null);
 
     /**
      * Retrieve a [WebHost] for the specified deployment.
@@ -88,7 +84,6 @@ interface HostManager {
      * successfully, or if the application is not [active](WebAppInfo.active), the "stub" web
      * application will be installed.
      *
-     * @param httpServer   the HttpServer to use
      * @param accountName  the account name
      * @param webAppInfo   the web application info
      * @param pwd          the password to use for the keystore
@@ -97,13 +92,13 @@ interface HostManager {
      * @return True iff the WebHost was successfully created
      * @return (optional) the WebHost for the newly loaded Container
      */
-    conditional WebHost createWebHost(HttpServer httpServer, String accountName,
-                                      WebAppInfo webAppInfo, CryptoPassword pwd, Log errors);
+    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd,
+                                      Log errors);
 
     /**
      * Remove the specified [WebHost].
      */
-    void removeWebHost(HttpServer httpServer, WebHost webHost);
+    void removeWebHost(WebHost webHost);
 
     /**
      * Remove the specified deployment.

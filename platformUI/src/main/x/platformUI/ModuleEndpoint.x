@@ -240,7 +240,7 @@ service ModuleEndpoint
                 if (WebHost webHost := hostManager.getWebHost(deployment),
                     moduleNames.contains(webHost.moduleName)) {
 
-                    hostManager.removeWebHost(httpServer, webHost);
+                    hostManager.removeWebHost(webHost);
 
                     WebAppInfo? newInfo = Null;
 
@@ -263,7 +263,7 @@ service ModuleEndpoint
                     }
 
                     // redeploy if necessary
-                    if (info.active && !hostManager.createWebHost(httpServer, accountName, info,
+                    if (info.active && !hostManager.createWebHost(accountName, info,
                             accountManager.decrypt(info.password), errors)) {
                         String hostName = info.hostName;
                         webHost.log($"Error: Failed to redeploy {hostName.quoted()}; reason: {errors}\n");

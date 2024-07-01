@@ -14,8 +14,9 @@ module host.xqiz.it {
     /**
      * Bootstrapping: configure and return the HostManager.
      */
-    common.HostManager configure(Directory accountsDir, net.Uri[] receivers) {
-        HostManager mgr = new HostManager(accountsDir, receivers);
+    common.HostManager configure(xenia.HttpServer httpServer, Directory accountsDir,
+                                 net.Uri[] receivers) {
+        HostManager mgr = new HostManager(httpServer, accountsDir, receivers);
         return &mgr.maskAs(common.HostManager);
     }
 }

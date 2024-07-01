@@ -113,7 +113,7 @@ service WebAppEndpoint
 
         // the deployment is not active; the "stub" will serve the ACME protocol challenge requests
         // as well as give them something better than "HttpStatus 404: Page Not Found" to look at
-        hostManager.addStubRoute(httpServer, accountName, appInfo, cryptoPwd);
+        hostManager.addStubRoute(accountName, appInfo, cryptoPwd);
 
         ErrorLog errors = new ErrorLog();
         if (!hostManager.ensureCertificate(accountName, appInfo, cryptoPwd, errors)) {
@@ -284,7 +284,7 @@ service WebAppEndpoint
 
             // at this point the application is registered, therefore there is an active stub route
             if (hostManager.ensureCertificate(accountName, appInfo, pwd, errors),
-                webHost := hostManager.createWebHost(httpServer, accountName, appInfo, pwd, errors)) {
+                webHost := hostManager.createWebHost(accountName, appInfo, pwd, errors)) {
                     break CreateWebHost;
                 }
             return new SimpleResponse(Conflict, errors.collectErrors());
@@ -295,7 +295,7 @@ service WebAppEndpoint
             accountManager.addOrUpdateWebApp(accountName, appInfo);
             return appInfo.redact();
         } else {
-            hostManager.removeWebHost(httpServer, webHost);
+            hostManager.removeWebHost(webHost);
             webHost.deactivate(True);
             return new SimpleResponse(Conflict, errors.collectErrors());
         }
@@ -315,8 +315,7 @@ service WebAppEndpoint
             accountManager.addOrUpdateWebApp(accountName, appInfo.updateStatus(False));
 
             // leave the webapp stub active
-            hostManager.addStubRoute(httpServer, accountName, appInfo,
-                    accountManager.decrypt(appInfo.password));
+            hostManager.addStubRoute(accountName, appInfo, accountManager.decrypt(appInfo.password));
             return new SimpleResponse(OK);
         } else {
             if (appInfo.active) {
@@ -374,7 +373,7 @@ service WebAppEndpoint
     Boolean removeWebHost(String deployment) {
         if (WebHost webHost := hostManager.getWebHost(deployment)) {
             webHost.deactivate(True);
-            hostManager.removeWebHost(httpServer, webHost);
+            hostManager.removeWebHost(webHost);
             return True;
             }
         return False;

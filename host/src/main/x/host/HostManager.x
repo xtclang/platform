@@ -361,6 +361,6 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
      * Log the specified message to the application "console" file.
      */
     void log(Directory homeDir, String message) {
-        homeDir.fileFor("console.log").append(utils.NewLine).append(message.utf8());
+        homeDir.fileFor("console.log").ensure().append(utils.NewLine).append(message.utf8());
     }
 }

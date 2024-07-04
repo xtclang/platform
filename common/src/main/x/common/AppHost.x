@@ -25,7 +25,7 @@ class AppHost(String moduleName, Directory homeDir)
      * Log the specified message to the application "console" file.
      */
     void log(String message) {
-        homeDir.fileFor("console.log").append(utils.NewLine).append(message.utf8());
+        homeDir.fileFor("console.log").ensure().append(utils.NewLine).append(message.utf8());
     }
 
 

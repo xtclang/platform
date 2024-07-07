@@ -212,7 +212,8 @@ module kernel.xqiz.it {
                 httpServer.bind(binding, isTrusted);
 
                 container.invoke("configure",
-                        Tuple:(httpServer, hostName, keystore, realm, accountManager, hostManager, errors));
+                        Tuple:(httpServer, hostName, keystore, realm,
+                               &accountManager.maskAs(common.AccountManager), hostManager, errors));
             } else {
                 return;
             }

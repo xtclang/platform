@@ -123,7 +123,7 @@ service WebHost
      * The inactivity duration limit; if no requests come within that period, the application
      * will be deactivated.
      */
-    static Duration InactivityDuration = Duration.ofSeconds(10);
+    static Duration InactivityDuration = Duration.ofSeconds(20);
 
     /*
      * Activate the underlying WebApp.

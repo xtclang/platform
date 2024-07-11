@@ -396,14 +396,10 @@ service WebAppEndpoint
         @Volatile String? error = Null;
         if ((String? user, String? host, IPAddress? ip, UInt16? port) :=
                 Uri.parseAuthority(name, (e) -> {error = e;})) {
-            if (user != Null) {
-                error = "User section is not allowed";
-            }
-            if (ip != Null) {
+            if (user != Null || host == Null || port != Null) {
+                error = "Invalid host name";
+            } else if (ip != Null) {
                 error = "IP is not allowed";
-            }
-            if (port != Null) {
-                error = "Port is not allowed";
             }
         }
         return error == Null ? False : (True, error);

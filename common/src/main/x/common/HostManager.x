@@ -75,7 +75,7 @@ interface HostManager {
      * Retrieve a [WebHost] for the specified deployment.
      *
      * @return True iff there is a WebHost for the specified deployment
-     * @return (optional) the WebHost
+     * @return (conditional) the WebHost
      */
     conditional WebHost getWebHost(String deployment);
 
@@ -90,7 +90,7 @@ interface HostManager {
      * @param errors       the error log
      *
      * @return True iff the WebHost was successfully created
-     * @return (optional) the WebHost for the newly loaded Container
+     * @return (conditional) the WebHost for the newly loaded Container
      */
     conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd,
                                       Log errors);

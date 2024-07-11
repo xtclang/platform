@@ -35,7 +35,7 @@ interface AccountManager {
      * @param accountName  the account name
      *
      * @return True iff there is an account with the specified name
-     * @return (optional) the AccountInfo
+     * @return (conditional) the AccountInfo
      */
     conditional AccountInfo getAccount(String accountName);
 
@@ -46,7 +46,7 @@ interface AccountManager {
      * @param accountName  the account name
      *
      * @return True iff the account name is not currently used
-     * @return (optional) the AccountInfo for the newly created account
+     * @return (conditional) the AccountInfo for the newly created account
      */
     conditional AccountInfo createAccount(String accountName);
 
@@ -110,7 +110,7 @@ interface AccountManager {
      * @param userName  the user name
      *
      * @return True iff there is a user the specified name
-     * @return (optional) the UserInfo
+     * @return (conditional) the UserInfo
      */
     conditional UserInfo getUser(String userName);
 
@@ -122,7 +122,7 @@ interface AccountManager {
      * @param email     the user email address
      *
      * @return True iff the user name and email are not currently used
-     * @return (optional) the UserInfo for the newly created user
+     * @return (conditional) the UserInfo for the newly created user
      */
     conditional UserInfo createUser(UserId id, String userName, String email);
 

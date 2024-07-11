@@ -32,8 +32,8 @@ package utils {
      * @param errors      the logger to report errors to
      *
      * @return True iff the container has been loaded successfully
-     * @return (optional) the Container
-     * @return (optional) an array of AppHost objects for all dependent containers that have been
+     * @return (conditional) the Container
+     * @return (conditional) an array of AppHost objects for all dependent containers that have been
      *         loaded along the "main" container
      */
     static conditional (Container, AppHost[]) createContainer(
@@ -105,7 +105,7 @@ package utils {
      * @param errors        the logger to report errors to
      *
      * @return True if the DbHost was successfully created; False otherwise (the errors are logged)
-     * @return (optional) the DbHost
+     * @return (conditional) the DbHost
      */
     static conditional DbHost createDbHost(
             ModuleRepository repository, String dbModuleName, String dbImpl,

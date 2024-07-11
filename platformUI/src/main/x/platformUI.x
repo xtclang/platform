@@ -8,6 +8,7 @@ module platformUI.xqiz.it {
     package auth   import webauth.xtclang.org;
     package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
+    package net    import net.xtclang.org;
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 

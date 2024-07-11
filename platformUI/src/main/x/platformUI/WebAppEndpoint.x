@@ -13,6 +13,9 @@ import common.utils;
 import crypto.Certificate;
 import crypto.CryptoPassword;
 
+import net.IPAddress;
+import net.Uri;
+
 import web.*;
 import web.responses.SimpleResponse;
 
@@ -64,18 +67,16 @@ service WebAppEndpoint
                                            String provider = "self") {
         AccountInfo accountInfo;
         if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return new SimpleResponse(Unauthorized, $"Account '{accountName}' is missing");
+            return new SimpleResponse(NotFound, $"Account '{accountName}' is missing");
+        }
+
+        if (String error := reportInvalidName(deployment)) {
+            return new SimpleResponse(BadRequest,
+                $"Invalid deployment name {deployment.quoted()}: {error}");
         }
 
         // compute the full host name (e.g. "welcome.localhost.xqiz.it")
         String hostName = $"{deployment}.{baseDomain}".toLowercase();
-
-        // make sure the name could be used as an "authority" part of the uri
-        try {
-            new net.Uri($"http://user@{hostName}:80/");
-        } catch (Exception e) {
-            return new SimpleResponse(Unauthorized, $"Invalid deployment name {deployment}.quoted()");
-        }
 
         if (httpServer.routes.keys.any(route -> route.host.toString() == hostName) ||
                 accountInfo.webApps.contains(deployment)) {
@@ -377,5 +378,34 @@ service WebAppEndpoint
             return True;
             }
         return False;
+    }
+
+    /**
+     * Check if the specified name could be used as a part of the "authority" section of the Uri.
+     *
+     * @param name  the new domain name
+     *
+     * @return True iff the name is invalid
+     * @return (conditional) the error message
+     */
+    static conditional String reportInvalidName(String name) {
+        if (name.endsWith('.')) {
+            return True, "Name cannot end with a dot";
+        }
+
+        @Volatile String? error = Null;
+        if ((String? user, String? host, IPAddress? ip, UInt16? port) :=
+                Uri.parseAuthority(name, (e) -> {error = e;})) {
+            if (user != Null) {
+                error = "User section is not allowed";
+            }
+            if (ip != Null) {
+                error = "IP is not allowed";
+            }
+            if (port != Null) {
+                error = "Port is not allowed";
+            }
+        }
+        return error == Null ? False : (True, error);
     }
 }

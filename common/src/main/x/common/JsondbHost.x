@@ -37,7 +37,7 @@ class JsondbHost(String dbModuleName, Directory homeDir)
     }
 
     @Override
-    function oodb.Connection(DBUser) ensureDatabase(Map<String, String>? configOverrides = Null) {
+    function oodb.Connection(DBUser) ensureDatabase() {
         return meta.ensureConnectionFactory(catalog);
     }
 

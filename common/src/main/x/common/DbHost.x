@@ -18,8 +18,7 @@ class DbHost(String dbModuleName, Directory homeDir)
      *
      * @return a connection factory
      */
-    function oodb.Connection(oodb.DBUser)
-        ensureDatabase(Map<String, String>? configOverrides = Null);
+    function oodb.Connection(oodb.DBUser) ensureDatabase();
 
     /**
      * Life cycle: close the database.

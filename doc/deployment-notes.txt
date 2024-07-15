@@ -21,7 +21,8 @@
 # copy generated files to ~/xqiz.it/platform/letsencrypt/work/host directory
 
     certbot certonly --manual --preferred-challenges dns --config-dir config --work-dir work \
-        --logs-dir logs --csr host.csr --key-path host-key.pem --cert-path host-cert.pem \
+         --csr ~/xqiz.it/platform/letsencrypt/work/host/host.csr \
+        --logs-dir logs --key-path host-key.pem --cert-path host-cert.pem \
         --fullchain-path host-fchain.pem --chain-path host-chain.pem --email automation@xqiz.it
 
     openssl pkcs12 -export -out host.p12 -inkey host-key.pem -in host-cert.pem \
@@ -36,7 +37,11 @@
     keytool -list -keystore host.p12 -storepass $password
 
 # copy the keystore
-*** scp -r host.p12 ops@linux31:~/xqiz.it/platform/keystore.p12
+*** scp ~/xqiz.it/platform/letsencript/work/host/host.p12 ops@linux31:~/xqiz.it/platform/keystore.p12
+
+# copy the certificate material to the nginx config
+*** scp ~/xqiz.it/platform/letsencript/work/host/host-key.pem ops@linux30:~/nginx/certs/host.xqiz.it.key
+*** scp ~/xqiz.it/platform/letsencript/work/host/host-fchain.pem ops@linux30:~/nginx/certs/host.xqiz.it.crt
 
 # start the platform
 xec -L xqiz.it/lib/ kernel.xqiz.it $password

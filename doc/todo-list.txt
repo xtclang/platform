@@ -1,0 +1,4 @@
+- host independent DBs and allow apps connecting to them
+- renew host.xqiz.it automatically
+- test certificate revocation/removal
+

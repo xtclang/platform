@@ -12,6 +12,7 @@ import ecstasy.reflect.TypeTemplate;
 
 import ecstasy.text.Log;
 
+import model.DbAppInfo;
 import model.Injections;
 
 /**
@@ -29,6 +30,8 @@ package utils {
      *                    (e.g. "~/xqiz.it/accounts/self/build")
      * @param platform    True iff the loading module is one of the "core" platform modules
      * @param injections  the custom injections
+     * @param findDbHost  a function that may supply a shared DbHost for a given database module
+     *                    TODO GG: replace with a "function conditional" when lambda support fixed
      * @param errors      the logger to report errors to
      *
      * @return True iff the container has been loaded successfully
@@ -38,7 +41,8 @@ package utils {
      */
     static conditional (Container, AppHost[]) createContainer(
                     ModuleRepository repository, ModuleTemplate template, Directory deployDir,
-                    Directory buildDir, Boolean platform, Injections injections, Log errors) {
+                    Directory buildDir, Boolean platform, Injections injections,
+                    function DbHost?(String) findDbHost, Log errors) {
         DbHost[]     dbHosts;
         HostInjector injector;
 
@@ -46,11 +50,13 @@ package utils {
         if (dbNames.size > 0) {
             dbHosts = new DbHost[];
 
-            for ((String dbPath, String dbModuleName) : dbNames) {
+            for (String dbModuleName : dbNames.values) {
                 DbHost dbHost;
-                if (!(dbHost := createDbHost(
-                        repository, dbModuleName, "jsondb", deployDir, buildDir, injections, errors))) {
+                if (!(dbHost ?= findDbHost(dbModuleName))) {
+                    if (!(dbHost := createDbHost(repository, dbModuleName, Null, "jsondb",
+                            deployDir, buildDir, errors))) {
                     return False;
+                    }
                 }
                 dbHosts += dbHost;
             }
@@ -94,50 +100,34 @@ package utils {
     /**
      * Create a DbHost for the specified db module.
      *
-     * @param repository    the [ModuleRepository] to load the module(s) from
-     * @param dbModuleName  the name of `Database` module (fully qualified)
-     * @param dbImpl        the database implementation name (currently always "jsondb")
-     * @param deployDir     the application deployment directory
-     *                      (e.g. "~/xqiz.it/accounts/self/deploy/banking")
-     * @param buildDir      the directory for auto-generated modules
-     *                      (e.g. "~/xqiz.it/accounts/self/build")
-     * @param injections    the custom injections
-     * @param errors        the logger to report errors to
+     * @param repository  the [ModuleRepository] to load the module(s) from
+     * @param moduleName  the name of `Database` module (fully qualified)
+     * @param appInfo     (optional) DbAppInfo (Null for embedded DB)
+     * @param dbImpl      the database implementation name (currently always "jsondb")
+     * @param deployDir   the application deployment directory
+     *                    (e.g. "~/xqiz.it/accounts/self/deploy/banking")
+     * @param buildDir    the directory for auto-generated modules
+     *                    (e.g. "~/xqiz.it/accounts/self/build")
+     * @param errors      the logger to report errors to
      *
      * @return True if the DbHost was successfully created; False otherwise (the errors are logged)
      * @return (conditional) the DbHost
      */
     static conditional DbHost createDbHost(
-            ModuleRepository repository, String dbModuleName, String dbImpl,
-            Directory deployDir, Directory buildDir, Injections injections, Log errors) {
-        import jsondb.tools.ModuleGenerator;
+            ModuleRepository repository, String moduleName, DbAppInfo? appInfo, String dbImpl,
+            Directory deployDir, Directory buildDir, Log errors) {
 
-        Directory       dbHomeDir = deployDir.dirFor(dbModuleName).ensure();
-        DbHost          dbHost;
-        ModuleTemplate  dbModuleTemplate;
-        ModuleGenerator generator;
+        Directory homeDir = deployDir.dirFor(moduleName).ensure();
 
         switch (dbImpl) {
         case "":
         case "jsondb":
-            dbHost    = new JsondbHost(dbModuleName, dbHomeDir);
-            generator = new jsondb.tools.ModuleGenerator(dbModuleName);
-            break;
+            return True, new JsondbHost(repository, moduleName, appInfo, homeDir, buildDir);
 
         default:
             errors.add($"Error: Unknown db implementation: {dbImpl}");
             return False;
         }
-
-        if (!(dbModuleTemplate := generator.ensureDBModule(repository, buildDir, errors))) {
-            errors.add($"Error: Failed to create a DB host for {dbModuleName}");
-            return False;
-        }
-
-        dbHost.container = new Container(dbModuleTemplate, Lightweight, repository,
-                                new HostInjector(dbHomeDir, False, injections));
-        dbHost.makeImmutable();
-        return True, dbHost;
     }
 
     /**
@@ -165,17 +155,23 @@ package utils {
                         assert schemaType := type.resolveFormalType("Schema");
                     }
 
+                    Log errors = new ErrorLog();
+
                     for (DbHost dbHost : dbHosts) {
                         // the actual type that "createConnection" produces is:
                         // RootSchema + Connection<RootSchema>;
+
+                        function Connection(DBUser) createConnection;
+                        if (!(createConnection := dbHost.activate(False, errors))) {
+                            errors.reportAll(consoleImpl.print);
+                            throw new Exception($"Failed to activate the database {type}/{name}");
+                        }
 
                         Type dbSchemaType   = dbHost.schemaType;
                         Type typeConnection = Connection;
 
                         typeConnection = dbSchemaType + typeConnection.parameterize([dbSchemaType]);
                         if (typeConnection.isA(schemaType)) {
-                            function Connection(DBUser) createConnection = dbHost.ensureDatabase();
-
                             return (InjectedRef.Options opts) -> {
                                 // consider the injector to be passed some info about the calling
                                 // container, so the host could figure out the user

@@ -2,10 +2,16 @@ import ecstasy.mgmt.DirRepository;
 import ecstasy.mgmt.LinkedRepository;
 import ecstasy.mgmt.ModuleRepository;
 
+import ecstasy.reflect.ModuleTemplate;
+
 import ecstasy.text.Log;
 
+import common.AccountManager;
+import common.AppHost;
+import common.DbHost;
 import common.WebHost;
 
+import common.model.DbAppInfo;
 import common.model.WebAppInfo;
 
 import common.names;
@@ -37,6 +43,8 @@ import xenia.HttpServer;
 service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receivers)
         implements common.HostManager {
 
+    @Inject Clock clock;
+
     /**
      * The HttpServer that should be used by the manager.
      */
@@ -53,9 +61,9 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
     private Uri[] receivers;
 
     /**
-     * Deployed WebHosts keyed by the deployment name.
+     * Deployed AppHosts keyed by the deployment name.
      */
-    private Map<String, WebHost> deployedWebHosts = new HashMap();
+    private Map<String, AppHost> deployedHosts = new HashMap();
 
     /**
      * The client used to talk to external services.
@@ -86,6 +94,14 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
     }
 
     @Override
+    conditional AppHost getHost(String deployment) {
+        return deployedHosts.get(deployment);
+    }
+
+
+    // ----- WebApp management ---------------------------------------------------------------------
+
+    @Override
     conditional Certificate ensureCertificate(String accountName, WebAppInfo appInfo,
                                               CryptoPassword pwd, Log errors) {
         (Directory homeDir, Boolean newHome) =
@@ -109,8 +125,8 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
 
                     @Inject Clock clock;
                     Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
-                    if (appInfo.provider == "self" || daysLeft < 14) {
-                        // self-issued or less than two weeks left - renew the certificate
+                    if (daysLeft < 14) {
+                        // less than two weeks left - renew the certificate
                         break CheckValid;
                     }
                     // TODO: there's probably no reason to update the receivers; need to figure out
@@ -225,14 +241,9 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
     }
 
     @Override
-    conditional WebHost getWebHost(String deployment) {
-        return deployedWebHosts.get(deployment);
-    }
-
-    @Override
     conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd,
                                       Log errors) {
-        if (deployedWebHosts.contains(webAppInfo.deployment)) {
+        if (deployedHosts.contains(webAppInfo.deployment)) {
             errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
                       );
             return False;
@@ -241,10 +252,7 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
         Directory libDir   = ensureAccountLibDirectory(accountName);
         Directory buildDir = ensureAccountBuildDirectory(accountName);
 
-        @Inject("repository") ModuleRepository coreRepo;
-
-        ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir), new DirRepository(buildDir)];
-        ModuleRepository   repository = new LinkedRepository(baseRepos.freeze(True));
+        ModuleRepository repository = getRepository(libDir, buildDir);
 
         String    deployment = webAppInfo.deployment;
         Directory homeDir    = ensureDeploymentHomeDirectory(accountName, deployment);
@@ -271,33 +279,65 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
             stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor(".challenge").ensure())
             ];
 
-        WebHost webHost = new WebHost(route, repository, accountName, webAppInfo, pwd, extras,
-                                      homeDir, buildDir);
-        deployedWebHosts.put(deployment, webHost);
+        common.HostManager mgr = &this.maskAs(common.HostManager);
+        WebHost webHost = new WebHost(mgr, route, accountName, repository, webAppInfo, pwd, extras,
+                            homeDir, buildDir);
+        deployedHosts.put(deployment, webHost);
         httpServer.addRoute(hostName, webHost, keystore,
                 tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
 
         return True, webHost;
     }
 
-    @Override
-    void removeWebHost(WebHost webHost) {
-        // leave the webapp stub active
-        addStubRoute(webHost.account, webHost.appInfo, webHost.pwd);
-
+    conditional DbHost[] collectSharedDBs(String accountName, ModuleRepository repository,
+                                          WebAppInfo webAppInfo, Log errors) {
+        String         moduleName = webAppInfo.moduleName;
+        ModuleTemplate mainModule;
         try {
-            webHost.close();
-        } catch (Exception ignore) {}
+            // we need the resolved module to look up annotations
+            mainModule = repository.getResolvedModule(moduleName);
+        } catch (Exception e) {
+            errors.add($"Error: Failed to resolve module: {moduleName.quoted()}: {e.message}");
+            return False;
+        }
 
-        deployedWebHosts.remove(webHost.appInfo.deployment);
+        String[] sharedDBs = webAppInfo.sharedDBs; // deployment names
+        try {
+            return True, new DbHost[sharedDBs.size](i -> {
+                String deployment = sharedDBs[i];
+                assert AppHost host := getHost(deployment) as $"Deployment {deployment.quoted()} is not active";
+                assert host.is(DbHost) as $"Deployment {deployment.quoted()} is not a DB";
+                return host;
+                });
+        } catch (Exception e) {
+            errors.add($"Error: {e.message}");
+            return False;
+        }
     }
 
     @Override
-    void removeDeployment(String accountName, String deployment,
-                          String hostName, CryptoPassword pwd) {
+    void removeHost(AppHost host) {
+
+        host.deactivate(True);
+
+        if (host.is(WebHost)) {
+            // leave the webapp stub active
+            addStubRoute(host.account, host.appInfo, host.pwd);
+        }
+
+        try {
+            host.close();
+        } catch (Exception ignore) {}
+
+        deployedHosts.remove(host.appInfo?.deployment) : assert;
+    }
+
+    @Override
+    void removeWebDeployment(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd) {
         // remove the deployment data
-        Directory homeDir = ensureDeploymentHomeDirectory(accountName, deployment);
-        File      store   = homeDir.ensure().fileFor(KeyStoreName);
+        Directory homeDir  = ensureDeploymentHomeDirectory(accountName, webAppInfo.deployment);
+        File      store    = homeDir.ensure().fileFor(KeyStoreName);
+        String    hostName = webAppInfo.hostName;
 
         try {
             // revoke the certificate (in case of a future hostName reuse)
@@ -325,34 +365,54 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
                 }
             }
         }
-
-        if (homeDir.exists) {
-            if (keepLogs) {
-                for (File file : homeDir.filesRecursively()) {
-                    if (!file.name.endsWith(".log")) {
-                        file.delete();
-                    }
-                // TODO: remove empty directories
-                }
-            } else {
-                homeDir.deleteRecursively();
-            }
-        }
+        removeFiles(homeDir, keepLogs);
     }
+
+
+    // ----- DbApp management ----------------------------------------------------------------------
+
+    @Override
+    conditional DbHost createDbHost(String accountName, DbAppInfo dbAppInfo, Log errors) {
+        Directory libDir   = ensureAccountLibDirectory(accountName);
+        Directory buildDir = ensureAccountBuildDirectory(accountName);
+
+        ModuleRepository repository = getRepository(libDir, buildDir);
+
+        String    deployment = dbAppInfo.deployment;
+        Directory homeDir    = ensureDeploymentHomeDirectory(accountName, deployment);
+
+        if (DbHost dbHost := utils.createDbHost(repository, dbAppInfo.moduleName, dbAppInfo, "jsondb",
+                homeDir, buildDir, errors)) {
+            deployedHosts.put(deployment, dbHost);
+            return True, dbHost;
+        }
+        return False;
+    }
+
+    @Override
+    void removeDbDeployment(String accountName, DbAppInfo dbAppInfo) {
+        // remove the deployment data
+        Directory homeDir = ensureDeploymentHomeDirectory(accountName, dbAppInfo.deployment);
+
+        removeFiles(homeDir, keepLogs = True); // TODO soft code?
+    }
+
+
+    // ----- lifecycle -----------------------------------------------------------------------------
 
     @Override
     Boolean shutdown(Boolean force = False) {
         Boolean reschedule = False;
-        for (WebHost webHost : deployedWebHosts.values) {
-            reschedule |= webHost.deactivate(True);
+        for (AppHost host : deployedHosts.values) {
+            reschedule |= host.deactivate(True);
         }
 
         if (reschedule) {
             return False;
         }
 
-        for (WebHost webHost : deployedWebHosts.values) {
-            webHost.close();
+        for (AppHost host : deployedHosts.values) {
+            host.close();
         }
         return True;
     }
@@ -361,6 +421,32 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
      * Log the specified message to the application "console" file.
      */
     void log(Directory homeDir, String message) {
-        homeDir.fileFor("console.log").ensure().append(utils.NewLine).append(message.utf8());
+
+        homeDir.fileFor("console.log").ensure().append($"\n{clock.now}: {message}".utf8());
+    }
+
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    private ModuleRepository getRepository(Directory libDir, Directory buildDir) {
+        @Inject("repository") ModuleRepository coreRepo;
+
+        ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir), new DirRepository(buildDir)];
+        return new LinkedRepository(baseRepos.freeze(True));
+    }
+
+    private void removeFiles(Directory dir, Boolean keepLogs) {
+        if (dir.exists) {
+            if (keepLogs) {
+                for (File file : dir.filesRecursively()) {
+                    if (!file.name.endsWith(".log")) {
+                        file.delete();
+                    }
+                // TODO: remove empty directories
+                }
+            } else {
+                dir.deleteRecursively();
+            }
+        }
     }
 }

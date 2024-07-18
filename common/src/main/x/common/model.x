@@ -6,32 +6,32 @@ package model {
 
     const AccountInfo(AccountId id, String name,
                       Map<String, ModuleInfo> modules = [], // keyed by the fully qualified name
-                      Map<String, WebAppInfo> webApps = [], // keyed by the deployment name
+                      Map<String, AppInfo>    apps    = [], // keyed by the deployment name
                       Map<UserId, UserRole>   users   = []
                       ) {
 
         AccountInfo addOrUpdateModule(ModuleInfo info) {
-            return new AccountInfo(id, name, modules.put(info.name, info), webApps, users);
+            return new AccountInfo(id, name, modules.put(info.name, info), apps, users);
         }
 
         AccountInfo removeModule(String moduleName) {
-            return new AccountInfo(id, name, modules.remove(moduleName), webApps, users);
+            return new AccountInfo(id, name, modules.remove(moduleName), apps, users);
         }
 
         AccountInfo addOrUpdateUser(UserId userId, UserRole role) {
-            return new AccountInfo(id, name, modules, webApps, users.put(userId, role));
+            return new AccountInfo(id, name, modules, apps, users.put(userId, role));
         }
 
         AccountInfo removeUser(UserId userId) {
-            return new AccountInfo(id, name, modules, webApps, users.remove(userId));
+            return new AccountInfo(id, name, modules, apps, users.remove(userId));
         }
 
-        AccountInfo addOrUpdateWebApp(WebAppInfo info) {
-            return new AccountInfo(id, name, modules, webApps.put(info.deployment, info), users);
+        AccountInfo addOrUpdateApp(AppInfo info) {
+            return new AccountInfo(id, name, modules, apps.put(info.deployment, info), users);
         }
 
-        AccountInfo removeWebApp(String deployment) {
-            return new AccountInfo(id, name, modules, webApps.remove(deployment), users);
+        AccountInfo removeApp(String deployment) {
+            return new AccountInfo(id, name, modules, apps.remove(deployment), users);
         }
 
         /**
@@ -40,11 +40,11 @@ package model {
         Set<String> collectDeployments(String moduleName) {
             Set<String> deployments = new HashSet();
 
-            for ((String deployment, WebAppInfo webAppInfo) : webApps) {
-                String webModuleName = webAppInfo.moduleName;
-                if (webModuleName == moduleName) {
+            for ((String deployment, AppInfo appInfo) : apps) {
+                String name = appInfo.moduleName;
+                if (name == moduleName) {
                     deployments += deployment;
-                } else if (ModuleInfo moduleInfo := modules.get(webModuleName),
+                } else if (ModuleInfo moduleInfo := modules.get(name),
                     moduleInfo.dependsOn(moduleName)) {
                     deployments += deployment;
                 }
@@ -84,40 +84,25 @@ package model {
 
     typedef Map<InjectionKey, String> as Injections;
 
-    const WebAppInfo(
+    const AppInfo(
             String     deployment,          // the same module could be deployed multiple times
-            String     moduleName,          // qualified
-            String     hostName,            // the full host name (e.g. "shop.acme.com.xqiz.it")
-            String     password,            // an encrypted password to the keystore for this deployment
-            String     provider   = "self", // the name of the certificate provider
-            Boolean    active     = False,  // if Treu, the app should be automatically started
+            String     moduleName,          // qualified module name
+            Boolean    active     = False,  // if True, the app should be automatically started
             Injections injections = [],     // values for Destringable injection types
             ) {
 
-        WebAppInfo with(
-            String?     hostName   = Null,
-            String?     password   = Null,
-            String?     provider   = Null,
+        @Abstract
+        AppInfo with(
             Boolean?    active     = Null,
-            Injections? injections = Null) {
+            Injections? injections = Null);
 
-            return new WebAppInfo(deployment, moduleName,
-                hostName   ?: this.hostName,
-                password   ?: this.password,
-                provider   ?: this.provider,
-                active     ?: this.active,
-                injections ?: this.injections);
-        }
-
-        WebAppInfo updateStatus(Boolean active) {
+        AppInfo updateStatus(Boolean active) {
             return active == this.active
                 ? this
                 : this.with(active=active);
         }
 
-        WebAppInfo redact() {
-            return this.with(password="");
-        }
+        AppInfo redact() = this;
 
         /**
          * Get an existing injection key for the given name and an optional type name.
@@ -145,6 +130,61 @@ package model {
                         ? key
                         : $"Invalid injection: \"{name}/{type}\"";
             }
+        }
+    }
+
+    const WebAppInfo(
+            String     deployment,          // @see AppInfo
+            String     moduleName,          // @see AppInfo
+            String     hostName,            // the full host name (e.g. "shop.acme.com.xqiz.it")
+            String     password,            // an encrypted password to the keystore for this deployment
+            String     provider   = "self", // the name of the certificate provider
+            Boolean    active     = False,  // @see AppInfo
+            Injections injections = [],     // @see AppInfo
+            String[]   sharedDBs  = [],     // names of shared DB deployments
+            )
+            extends AppInfo(deployment, moduleName, active, injections) {
+
+        @Override
+        WebAppInfo with(
+            Boolean?    active     = Null,
+            Injections? injections = Null,
+            String?     hostName   = Null,
+            String?     password   = Null,
+            String?     provider   = Null,
+            String[]?   sharedDBs  = Null,
+            ) {
+            return new WebAppInfo(deployment, moduleName,
+                hostName   ?: this.hostName,
+                password   ?: this.password,
+                provider   ?: this.provider,
+                active     ?: this.active,
+                injections ?: this.injections,
+                sharedDBs  ?: this.sharedDBs,
+                );
+        }
+
+        @Override
+        WebAppInfo redact() = this.with(password="");
+    }
+
+    const DbAppInfo(
+            String     deployment,         // @see AppInfo
+            String     moduleName,         // @see AppInfo
+            Boolean    active     = False, // @see AppInfo
+            Injections injections = [],    // @see AppInfo
+            )
+            extends AppInfo(deployment, moduleName, active, injections) {
+
+        @Override
+        DbAppInfo with(
+            Boolean?    active     = Null,
+            Injections? injections = Null,
+            ) {
+            return new DbAppInfo(deployment, moduleName,
+                active     ?: this.active,
+                injections ?: this.injections
+                );
         }
     }
 }

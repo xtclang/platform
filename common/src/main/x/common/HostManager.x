@@ -1,5 +1,6 @@
 import ecstasy.text.Log;
 
+import common.model.DbAppInfo;
 import common.model.WebAppInfo;
 
 import crypto.Certificate;
@@ -48,6 +49,22 @@ interface HostManager {
     }
 
     /**
+     * Retrieve an [AppHost] for the specified deployment name
+     *
+     * @return True iff there is an AppHost for the specified deployment
+     * @return (optional) the AppHost
+     */
+    conditional AppHost getHost(String deployment);
+
+    /**
+     * Remove the specified [AppHost].
+     */
+    void removeHost(AppHost host);
+
+
+    // ----- WebApp management ---------------------------------------------------------------------
+
+    /**
      * Ensure there is a keystore for the specified web app that contains a private key, a
      * certificate for the application host name and a symmetrical key for cookie encryption.
      *
@@ -77,7 +94,12 @@ interface HostManager {
      * @return True iff there is a WebHost for the specified deployment
      * @return (conditional) the WebHost
      */
-    conditional WebHost getWebHost(String deployment);
+    conditional WebHost getWebHost(String deployment) {
+        if (AppHost host := getHost(deployment), host.is(WebHost)){
+            return True, host;
+        }
+        return False;
+    }
 
     /**
      * Create a [WebHost] for the specified application module. If the `WebHost` cannot be created
@@ -96,14 +118,41 @@ interface HostManager {
                                       Log errors);
 
     /**
-     * Remove the specified [WebHost].
+     * Remove the specified deployment.
      */
-    void removeWebHost(WebHost webHost);
+    void removeWebDeployment(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd);
+
+
+    // ----- DB App management ---------------------------------------------------------------------
+
+    /**
+     * Retrieve a [DbHost] for the specified deployment.
+     *
+     * @return True iff there is a DbHost for the specified deployment
+     * @return (optional) the DbHost
+     */
+    conditional DbHost getDbHost(String deployment) {
+        if (AppHost host := getHost(deployment), host.is(DbHost)){
+            return True, host;
+        }
+        return False;
+    }
+
+    /**
+     * Create a [DbHost] for the specified application module.
+     *
+     * @param accountName  the account name
+     * @param dbAppInfo    the db application info
+     *
+     * @return True iff the DbHost was successfully created
+     * @return (optional) the DbHost for the newly loaded Container
+     */
+    conditional DbHost createDbHost(String accountName, DbAppInfo dbAppInfo, Log errors);
 
     /**
      * Remove the specified deployment.
      */
-    void removeDeployment(String accountName, String deployment, String hostName, CryptoPassword pwd);
+    void removeDbDeployment(String accountName, DbAppInfo dbAppInfo);
 
 
     // ----- lifecycle -----------------------------------------------------------------------------

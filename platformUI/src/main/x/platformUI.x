@@ -20,6 +20,8 @@ module platformUI.xqiz.it {
     import common.names;
 
     import common.model.AccountInfo;
+    import common.model.AppInfo;
+    import common.model.DbAppInfo;
     import common.model.WebAppInfo;
 
     import crypto.KeyStore;
@@ -60,25 +62,47 @@ module platformUI.xqiz.it {
         server.addRoute(route, new HttpHandler(route, this), keystore,
                 names.PlatformTlsKey, names.CookieEncryptionKey);
 
-        // create WebHosts for all active web applications
-        @Inject Console console;
+        void reportInitialized(AppInfo appInfo, String type) {
+            @Inject Console console;
+            console.print($|Info: Initialized {type} deployment: "{appInfo.deployment}" \
+                           |of "{appInfo.moduleName}"
+                         );
+        }
 
+        void reportFailedInitialization(AppInfo appInfo, String type, ErrorLog errors) {
+            @Inject Console console;
+            console.print($|Warning: Failed to initialize {type} deployment: "{appInfo.deployment}" \
+                           |of "{appInfo.moduleName}"
+                         );
+            errors.reportAll(msg -> console.print(msg));
+        }
+
+        // create AppHosts for all active applications
         for (AccountInfo accountInfo : accountManager.getAccounts()) {
             String accountName = accountInfo.name;
-            for (WebAppInfo appInfo : accountInfo.webApps.values) {
-                if (appInfo.active) {
+
+            // create DbHosts for all active db applications first
+            for (AppInfo appInfo : accountInfo.apps.values) {
+                if (appInfo.active && appInfo.is(DbAppInfo)) {
+                    if (hostManager.createDbHost(accountName, appInfo, errors)) {
+                        reportInitialized(appInfo, "DB");
+                    } else {
+                        accountManager.addOrUpdateApp(accountName, appInfo.updateStatus(False));
+                        reportFailedInitialization(appInfo, "DB", errors);
+                    }
+                }
+            }
+
+            // create WebHosts for all active web applications
+            for (AppInfo appInfo : accountInfo.apps.values) {
+                if (appInfo.active && appInfo.is(WebAppInfo)) {
                     if (hostManager.createWebHost(accountName, appInfo,
                             accountManager.decrypt(appInfo.password), errors)) {
-                        console.print($|Info: Initialized deployment: "{appInfo.hostName}" \
-                                       |of "{appInfo.moduleName}"
-                                     );
+                        reportInitialized(appInfo, "Web");
                     } else {
-                        accountManager.addOrUpdateWebApp(accountName, appInfo.updateStatus(False));
                         hostManager.addStubRoute(accountName, appInfo);
-                        console.print($|Warning: Failed to initialize deployment: "{appInfo.hostName}" \
-                                       |of "{appInfo.moduleName}"
-                                     );
-                        errors.reportAll(msg -> console.print(msg));
+                        accountManager.addOrUpdateApp(accountName, appInfo.updateStatus(False));
+                        reportFailedInitialization(appInfo, "Web", errors);
                     }
                 }
             }

@@ -1,8 +1,8 @@
 import common.model.AccountInfo;
+import common.model.AppInfo;
 import common.model.ModuleInfo;
 import common.model.UserId;
 import common.model.UserInfo;
-import common.model.WebAppInfo;
 
 import crypto.CryptoPassword;
 
@@ -86,20 +86,20 @@ interface AccountManager {
     void removeModule(String accountName, String moduleName);
 
     /**
-     * Add the specified web application to the account or update tis info.
+     * Add the specified application to the account or update tis info.
      *
      * @param accountName  the account name
-     * @param webAppInfo   the web application info
+     * @param appInfo      the application info
      */
-    void addOrUpdateWebApp(String accountName, WebAppInfo webAppInfo);
+    void addOrUpdateApp(String accountName, AppInfo appInfo);
 
     /**
      * Remove the specified web application from the account.
      *
      * @param accountName  the account name
-     * @param webAppName   the web application name
+     * @param deployment   the application deployment name
      */
-    void removeWebApp(String accountName, String webAppName);
+    void removeApp(String accountName, String deployment);
 
 
     // ----- UserInfo management -------------------------------------------------------------------

@@ -157,14 +157,15 @@ module kernel.xqiz.it {
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
             if (Container  container :=
-                    utils.createContainer(repository, hostModule, hostDir, buildDir, True, [], errors)) {
+                    utils.createContainer(repository, hostModule, hostDir, buildDir, True, [],
+                        (_) -> Null, errors)) {
                 // TODO: we should either soft-code the receiver's protocol and port or
                 //       have the configuration supply the receivers' URI, from which we would
                 //       compute the proxy addresses
                 Uri[] receivers = new Uri[proxies.size]
                         (i -> new Uri(scheme="https", ip=proxies[i], port=8091)).freeze(inPlace=True);
-                hostManager = container.invoke("configure", Tuple:(httpServer, accountsDir, receivers))[0].
-                                as(HostManager);
+                hostManager = container.invoke("configure",
+                                Tuple:(httpServer, accountsDir, receivers))[0]. as(HostManager);
             } else {
                 return;
             }
@@ -200,8 +201,8 @@ module kernel.xqiz.it {
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
-                    utils.createContainer(repository, uiModule, hostDir, buildDir, True, [], errors)) {
-
+                    utils.createContainer(repository, uiModule, hostDir, buildDir, True, [],
+                        (_) -> Null, errors)) {
                 import HttpServer.ProxyCheck;
 
                 HostInfo   binding   = new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort);

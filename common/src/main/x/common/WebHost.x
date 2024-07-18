@@ -24,42 +24,37 @@ import common.model.WebAppInfo;
 /**
  * AppHost for a Web module.
  */
-service WebHost
-        extends AppHost
+service WebHost(HostManager hostManager, HostInfo route, String account, ModuleRepository repository,
+                WebAppInfo appInfo, CryptoPassword pwd, CatalogExtras extras, Directory homeDir,
+                Directory buildDir)
+        extends AppHost(appInfo.moduleName, appInfo, homeDir)
         implements Handler {
 
-    construct (HostInfo route, ModuleRepository repository, String account, WebAppInfo appInfo,
-               CryptoPassword pwd, CatalogExtras extras, Directory homeDir, Directory buildDir) {
-        construct AppHost(appInfo.moduleName, homeDir);
+    @Override
+    WebAppInfo appInfo.get() = super().as(WebAppInfo);
 
-        this.route      = route;
-        this.repository = repository;
-        this.account    = account;
-        this.appInfo    = appInfo;
-        this.pwd        = pwd;
-        this.extras     = extras;
-        this.buildDir   = buildDir;
-    }
+    @Override
+    Boolean active.get() = handler != Null;
 
     /**
-     * The module repository to use.
+     * The HostManager instance.
      */
-    ModuleRepository repository;
+    protected HostManager hostManager;
 
     /**
      * The account name this deployment belongs to.
      */
-    String account;
+    public/protected String account;
 
     /**
-     * The web application details.
+     * The module repository to use.
      */
-    WebAppInfo appInfo;
+    protected ModuleRepository repository;
 
     /**
      * The password to use for the keystore.
      */
-    CryptoPassword pwd;
+    public/protected CryptoPassword pwd;
 
     /**
      * A map of WebService classes for processing requests for the paths not handled by the web app
@@ -67,12 +62,12 @@ service WebHost
      *
      * @see [HttpHandler]
      */
-    CatalogExtras extras;
+    protected CatalogExtras extras;
 
     /**
      * The build directory.
      */
-    Directory buildDir;
+    protected Directory buildDir;
 
     /**
      * The AppHosts for the containers this module depends on.
@@ -82,27 +77,22 @@ service WebHost
     /**
      * The HostInfo that routes to this handler.
      */
-    HostInfo route;
+    protected HostInfo route;
 
     /**
      * The underlying HttpHandler.
      */
-    HttpHandler? handler;
+    protected HttpHandler? handler;
 
     /**
      * The decryptor to be used by the underlying handler.
      */
-    Decryptor? decryptor;
-
-    /**
-     * Indicates whether or not this WebHost is ready to handle HTTP requests.
-     */
-    Boolean active.get() = handler != Null;
+    protected Decryptor? decryptor;
 
     /**
      * Total request counter (serves as an activity indicator).
      */
-    private Int totalRequests;
+    public/private Int totalRequests;
 
     /**
      * The timer used to monitor the application activity.
@@ -132,7 +122,9 @@ service WebHost
      *                  False if it's caused by an application HTTP request
      *
      * @return True iff the hosted WebApp is active
+     * @return (conditional) the corresponding HttpHandler
      */
+    @Override
     conditional HttpHandler activate(Boolean explicit, Log errors) {
         if (HttpHandler handler ?= this.handler) {
             return True, handler;
@@ -153,14 +145,37 @@ service WebHost
             return False;
         }
 
-        import tools.ModuleGenerator;
+        // check if all the shared databases are deployed
+        Map<String, DbHost> sharedDbHosts;
+        if (appInfo.sharedDBs.empty) {
+            sharedDbHosts = [];
+        } else {
+            sharedDbHosts = new ListMap();
+            for (String dbDeployment : appInfo.sharedDBs) {
+                if (DbHost dbHost := hostManager.getDbHost(dbDeployment)) {
+                    String dbModuleName = dbHost.moduleName;
+                    if (sharedDbHosts.contains(dbModuleName)) {
+                        errors.add($|Error: More than one dependency on the same database module \
+                                    |"{dbModuleName}"
+                                   );
+                        return False;
+                    } else {
+                        sharedDbHosts.put(dbModuleName, dbHost);
+                    }
+                } else {
+                    errors.add($"Error: Dependent database {dbDeployment.quoted()} has not been deployed");
+                    return False;
+                }
+            }
+        }
 
-        ModuleGenerator generator = new ModuleGenerator(mainModule);
-        if (ModuleTemplate webTemplate := generator.ensureWebModule(repository, buildDir, errors)) {
-            Container container;
-            if ((container, dependencies) := utils.createContainer(
-                        repository, webTemplate, homeDir, buildDir, False, appInfo.injections, errors)) {
+        if (ModuleTemplate webTemplate := new tools.ModuleGenerator(mainModule).
+                ensureWebModule(repository, buildDir, errors)) {
 
+            function DbHost?(String) hostFinder = name -> sharedDbHosts.getOrNull(name);
+
+            if ((Container container, dependencies) := utils.createContainer(repository, webTemplate,
+                        homeDir, buildDir, False, appInfo.injections, hostFinder, errors)) {
                 try {
                     Tuple       result  = container.invoke("createHandler_", Tuple:(route, extras));
                     HttpHandler handler = result[0].as(HttpHandler);
@@ -171,8 +186,13 @@ service WebHost
 
                     // set the alarm, expecting at least one application request within next
                     // "check interval"
-                    Int currentCount = totalRequests + 1;
-                    timer.schedule(InactivityDuration, () -> checkActivity(currentCount));
+                    Int      currentCount = totalRequests + 1;
+                    Duration duration     = InactivityDuration;
+                    if (explicit) {
+                        // they explicitly started it; keep it up longer first time around
+                        duration = duration*2;
+                    }
+                    timer.schedule(duration, () -> checkActivity(currentCount));
 
                     return True, handler;
                 } catch (Exception e) {
@@ -182,7 +202,6 @@ service WebHost
             }
         } else {
             errors.add($"Error: Failed to create a WebModule for moduleName.quoted()}");
-
         }
         return False;
     }
@@ -198,14 +217,7 @@ service WebHost
         }
     }
 
-    /*
-     * Deactivate the underlying WebApp.
-     *
-     * @param explicit  True if the deactivation request comes from the platform management UI;
-     *                  False if it's caused by the [activity check](checkActivity)
-     *
-     * @return True iff the deactivation has succeeded; False if it has been re-scheduled
-     */
+    @Override
     Boolean deactivate(Boolean explicit) {
         if (HttpHandler handler ?= this.handler) {
             // TODO: if deactivation is "implicit", we need to "serialize to disk" rather than "shutdown"
@@ -219,7 +231,7 @@ service WebHost
 
             // TODO: pause, serialize and only then kill
             for (AppHost dependent : dependencies) {
-                dependent.close();
+                dependent.deactivate(explicit);
             }
             container?.kill();
 

@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { apiWebApp } from "boot/axios";
 import { useQuasar } from "quasar";
 
-export const useWebAppStore = defineStore("webApp", {
+export const useWebAppStore = defineStore("deployments", {
   state: () => ({
     webAppsJSON: {},
     $q: useQuasar()
@@ -18,6 +18,8 @@ export const useWebAppStore = defineStore("webApp", {
       delete this.webApps["$type"] // remove the metadata
 
       for (const webApp of Object.values(this.webApps)) {
+        delete webApp["$type"]
+
         webApp.displayInfo = webApp.active ? {
           displayText: "Active",
           displayColor: "positive",
@@ -37,11 +39,31 @@ export const useWebAppStore = defineStore("webApp", {
          */
         console.log(`DEV MODE: Adding mock webapp data`);
         this.webAppsJSON = {
+         "$type": "HashMap<String, common.model.AppInfo>",
           "bank1": {
+            "$type": "common.model.WebAppInfo",
             "deployment": "bank1",
             "moduleName": "bankStressTest.examples.org",
             "hostName": "bank1.localhost.xqiz.it",
             "active": Math.random() > 0.5,
+            "password": "",
+            "provider": "self",
+            "injections":
+                {
+                "$type": "ListMap<common.model.InjectionKey, String>",
+                "e":
+                  [
+                  {
+                  "k":
+                    {
+                    "name": "org",
+                    "type": "String"
+                    },
+                  "v": ""
+                  }
+                  ]
+                },
+            "sharedDBs": []
           },
           "bank2": {
             "deployment": "bank2",
@@ -56,7 +78,7 @@ export const useWebAppStore = defineStore("webApp", {
          * fetch actual data
          */
         apiWebApp
-          .get("/status")
+          .get("/deployments")
           .then((response) => {
             this.webAppsJSON = response.data;
             this.enhance();
@@ -87,7 +109,7 @@ export const useWebAppStore = defineStore("webApp", {
       } else {
         this.$q.loading.show();
         apiWebApp
-          .post(`/register/${deployment}/${moduleName}`)
+          .put(`/web/${deployment}/${moduleName}`)
           .then((response) => {
             if (update) {
               this.updateWebApps()
@@ -119,7 +141,7 @@ export const useWebAppStore = defineStore("webApp", {
       } else {
         this.$q.loading.show();
         apiWebApp
-          .delete(`/unregister/${deployment}`)
+          .delete(`/deployments/${deployment}`)
           .then(() => {
             this.updateWebApps()
           })
@@ -128,7 +150,7 @@ export const useWebAppStore = defineStore("webApp", {
             this.$q.notify({
               color: "negative",
               position: "top",
-              message: "Could not remove the web application",
+              message: "Could not remove the deployment",
               icon: "report_problem",
             });
           })

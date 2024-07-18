@@ -4,14 +4,13 @@ import ecstasy.mgmt.DirRepository;
 import ecstasy.mgmt.LinkedRepository;
 
 import common.DbHost;
-import common.WebHost;
 
 import common.model.AccountId;
 import common.model.AccountInfo;
+import common.model.AppInfo;
 import common.model.ModuleInfo;
 import common.model.UserId;
 import common.model.UserInfo;
-import common.model.WebAppInfo;
 
 import common.utils;
 
@@ -56,11 +55,13 @@ service AccountManager
     Connection init(ModuleRepository repository, Directory homeDir, Directory buildDir,
               Decryptor decryptor, Log errors) {
         repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
-        assert this.platformDbHost := utils.createDbHost(repository, "platformDB.xqiz.it", "jsondb",
-                                                    homeDir, buildDir, [], errors);
+        assert this.platformDbHost := utils.createDbHost(repository, "platformDB.xqiz.it", Null,
+                                                        "jsondb", homeDir, buildDir, errors);
 
-        DBUser user = new oodb.model.User(1, "admin");
-        this.dbConnection = platformDbHost.ensureDatabase()(user).as(Connection);
+        assert function oodb.Connection(DBUser) createConnection :=
+            platformDbHost.activate(True, errors);
+
+        this.dbConnection = createConnection(new oodb.model.User(1, "admin")).as(Connection);
         this.decryptor    = decryptor;
         return dbConnection;
     }
@@ -118,19 +119,19 @@ service AccountManager
     }
 
     @Override
-    void addOrUpdateWebApp(String accountName, WebAppInfo webAppInfo) {
+    void addOrUpdateApp(String accountName, AppInfo appInfo) {
         using (val tx = dbConnection.createTransaction()) {
             if (AccountInfo accountInfo := getAccount(accountName)) {
-                tx.accounts.put(accountInfo.id, accountInfo.addOrUpdateWebApp(webAppInfo));
+                tx.accounts.put(accountInfo.id, accountInfo.addOrUpdateApp(appInfo));
             }
         }
     }
 
     @Override
-    void removeWebApp(String accountName, String appName) {
+    void removeApp(String accountName, String deployment) {
         using (val tx = dbConnection.createTransaction()) {
             if (AccountInfo accountInfo := getAccount(accountName)) {
-                tx.accounts.put(accountInfo.id, accountInfo.removeWebApp(appName));
+                tx.accounts.put(accountInfo.id, accountInfo.removeApp(deployment));
             }
         }
     }
@@ -160,6 +161,6 @@ service AccountManager
 
     @Override
     void shutdown() {
-        platformDbHost.closeDatabase();
+        platformDbHost.close();
     }
 }

@@ -8,10 +8,14 @@ import web.*;
 import web.http.FormDataFile;
 import web.responses.SimpleResponse;
 
+import common.AppHost;
+import common.DbHost;
 import common.ErrorLog;
 import common.WebHost;
 
 import common.model.AccountInfo;
+import common.model.AppInfo;
+import common.model.DbAppInfo;
 import common.model.ModuleInfo;
 import common.model.ModuleType;
 import common.model.WebAppInfo;
@@ -54,6 +58,7 @@ service ModuleEndpoint
     @Post("upload")
     String[] uploadModule(@QueryParam("redeploy") Boolean allowRedeployment) {
         assert RequestIn request ?= this.request;
+        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
 
         String[] messages = [];
         if (web.Body body ?= request.body) {
@@ -62,7 +67,7 @@ service ModuleEndpoint
 
             @Inject Container.Linker linker;
 
-            Set<String> affectedWebModules = new HashSet();
+            Set<String> affectedModules = new HashSet();
             for (FormDataFile fileData : http.extractFileData(body)) {
                 File file = libDir.fileFor(fileData.fileName);
                 file.contents = fileData.contents;
@@ -81,10 +86,10 @@ service ModuleEndpoint
                         }
                         if (file.renameTo(fileName)) {
                             messages += $|Stored "{fileData.fileName}" module as: "{moduleName}"
-                                       ;
+                                         ;
                         } else {
-                            messages += $|Invalid or duplicate module name: {moduleName}"
-                                       ;
+                            messages += $|Invalid or duplicate module name: "{moduleName}"
+                                         ;
                         }
                     }
 
@@ -92,20 +97,25 @@ service ModuleEndpoint
 
                     accountManager.addOrUpdateModule(accountName, info);
 
-                    if (info.moduleType == Web) {
-                        affectedWebModules += moduleName;
-                    }
-                    affectedWebModules += updateDependencies(accountRepo, moduleName);
+                    affectedModules += moduleName;
+                    affectedModules += updateDependencies(accountRepo, moduleName);
                 } catch (Exception e) {
                     file.delete();
                     messages += $"Invalid module file {fileData.fileName.quoted()}: {e.message}";
                 }
             }
 
-            if (allowRedeployment && affectedWebModules.size > 0) {
-                messages += $|Redeploying {affectedWebModules.toString(sep=",", pre="", post="")}
+            if (allowRedeployment && affectedModules.size > 0) {
+                String[] deployments = new String[];
+                for ((String deployment, AppInfo appInfo) : accountInfo.apps) {
+                    if (AppHost host := hostManager.getHost(deployment),
+                            affectedModules.contains(host.moduleName)) {
+                    deployments += deployment;
+                    }
+                }
+                messages += $|Redeploying {deployments.toString(sep=", ", pre="", post="")}
                             ;
-                redeploy^(accountRepo, affectedWebModules);
+                redeploy^(accountRepo, deployments);
             }
         }
        return messages;
@@ -166,23 +176,20 @@ service ModuleEndpoint
     /**
      * Iterate over modules that depend on the specified `moduleName` and rebuild their ModuleInfos.
      *
-     * @return an array of affected WebModule names
+     * @return an array of affected module names
      */
     private String[] updateDependencies(ModuleRepository accountRepo, String moduleName) {
         String[] affectedNames = [];
         if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
             for (ModuleInfo moduleInfo : accountInfo.modules.values) {
-                for (RequiredModule dependent : moduleInfo.dependencies) {
-                    if (dependent.name == moduleName) {
-                        String     affectedName = moduleInfo.name;
-                        ModuleInfo newInfo      = buildModuleInfo(accountRepo, affectedName);
+                if (moduleInfo.dependsOn(moduleName)) {
+                    String     affectedName = moduleInfo.name;
+                    ModuleInfo newInfo      = buildModuleInfo(accountRepo, affectedName);
 
-                        accountManager.addOrUpdateModule(accountName, newInfo);
+                    accountManager.addOrUpdateModule(accountName, newInfo);
 
-                        if (moduleInfo.moduleType == Web && newInfo.isResolved) {
-                            affectedNames += affectedName;
-                        }
-                        break;
+                    if (newInfo.isResolved) {
+                        affectedNames += affectedName;
                     }
                 }
             }
@@ -228,52 +235,66 @@ service ModuleEndpoint
     }
 
     /**
-     * Redeploy all deployments that are based on the web module names in the specified set.
+     * Redeploy all specified deployments.
      *
      * Note: this method executes asynchronously.
      */
-    private void redeploy(ModuleRepository accountRepo, Set<String> moduleNames) {
-        if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
+    private void redeploy(ModuleRepository accountRepo, String[] deployments) {
+        ErrorLog errors = new ErrorLog();
 
-            ErrorLog errors = new ErrorLog();
-            for ((String deployment, WebAppInfo info) : accountInfo.webApps) {
-                if (WebHost webHost := hostManager.getWebHost(deployment),
-                    moduleNames.contains(webHost.moduleName)) {
+        for (String deployment : deployments) {
+            if (AppHost host := hostManager.getHost(deployment), AppInfo appInfo ?= host.appInfo) {
 
-                    hostManager.removeWebHost(webHost);
+                import common.model.InjectionKey;
+                import common.model.Injections;
 
-                    WebAppInfo? newInfo = Null;
+                // adjust the injections map if necessary
+                AppInfo?       newInfo = Null;
+                InjectionKey[] injectionKeys;
+                if (injectionKeys :=
+                        utils.collectDestringableInjections(accountRepo, host.moduleName)) {
 
-                    import common.model.InjectionKey;
-                    import common.model.Injections;
-
-                    // adjust the injections map if necessary
-                    InjectionKey[] injectionKeys;
-                    if (injectionKeys :=
-                            utils.collectDestringableInjections(accountRepo, webHost.moduleName)) {
-
-                        Injections injections = info.injections;
-                        if (injectionKeys.as(Collection) != injections.keys.as(Collection)) {
-                            Injections newInjections = new ListMap();
-                            for (InjectionKey key : injectionKeys) {
-                                injections.put(key, injections.getOrDefault(key, ""));
-                            }
-                            newInfo = info.with(injections=newInjections);
+                    Injections injections = appInfo.injections;
+                    if (injectionKeys.as(Collection) != injections.keys.as(Collection)) {
+                        Injections newInjections = new ListMap();
+                        for (InjectionKey key : injectionKeys) {
+                            injections.put(key, injections.getOrDefault(key, ""));
                         }
+                        newInfo = appInfo.with(injections=newInjections);
                     }
+                }
 
-                    // redeploy if necessary
-                    if (info.active && !hostManager.createWebHost(accountName, info,
-                            accountManager.decrypt(info.password), errors)) {
-                        String hostName = info.hostName;
-                        webHost.log($"Error: Failed to redeploy {hostName.quoted()}; reason: {errors}\n");
+                // redeploy if necessary and possible
+                if (host.active) {
+                    // TODO: schedule a redeployment for later
+                    host.log($|Warning: The application "{deployment}" is active and needs to \
+                              |be redeployed manually"
+                            );
+                } else if (appInfo.active) {
+                    hostManager.removeHost(host);
 
-                        newInfo = info.updateStatus(False);
+                    if (appInfo.is(WebAppInfo)) {
+                        if (!hostManager.createWebHost(accountName, appInfo,
+                                accountManager.decrypt(appInfo.password), errors)) {
+                            host.log($|Error: Failed to redeploy "{deployment}"; \
+                                      |reason: {errors}"
+                                      |
+                                      );
+                            newInfo = appInfo.updateStatus(False);
+                        }
+                    } else if (appInfo.is(DbAppInfo)) {
+                        if (!(host := hostManager.createDbHost(accountName, appInfo, errors))) {
+                            host.log($|Error: Failed to redeploy "{deployment}"; \
+                                  |reason: {errors}"
+                                  |
+                                  );
+                            newInfo = appInfo.updateStatus(False);
+                        }
                     }
                     errors.reset();
 
                     if (newInfo != Null) {
-                        accountManager.addOrUpdateWebApp(accountName, newInfo);
+                        accountManager.addOrUpdateApp(accountName, newInfo);
                     }
                 }
             }

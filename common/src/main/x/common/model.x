@@ -87,20 +87,19 @@ package model {
     const AppInfo(
             String     deployment,          // the same module could be deployed multiple times
             String     moduleName,          // qualified module name
-            Boolean    active     = False,  // if True, the app should be automatically started
+            Boolean    autoStart  = False,  // if True, the app should be automatically started
+            Boolean    active     = False,  // if True, the app is currently active; this flag is
+                                            // transient and is here only to simplify communications
+                                            // withe the UI
             Injections injections = [],     // values for Destringable injection types
             ) {
 
         @Abstract
         AppInfo with(
+            Boolean?    autoStart  = Null,
             Boolean?    active     = Null,
-            Injections? injections = Null);
-
-        AppInfo updateStatus(Boolean active) {
-            return active == this.active
-                ? this
-                : this.with(active=active);
-        }
+            Injections? injections = Null,
+            );
 
         AppInfo redact() = this;
 
@@ -139,14 +138,16 @@ package model {
             String     hostName,            // the full host name (e.g. "shop.acme.com.xqiz.it")
             String     password,            // an encrypted password to the keystore for this deployment
             String     provider   = "self", // the name of the certificate provider
+            Boolean    autoStart  = False,  // @see AppInfo
             Boolean    active     = False,  // @see AppInfo
             Injections injections = [],     // @see AppInfo
             String[]   sharedDBs  = [],     // names of shared DB deployments
             )
-            extends AppInfo(deployment, moduleName, active, injections) {
+            extends AppInfo(deployment, moduleName, autoStart, active, injections) {
 
         @Override
         WebAppInfo with(
+            Boolean?    autoStart  = Null,
             Boolean?    active     = Null,
             Injections? injections = Null,
             String?     hostName   = Null,
@@ -158,6 +159,7 @@ package model {
                 hostName   ?: this.hostName,
                 password   ?: this.password,
                 provider   ?: this.provider,
+                autoStart  ?: this.autoStart,
                 active     ?: this.active,
                 injections ?: this.injections,
                 sharedDBs  ?: this.sharedDBs,
@@ -171,19 +173,22 @@ package model {
     const DbAppInfo(
             String     deployment,         // @see AppInfo
             String     moduleName,         // @see AppInfo
+            Boolean    autoStart  = False, // @see AppInfo
             Boolean    active     = False, // @see AppInfo
             Injections injections = [],    // @see AppInfo
             )
-            extends AppInfo(deployment, moduleName, active, injections) {
+            extends AppInfo(deployment, moduleName, autoStart, active, injections) {
 
         @Override
         DbAppInfo with(
+            Boolean?    autoStart  = Null,
             Boolean?    active     = Null,
             Injections? injections = Null,
             ) {
             return new DbAppInfo(deployment, moduleName,
+                autoStart  ?: this.autoStart,
                 active     ?: this.active,
-                injections ?: this.injections
+                injections ?: this.injections,
                 );
         }
     }

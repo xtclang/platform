@@ -52,7 +52,9 @@ class DbHost(ModuleRepository repository, String moduleName, DbAppInfo? appInfo,
      */
     @Override
     conditional function Connection(DBUser) activate(Boolean explicit, Log errors) {
-        dependees++;
+        if (!explicit) {
+            dependees++;
+        }
         return True, _ -> throw new NotImplemented();
     }
 

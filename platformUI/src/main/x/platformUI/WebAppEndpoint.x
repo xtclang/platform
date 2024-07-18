@@ -41,12 +41,8 @@ service WebAppEndpoint
     Map<String, AppInfo> checkStatus() {
         if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
             HashMap<String, AppInfo> status = new HashMap();
-            for ((String deployment, AppInfo info) : accountInfo.apps) {
-                if (AppHost host := hostManager.getHost(deployment)) {
-                    info = info.updateStatus(host.active);
-                }
-
-                status.put(deployment, info.redact());
+            for ((String deployment, AppInfo appInfo) : accountInfo.apps) {
+                status.put(deployment, appInfo.with(active=isActive(deployment)).redact());
             }
             return status.freeze(inPlace=True);
         }
@@ -61,7 +57,7 @@ service WebAppEndpoint
         (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
         return appInfo.is(SimpleResponse)
                 ? appInfo
-                : appInfo.redact();
+                : appInfo.with(active=isActive(deployment)).redact();
     }
 
     /**
@@ -250,7 +246,7 @@ service WebAppEndpoint
         }
 
         if (host.activate(True, errors)) {
-            appInfo = appInfo.updateStatus(True);
+            appInfo = appInfo.with(autoStart=True);
             accountManager.addOrUpdateApp(accountName, appInfo);
             return appInfo.redact();
         } else {
@@ -271,12 +267,12 @@ service WebAppEndpoint
 
         if (AppHost host := hostManager.getHost(deployment)) {
             hostManager.removeHost(host);
-            accountManager.addOrUpdateApp(accountName, appInfo.updateStatus(False));
+            accountManager.addOrUpdateApp(accountName, appInfo.with(autoStart=False));
             return new SimpleResponse(OK);
         } else {
-            if (appInfo.active) {
-                // there's no host, but the deployment is marked as active; fix it
-                accountManager.addOrUpdateApp(accountName, appInfo.updateStatus(False));
+            if (appInfo.autoStart) {
+                // there's no host, but the deployment is marked as `autoStart`; fix it
+                accountManager.addOrUpdateApp(accountName, appInfo.with(autoStart=False));
                 }
             return new SimpleResponse(OK, "The application is not active");
         }
@@ -362,7 +358,7 @@ service WebAppEndpoint
         CryptoPassword cryptoPwd = accountManager.decrypt(encrypted);
 
         WebAppInfo appInfo = new WebAppInfo(
-                deployment, moduleName, hostName, encrypted, provider, False, injections);
+                deployment, moduleName, hostName, encrypted, provider, injections=injections);
 
         // the deployment is not active; the "stub" will serve the ACME protocol challenge requests
         // as well as give them something better than "HttpStatus 404: Page Not Found" to look at
@@ -515,7 +511,7 @@ service WebAppEndpoint
             return new SimpleResponse(Conflict, $"Failed to load module: {moduleName.quoted()}");
         }
 
-        DbAppInfo appInfo = new DbAppInfo(deployment, moduleName, False, injections);
+        DbAppInfo appInfo = new DbAppInfo(deployment, moduleName, injections=injections);
 
         accountManager.addOrUpdateApp(accountName, appInfo);
 
@@ -560,6 +556,16 @@ service WebAppEndpoint
         return appInfo.is(DbAppInfo | SimpleResponse)
                 ? appInfo
                 : new SimpleResponse(NotFound, $"Deployment '{deployment}' is not a DbApp");
+    }
+
+    /**
+     * @return True iff the specified deployment is active (in memory)
+     */
+    Boolean isActive(String deployment) {
+        if (AppHost host := hostManager.getHost(deployment)) {
+            return host.active;
+        }
+        return False;
     }
 
     /**

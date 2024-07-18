@@ -103,7 +103,7 @@ interface HostManager {
 
     /**
      * Create a [WebHost] for the specified application module. If the `WebHost` cannot be created
-     * successfully, or if the application is not [active](WebAppInfo.active), the "stub" web
+     * successfully, or if the application is not [autoStart](WebAppInfo.autoStart), the "stub" web
      * application will be installed.
      *
      * @param accountName  the account name

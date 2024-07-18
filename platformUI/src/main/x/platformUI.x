@@ -77,33 +77,36 @@ module platformUI.xqiz.it {
             errors.reportAll(msg -> console.print(msg));
         }
 
-        // create AppHosts for all active applications
+        // create AppHosts for all `autoStart` applications
         for (AccountInfo accountInfo : accountManager.getAccounts()) {
             String accountName = accountInfo.name;
 
-            // create DbHosts for all active db applications first
+            // create DbHosts for `autoStart` db applications first
             for (AppInfo appInfo : accountInfo.apps.values) {
-                if (appInfo.active && appInfo.is(DbAppInfo)) {
+                if (appInfo.autoStart && appInfo.is(DbAppInfo)) {
                     if (hostManager.createDbHost(accountName, appInfo, errors)) {
                         reportInitialized(appInfo, "DB");
                     } else {
-                        accountManager.addOrUpdateApp(accountName, appInfo.updateStatus(False));
+                        accountManager.addOrUpdateApp(accountName, appInfo.with(autoStart=False));
                         reportFailedInitialization(appInfo, "DB", errors);
                     }
                 }
             }
 
-            // create WebHosts for all active web applications
+            // create WebHosts for all `autoStart` web applications
             for (AppInfo appInfo : accountInfo.apps.values) {
-                if (appInfo.active && appInfo.is(WebAppInfo)) {
-                    if (hostManager.createWebHost(accountName, appInfo,
-                            accountManager.decrypt(appInfo.password), errors)) {
-                        reportInitialized(appInfo, "Web");
-                    } else {
-                        hostManager.addStubRoute(accountName, appInfo);
-                        accountManager.addOrUpdateApp(accountName, appInfo.updateStatus(False));
+                if (appInfo.is(WebAppInfo)) {
+                    if (appInfo.autoStart) {
+                        if (hostManager.createWebHost(accountName, appInfo,
+                                accountManager.decrypt(appInfo.password), errors)) {
+                            reportInitialized(appInfo, "Web");
+                            continue;
+                        }
+                        accountManager.addOrUpdateApp(accountName, appInfo.with(autoStart=False));
                         reportFailedInitialization(appInfo, "Web", errors);
                     }
+                    // set up the stub in either case
+                    hostManager.addStubRoute(accountName, appInfo);
                 }
             }
         }

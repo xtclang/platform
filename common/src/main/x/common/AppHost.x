@@ -34,8 +34,8 @@ class AppHost(String moduleName, AppInfo? appInfo, Directory homeDir)
      * Indicates whether or not this host is ready to handle corresponding requests or needs to be
      * activated first.
      *
-     * Unlike the `active` property of the [AppInfo], which indicates that an application needs to
-     * be loaded automatically, this property indicates whether or not the app is currently
+     * Unlike the `autoStart` property of the [AppInfo], which indicates that an application needs
+     * to be loaded automatically, this property indicates whether or not the app is currently
      * "in memory".
      */
     @RO Boolean active;

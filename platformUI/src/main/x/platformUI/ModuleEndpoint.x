@@ -270,7 +270,7 @@ service ModuleEndpoint
                     host.log($|Warning: The application "{deployment}" is active and needs to \
                               |be redeployed manually"
                             );
-                } else if (appInfo.active) {
+                } else if (appInfo.autoStart) {
                     hostManager.removeHost(host);
 
                     if (appInfo.is(WebAppInfo)) {
@@ -280,7 +280,7 @@ service ModuleEndpoint
                                       |reason: {errors}"
                                       |
                                       );
-                            newInfo = appInfo.updateStatus(False);
+                            newInfo = appInfo.with(autoStart=False);
                         }
                     } else if (appInfo.is(DbAppInfo)) {
                         if (!(host := hostManager.createDbHost(accountName, appInfo, errors))) {
@@ -288,7 +288,7 @@ service ModuleEndpoint
                                   |reason: {errors}"
                                   |
                                   );
-                            newInfo = appInfo.updateStatus(False);
+                            newInfo = appInfo.with(autoStart=False);
                         }
                     }
                     errors.reset();

@@ -158,7 +158,7 @@ module kernel.xqiz.it {
             HostManager    hostManager;
             if (Container  container :=
                     utils.createContainer(repository, hostModule, hostDir, buildDir, True, [],
-                        (_) -> Null, errors)) {
+                        (_) -> False, errors)) {
                 // TODO: we should either soft-code the receiver's protocol and port or
                 //       have the configuration supply the receivers' URI, from which we would
                 //       compute the proxy addresses
@@ -202,7 +202,7 @@ module kernel.xqiz.it {
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
                     utils.createContainer(repository, uiModule, hostDir, buildDir, True, [],
-                        (_) -> Null, errors)) {
+                        (_) -> False, errors)) {
                 import HttpServer.ProxyCheck;
 
                 HostInfo   binding   = new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort);

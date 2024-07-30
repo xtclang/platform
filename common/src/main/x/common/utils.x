@@ -31,7 +31,6 @@ package utils {
      * @param platform    True iff the loading module is one of the "core" platform modules
      * @param injections  the custom injections
      * @param findDbHost  a function that may supply a shared DbHost for a given database module
-     *                    TODO GG: replace with a "function conditional" when lambda support fixed
      * @param errors      the logger to report errors to
      *
      * @return True iff the container has been loaded successfully
@@ -42,7 +41,7 @@ package utils {
     static conditional (Container, AppHost[]) createContainer(
                     ModuleRepository repository, ModuleTemplate template, Directory deployDir,
                     Directory buildDir, Boolean platform, Injections injections,
-                    function DbHost?(String) findDbHost, Log errors) {
+                    function conditional DbHost(String) findDbHost, Log errors) {
         DbHost[]     dbHosts;
         HostInjector injector;
 
@@ -52,7 +51,7 @@ package utils {
 
             for (String dbModuleName : dbNames.values) {
                 DbHost dbHost;
-                if (!(dbHost ?= findDbHost(dbModuleName))) {
+                if (!(dbHost := findDbHost(dbModuleName))) {
                     if (!(dbHost := createDbHost(repository, dbModuleName, Null, "jsondb",
                             deployDir, buildDir, errors))) {
                     return False;

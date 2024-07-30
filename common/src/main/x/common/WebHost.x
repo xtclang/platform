@@ -172,10 +172,8 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
         if (ModuleTemplate webTemplate := new tools.ModuleGenerator(mainModule).
                 ensureWebModule(repository, buildDir, errors)) {
 
-            function DbHost?(String) hostFinder = name -> sharedDbHosts.getOrNull(name);
-
             if ((Container container, dependencies) := utils.createContainer(repository, webTemplate,
-                        homeDir, buildDir, False, appInfo.injections, hostFinder, errors)) {
+                        homeDir, buildDir, False, appInfo.injections, sharedDbHosts.get, errors)) {
                 try {
                     Tuple       result  = container.invoke("createHandler_", Tuple:(route, extras));
                     HttpHandler handler = result[0].as(HttpHandler);

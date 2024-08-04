@@ -146,6 +146,8 @@ package utils {
         import oodb.DBUser;
 
         return new HostInjector(deployDir, False, injections) {
+            private Connection[] connections = new Connection[];
+
             @Override
             Supplier getResource(Type type, String name) {
                 if (type.is(Type<RootSchema>)) {
@@ -176,6 +178,7 @@ package utils {
                                 // container, so the host could figure out the user
                                 DBUser     user = new oodb.model.User(1, "test");
                                 Connection conn = createConnection(user);
+                                connections += conn;
                                 return type.is(Type<Connection>)
                                         ? &conn.maskAs<Connection>(type)
                                         : &conn.maskAs<RootSchema>(type);
@@ -184,6 +187,11 @@ package utils {
                     }
                 }
                 return super(type, name);
+            }
+
+            @Override
+            void close(Exception? cause = Null) {
+                connections.forEach(c -> c.close(cause));
             }
         };
     }

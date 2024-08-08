@@ -27,10 +27,10 @@ service Controller
                 });
             return HttpStatus.Processing;
         }
-    accountManager.shutdown();
+        accountManager.shutdown();
 
-    // respond first; terminate the server an eon later
-    timer.schedule(Duration.ofMillis(10), httpServer.&close);
-    return HttpStatus.OK;
+        // respond first; terminate the server an eon later
+        clock.schedule(Duration.ofMillis(10), httpServer.&close);
+        return HttpStatus.OK;
     }
 }

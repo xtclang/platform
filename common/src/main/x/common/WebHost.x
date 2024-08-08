@@ -95,9 +95,9 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
     public/private Int totalRequests;
 
     /**
-     * The timer used to monitor the application activity.
+     * The clock used to monitor the application activity.
      */
-    @Inject Timer timer;
+    @Inject Clock clock;
 
     /**
      * Indicates the number of attempted deactivations before forcefully killing the container.
@@ -190,7 +190,7 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
                         // they explicitly started it; keep it up longer first time around
                         duration = duration*2;
                     }
-                    timer.schedule(duration, () -> checkActivity(currentCount));
+                    clock.schedule(duration, () -> checkActivity(currentCount));
 
                     return True, handler;
                 } catch (Exception e) {
@@ -211,7 +211,7 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
         } else {
             // some activity detected; reschedule the check
             Int currentCount = totalRequests;
-            timer.schedule(InactivityDuration, () -> checkActivity(currentCount));
+            clock.schedule(InactivityDuration, () -> checkActivity(currentCount));
         }
     }
 
@@ -221,7 +221,7 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
             // TODO: if deactivation is "implicit", we need to "serialize to disk" rather than "shutdown"
 
             if (!handler.shutdown() && ++deactivationProgress < DeactivationThreshold) {
-                timer.schedule(Second, () -> deactivate(explicit));
+                clock.schedule(Second, () -> deactivate(explicit));
                 return False;
             }
 

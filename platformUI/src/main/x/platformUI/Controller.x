@@ -17,10 +17,10 @@ service Controller
         @Inject Console console;
         console.print($"Info: Shutting down...");
 
-        @Inject Timer timer;
+        @Inject Clock clock;
         if (!hostManager.shutdown()) {
             // wait a second (TODO: repeat a couple of times)
-            timer.schedule(Second, () ->
+            clock.schedule(Second, () ->
                 {
                 hostManager.shutdown(True);
                 httpServer.close();

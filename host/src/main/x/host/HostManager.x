@@ -404,10 +404,10 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
     Boolean shutdown(Boolean force = False) {
         Boolean reschedule = False;
         for (AppHost host : deployedHosts.values) {
-            reschedule |= host.deactivate(True);
+            reschedule |= !host.deactivate(True);
         }
 
-        if (reschedule) {
+        if (reschedule && !force) {
             return False;
         }
 

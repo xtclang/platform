@@ -15,14 +15,16 @@ service Controller
     @LoginOptional // TODO: TEMPORARY: only the admin can shutdown the host
     HttpStatus shutdown() {
         @Inject Console console;
-        console.print($"Info: Shutting down...");
+        console.print("Info: Shutting down...");
 
         @Inject Clock clock;
         if (!hostManager.shutdown()) {
             // wait a second (TODO: repeat a couple of times)
             clock.schedule(Second, () ->
                 {
+                console.print("Info: Forcing shutdown");
                 hostManager.shutdown(True);
+                accountManager.shutdown();
                 httpServer.close();
                 });
             return HttpStatus.Processing;

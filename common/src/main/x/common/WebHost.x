@@ -100,14 +100,14 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
     @Inject Clock clock;
 
     /**
+     * Activity check cancellation function.
+     */
+    private Clock.Cancellable? cancelActivityCheck;
+
+    /**
      * Indicates the number of attempted deactivations before forcefully killing the container.
      */
     private Int deactivationProgress;
-
-    /**
-     * The number of seconds to wait for the application traffic to stop before killing it.
-     */
-    static Int DeactivationThreshold = 15;
 
     /**
      * The inactivity duration limit; if no requests come within that period, the application
@@ -190,7 +190,8 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
                         // they explicitly started it; keep it up longer first time around
                         duration = duration*2;
                     }
-                    clock.schedule(duration, () -> checkActivity(currentCount));
+                    cancelActivityCheck =
+                        clock.schedule(duration, () -> checkActivity(currentCount));
 
                     return True, handler;
                 } catch (Exception e) {
@@ -211,23 +212,22 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
         } else {
             // some activity detected; reschedule the check
             Int currentCount = totalRequests;
-            clock.schedule(InactivityDuration, () -> checkActivity(currentCount));
+            cancelActivityCheck =
+                clock.schedule(InactivityDuration, () -> checkActivity(currentCount));
         }
     }
 
     @Override
     Boolean deactivate(Boolean explicit) {
         if (HttpHandler handler ?= this.handler) {
-            // TODO: if deactivation is "implicit", we need to "serialize to disk" rather than "shutdown"
 
-            if (!handler.shutdown() && ++deactivationProgress < DeactivationThreshold) {
-                clock.schedule(Second, () -> deactivate(explicit));
-                return False;
+            cancelActivityCheck?();
+            handler.close();
+
+            if (!explicit) {
+                // TODO: container.pause(); container.store();
             }
 
-            // TODO: if deactivation is "explicit", we could prevent an implicit activation
-
-            // TODO: pause, serialize and only then kill
             for (AppHost dependent : dependencies) {
                 dependent.deactivate(explicit);
             }

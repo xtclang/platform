@@ -84,6 +84,12 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
     // ----- common.HostManager API ----------------------------------------------------------------
 
     @Override
+    WebApp stubApp.get() {
+        assert Module stubApp := stub.isModuleImport(), stubApp.is(WebApp);
+        return stubApp;
+    }
+
+    @Override
     Directory ensureAccountHomeDirectory(String accountName) {
         import ecstasy.fs.DirectoryFileStore;
 
@@ -98,6 +104,22 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
         return deployedHosts.get(deployment);
     }
 
+    @Override
+    void removeHost(AppHost host) {
+
+        host.deactivate(True);
+
+        if (host.is(WebHost)) {
+            // leave the webapp stub active
+            addStubRoute(host.account, host.appInfo, host.pwd);
+        }
+
+        try {
+            host.close();
+        } catch (Exception ignore) {}
+
+        deployedHosts.remove(host.appInfo?.deployment) : assert;
+    }
 
     // ----- WebApp management ---------------------------------------------------------------------
 
@@ -150,6 +172,9 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
             @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
             assert Certificate cert := keystore.getCertificate(hostName), cert.valid;
             updateProxyConfig(hostName, homeDir, keystore, pwd);
+
+            errors.add($|Info: {newStore ? "created" : "renewed"} a certificate for "{hostName}"
+                      );
             return True, cert;
         } catch (Exception e) {
             try {
@@ -219,8 +244,6 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
         File      store    = homeDir.fileFor(KeyStoreName);
         String    hostName = appInfo.hostName;
 
-        assert Module stubApp := stub.isModuleImport(), stubApp.is(WebApp);
-
         HttpHandler.CatalogExtras extras =
             [
             stub.Unavailable   = () -> new stub.Unavailable(["%deployment%"=hostName]),
@@ -236,8 +259,9 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
                     tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
                 return;
             } catch (Exception ignore) {}
+        } else {
+            httpServer.addRoute(hostName, handler);
         }
-        httpServer.addRoute(hostName, handler);
     }
 
     @Override
@@ -313,23 +337,6 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
             errors.add($"Error: {e.message}");
             return False;
         }
-    }
-
-    @Override
-    void removeHost(AppHost host) {
-
-        host.deactivate(True);
-
-        if (host.is(WebHost)) {
-            // leave the webapp stub active
-            addStubRoute(host.account, host.appInfo, host.pwd);
-        }
-
-        try {
-            host.close();
-        } catch (Exception ignore) {}
-
-        deployedHosts.remove(host.appInfo?.deployment) : assert;
     }
 
     @Override
@@ -421,7 +428,6 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
      * Log the specified message to the application "console" file.
      */
     void log(Directory homeDir, String message) {
-
         homeDir.fileFor("console.log").ensure().append($"\n{clock.now}: {message}".utf8());
     }
 

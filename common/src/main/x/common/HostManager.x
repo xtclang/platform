@@ -14,6 +14,12 @@ interface HostManager {
     // ----- WebHost management --------------------------------------------------------------------
 
     /**
+     * The stub WebApp, which is used to serve requests when a deployments have been registered, but
+     * either not yet deployed or deactivated.
+     */
+    @RO web.WebApp stubApp;
+
+    /**
      * Ensure an account home directory for the specified account (e.g. "~/xqiz.it/accounts/self").
      */
     Directory ensureAccountHomeDirectory(String accountName);

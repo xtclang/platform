@@ -85,6 +85,12 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
     protected HttpHandler? handler;
 
     /**
+     * The HttpHandler used only to process ACME challenge requests while the application is
+     * inactive.
+     */
+    protected HttpHandler? challengeHandler;
+
+    /**
      * The decryptor to be used by the underlying handler.
      */
     protected Decryptor? decryptor;
@@ -193,6 +199,10 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
                     cancelActivityCheck =
                         clock.schedule(duration, () -> checkActivity(currentCount));
 
+                    // if a challengeHandler has been activated, close and drop it
+                    challengeHandler?.close^();
+                    challengeHandler = Null;
+
                     return True, handler;
                 } catch (Exception e) {
                     errors.add($"Error: Failed to create a container; {e}");
@@ -237,6 +247,12 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
             this.handler              = Null;
             this.container            = Null;
             this.deactivationProgress = 0;
+
+            // now is a good time to check if the certificate is up-to-date and renew it
+            // asynchronously if necessary
+            ErrorLog errors  = new ErrorLog();
+            Boolean  success = hostManager.ensureCertificate^(account, appInfo, pwd, errors);
+            &success.whenComplete((r, e) -> errors.reportAll(log));
         }
         return True;
     }
@@ -261,6 +277,16 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
 
         HttpHandler handler;
         if (!(handler ?= this.handler)) {
+            if (request.uriString.startsWith("/.well-known/acme-challenge")) {
+                // this is a certificate challenge request; no need to load the app
+                if (!(handler ?= challengeHandler)) {
+                    handler          = new HttpHandler(route, hostManager.stubApp, extras);
+                    challengeHandler = handler;
+                }
+                handler.handle^(request);
+                return;
+            }
+
             Log errors = new ErrorLog();
 
             if (!(handler := activate(False, errors))) {

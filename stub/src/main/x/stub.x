@@ -16,7 +16,7 @@ module stub.xqiz.it {
      */
     @WebService("/")
     service Unavailable {
-        construct(Map<String, String> tags) {
+        construct(Map<String, String> tags = []) {
             String html = $./not-deployed.html;
             for ((String tag, String value) : tags) {
                 html = html.replace(tag, value);

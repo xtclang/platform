@@ -4,6 +4,7 @@
 @WebApp
 module platformUI.xqiz.it {
     package common import common.xqiz.it;
+    package stub   import stub.xqiz.it;
 
     package auth   import webauth.xtclang.org;
     package crypto import crypto.xtclang.org;
@@ -24,6 +25,9 @@ module platformUI.xqiz.it {
     import common.model.DbAppInfo;
     import common.model.WebAppInfo;
 
+    import crypto.Certificate;
+    import crypto.CertificateManager;
+    import crypto.CryptoPassword;
     import crypto.KeyStore;
 
     import json.Schema;
@@ -42,40 +46,36 @@ module platformUI.xqiz.it {
     import xenia.HttpHandler;
     import xenia.HttpServer;
 
+    @Inject Console console;
+
     /**
      * Configure the controller.
      */
-    void configure(HttpServer server, String hostAddr, KeyStore keystore, Realm realm,
-                   AccountManager accountManager, HostManager hostManager, ErrorLog errors) {
-        // the 'hostAddr' is a full URI of the platform server, e.g. "xtc-platform.localhost.xqiz.it";
+    void configure(HttpServer server, String hostName, String dName, String provider,
+                   Directory homeDir, KeyStore keystore, CryptoPassword pwd, Realm realm,
+                   AccountManager accountManager, HostManager hostManager,
+                   ErrorLog errors) {
+        // the 'hostName' is a full URI of the platform server, e.g. "xtc-platform.localhost.xqiz.it";
         // we need to extract the base domain ("localhost.xqiz.it")
         String baseDomain;
-        if (Int dot := hostAddr.indexOf('.')) {
-            baseDomain = hostAddr.substring(dot + 1);
+        if (Int dot := hostName.indexOf('.')) {
+            baseDomain = hostName.substring(dot + 1);
         } else {
-            throw new IllegalState($"Invalid host address: {hostAddr.quoted()}");
+            throw new IllegalState($"Invalid host address: {hostName.quoted()}");
         }
 
         ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm);
 
-        HostInfo route = new HostInfo(hostAddr);
-        server.addRoute(route, new HttpHandler(route, this), keystore,
-                names.PlatformTlsKey, names.CookieEncryptionKey);
+        HostInfo route = new HostInfo(hostName);
+        HttpHandler.CatalogExtras extras =
+            [
+            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor(".challenge").ensure())
+            ];
 
-        void reportInitialized(AppInfo appInfo, String type) {
-            @Inject Console console;
-            console.print($|Info: Initialized {type} deployment: "{appInfo.deployment}" \
-                           |of "{appInfo.moduleName}"
-                         );
-        }
+        server.addRoute(route, new HttpHandler(route, this, extras), keystore,
+                        names.PlatformTlsKey, names.CookieEncryptionKey);
 
-        void reportFailedInitialization(AppInfo appInfo, String type, ErrorLog errors) {
-            @Inject Console console;
-            console.print($|Warning: Failed to initialize {type} deployment: "{appInfo.deployment}" \
-                           |of "{appInfo.moduleName}"
-                         );
-            errors.reportAll(msg -> console.print(msg));
-        }
+        ensureCertificate^(keystore, pwd, hostName, dName, provider, homeDir);
 
         // create AppHosts for all `autoStart` applications
         for (AccountInfo accountInfo : accountManager.getAccounts()) {
@@ -116,6 +116,60 @@ module platformUI.xqiz.it {
                 enableMetadata   = True,
                 enablePointers   = False,
                 randomAccess     = True);
+
+        void reportInitialized(AppInfo appInfo, String type) {
+            console.print($|Info: Initialized {type} deployment: "{appInfo.deployment}" \
+                           |of "{appInfo.moduleName}"
+                         );
+        }
+
+        void reportFailedInitialization(AppInfo appInfo, String type, ErrorLog errors) {
+            console.print($|Warning: Failed to initialize {type} deployment: "{appInfo.deployment}" \
+                           |of "{appInfo.moduleName}"
+                         );
+            errors.reportAll(msg -> console.print(msg));
+        }
+    }
+
+    /**
+     * Make sure the platform certificate is up-to-date.
+     */
+    void ensureCertificate(KeyStore keystore, CryptoPassword pwd, String hostName, String dName,
+                           String provider, Directory homeDir) {
+        // schedule the check once a week
+        @Inject Clock clock;
+        clock.schedule(Duration.ofDays(14), () ->
+                ensureCertificate(keystore, pwd, hostName, dName, provider, homeDir));
+
+        Boolean exists = False;
+        CheckValid:
+        if (Certificate cert := keystore.getCertificate(names.PlatformTlsKey)) {
+            String cname = cert.issuer.splitMap().getOrDefault("CN", "");
+
+            exists = True;
+            if (provider != "self" && cname == hostName) {
+                // the current certificate is self-issued; replace with a real one
+                break CheckValid;
+            }
+
+            Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
+            if (daysLeft > 14) {
+                console.print($|Info: The certificate for "{cname}" is valid for {daysLeft} more days
+                             );
+                return;
+            }
+        }
+
+        File storeFile = homeDir.fileFor(names.PlatformKeyStore);
+        assert storeFile.exists;
+
+        // create or renew the certificate
+        @Inject(opts=provider) CertificateManager manager;
+
+        manager.createCertificate(storeFile, pwd, names.PlatformTlsKey, dName);
+
+        console.print($|Info: {exists ? "Renewed" : "Created"} a certificate for "{hostName}"
+                     );
     }
 
     /**

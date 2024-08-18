@@ -42,8 +42,10 @@ module kernel.xqiz.it {
     import crypto.Algorithms;
     import crypto.CertificateManager;
     import crypto.CryptoKey;
+    import crypto.CryptoPassword;
     import crypto.Decryptor;
     import crypto.KeyStore;
+    import crypto.NamedPassword;
 
     import json.Doc;
     import json.Parser;
@@ -99,11 +101,15 @@ module kernel.xqiz.it {
 
         ErrorLog errors = new ErrorLog();
         try {
-            String      hostName  = config.getOrDefault("hostName",  names.PlatformUri).as(String);
+            String      dName     = config.getOrDefault("dName", "").as(String);
+            String      provider  = config.getOrDefault("cert-provider", "self").as(String);
             UInt16      httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
             UInt16      httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
-            IPAddress[] proxies   = config.getOrDefault("proxies",   [])  .as(Doc[])
+            IPAddress[] proxies   = config.getOrDefault("proxies", []).as(Doc[])
                                           .map(addr -> new IPAddress(addr.as(String))).toArray();
+
+            assert String hostName := dName.splitMap().get("CN"), hostName.count('.') > 2
+                    as "Invalid \"dName\" configuration value";
 
             File storeFile = platformDir.fileFor(names.PlatformKeyStore);
             if (storeFile.exists) {
@@ -127,16 +133,11 @@ module kernel.xqiz.it {
                              );
 
                 @Inject CertificateManager manager;
-                String dName = CertificateManager.distinguishedName(hostName, org="localhost", orgUnit="Platform");
-
-                manager.createCertificate(storeFile, password, names.PlatformTlsKey, dName);
                 manager.createSymmetricKey(storeFile, password, names.CookieEncryptionKey);
                 manager.createSymmetricKey(storeFile, password, names.PasswordEncryptionKey);
-                }
 
-            // initialize the account manager; it's inside the kernel for now, but we need to
-            // consider creating a separate container for it
-            console.print($"Info: Starting the AccountManager...");
+                // Note: the certificate creation will be done by platformUI.ensureCertificate()
+                }
 
             @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
             assert CryptoKey key := keystore.getKey(names.PasswordEncryptionKey) as
@@ -145,34 +146,13 @@ module kernel.xqiz.it {
             @Inject Algorithms algorithms;
             assert Decryptor decryptor := algorithms.decryptorFor("AES", key);
 
+            // initialize the account manager; it's inside the kernel for now, but we need to
+            // consider creating a separate container for it
+            console.print("Info: Starting the AccountManager...");
+
             AccountManager accountManager = new AccountManager();
             Connection     connection     = accountManager.init(repository, hostDir, buildDir,
-                                                decryptor, errors);
-
-            @Inject(resourceName="server") HttpServer httpServer;
-
-            // create a container for the host manager and configure it
-            console.print($"Info: Starting the HostManager...");
-
-            ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
-            HostManager    hostManager;
-            if (Container  container :=
-                    utils.createContainer(repository, hostModule, hostDir, buildDir, True, [],
-                        (_) -> False, errors)) {
-                // TODO: we should either soft-code the receiver's protocol and port or
-                //       have the configuration supply the receivers' URI, from which we would
-                //       compute the proxy addresses
-                Uri[] receivers = new Uri[proxies.size]
-                        (i -> new Uri(scheme="https", ip=proxies[i], port=8091)).freeze(inPlace=True);
-                hostManager = container.invoke("configure",
-                                Tuple:(httpServer, accountsDir, receivers))[0]. as(HostManager);
-            } else {
-                return;
-            }
-
-            // create a container for the platformUI controller and configure it
-            console.print($"Info: Starting the platform UI controller...");
-
+                                                                decryptor, errors);
             DBRealm realm;
             if (accountManager.initialized) {
                 realm = new DBRealm(names.PlatformRealm, connection);
@@ -199,6 +179,30 @@ module kernel.xqiz.it {
                 }
             }
 
+            @Inject(resourceName="server") HttpServer httpServer;
+
+            // create a container for the host manager and configure it
+            console.print("Info: Starting the HostManager...");
+
+            ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
+            HostManager    hostManager;
+            if (Container  container :=
+                    utils.createContainer(repository, hostModule, hostDir, buildDir, True, [],
+                        (_) -> False, errors)) {
+                // TODO: we should either soft-code the receiver's protocol and port or
+                //       have the configuration supply the receivers' URI, from which we would
+                //       compute the proxy addresses
+                Uri[] receivers = new Uri[proxies.size]
+                        (i -> new Uri(scheme="https", ip=proxies[i], port=8091)).freeze(inPlace=True);
+                hostManager = container.invoke("configure",
+                                Tuple:(httpServer, accountsDir, receivers))[0]. as(HostManager);
+            } else {
+                return;
+            }
+
+            // create a container for the platformUI controller and configure it
+            console.print("Info: Starting the platform UI controller...");
+
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
                     utils.createContainer(repository, uiModule, hostDir, buildDir, True, [],
@@ -212,8 +216,11 @@ module kernel.xqiz.it {
 
                 httpServer.bind(binding, isTrusted);
 
+                CryptoPassword pwd = new NamedPassword("", password);
+
                 container.invoke("configure",
-                        Tuple:(httpServer, hostName, keystore, realm,
+                        Tuple:(httpServer, hostName, dName, provider, platformDir, keystore,
+                               &pwd.maskAs(CryptoPassword), realm,
                                &accountManager.maskAs(common.AccountManager), hostManager, errors));
             } else {
                 return;

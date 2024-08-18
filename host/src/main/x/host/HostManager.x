@@ -140,7 +140,7 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
                 CheckValid:
                 if (Certificate cert := keystore.getCertificate(hostName)) {
                     if (appInfo.provider != "self" &&
-                            cert.issuer.splitMap().getOrDefault("CN", "") == appInfo.hostName) {
+                            cert.issuer.splitMap().getOrDefault("CN", "") == hostName) {
                         // the current certificate is self-issued; replace with a real one
                         break CheckValid;
                     }

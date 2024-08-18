@@ -1,4 +1,4 @@
-- host independent DBs and allow apps connecting to them
-- renew host.xqiz.it automatically
-- test certificate revocation/removal
+- add constraints to Timer and Clock injected by the web/db apps
+- test certificate revocation/removal with Let's Encrypt
+
 

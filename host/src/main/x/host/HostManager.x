@@ -151,9 +151,6 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
                         // less than two weeks left - renew the certificate
                         break CheckValid;
                     }
-                    // TODO: there's probably no reason to update the receivers; need to figure out
-                    //       a way to optimize this out
-                    updateProxyConfig(hostName, homeDir, keystore, pwd);
                     return True, cert;
                 }
             }

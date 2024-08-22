@@ -1,47 +1,44 @@
+# copy the latest binaries to linux31 (host)
+*** scp -r ~/Development/xvm/xdk/build/install/xdk/* ops@linux31:~/xdk
+*** scp -r ~/Development/platform/lib/* ops@linux31:~/xqiz.it/lib
+
+# copy the latest binaries to linux30 (nginx)
+*** scp -r ~/Development/xvm/xdk/build/install/xdk/* ops@linux30:~/xdk
+*** scp -r ~/Development/nginx-certs/receiver/build/xtc/main/lib ops@linux30:~/xqiz.it/lib
+
+*** ssh ops@linux30
+
+*** start nginx
+sudo nginx -s reload # only once after a reboot
+sudo nginx -t
+
+*** start nginx restart daemon
+nginxrestartd
+
+*** start the "receiver" app
+nohup xec -L xqiz.it/lib receiver.nginx.xqiz.it 192.168.1.30:8081/8091 :80/443 http://192.168.1.31 \
+    /home/ops/nginx >> receiver.out&
+
 *** ssh ops@linux31
+
+# only the first time:
     mkdir xqiz.it
     mkdir xqiz.it/lib
     mkdir xqiz.it/platform
     cd xqiz.it
     echo '{
-"hostName":"host.xqiz.it",
+"dName":"C=USA,S=MA,L=Lexington,OU=hosting,O=xqiz.it,CN=host.xqiz.it",
+"cert-provider":"certbot",
 "httpPort":80,
-"httpsPort":443
+"httpsPort":443,
+"proxies":["192.168.1.30"]
 }' > platform/cfg.json
-
-*** scp -r ~/Development/platform/lib/* ops@linux31:~/xqiz.it/lib
 
 # ensure that "openssl" and "keytool" are installed
 # install the "certbot"
     sudo apt install certbot
 
-# obtained a certificate for host.xqiz.it
-~/Development/platform/bin/addLocalCert.sh host $password
-
-# copy generated files to ~/xqiz.it/platform/letsencrypt/work/host directory
-
-    certbot certonly --manual --preferred-challenges dns --config-dir config --work-dir work \
-         --csr ~/xqiz.it/platform/letsencrypt/work/host/host.csr \
-        --logs-dir logs --key-path host-key.pem --cert-path host-cert.pem \
-        --fullchain-path host-fchain.pem --chain-path host-chain.pem --email automation@xqiz.it
-
-    openssl pkcs12 -export -out host.p12 -inkey host-key.pem -in host-cert.pem \
-        -certfile host-chain.pem -name platform --passout pass:$password
-
-    keytool -genseckey -alias cookies -keyalg AES -keysize 256 -keystore host.p12 \
-        -storetype PKCS12 -storepass $password
-
-    keytool -genseckey -alias passwords -keyalg AES -keysize 256 -keystore host.p12 \
-        -storetype PKCS12 -storepass $password
-
-    keytool -list -keystore host.p12 -storepass $password
-
-# copy the keystore
-*** scp ~/xqiz.it/platform/letsencript/work/host/host.p12 ops@linux31:~/xqiz.it/platform/keystore.p12
-
-# copy the certificate material to the nginx config
-*** scp ~/xqiz.it/platform/letsencript/work/host/host-key.pem ops@linux30:~/nginx/certs/host.xqiz.it.key
-*** scp ~/xqiz.it/platform/letsencript/work/host/host-fchain.pem ops@linux30:~/nginx/certs/host.xqiz.it.crt
-
-# start the platform
+# start the platform in debug mode
 xec -L xqiz.it/lib/ kernel.xqiz.it $password
+# or in "production" mode
+nohup xec -L xqiz.it/lib/ kernel.xqiz.it $password &> platform.out&

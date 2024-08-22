@@ -108,7 +108,7 @@ module kernel.xqiz.it {
             IPAddress[] proxies   = config.getOrDefault("proxies", []).as(Doc[])
                                           .map(addr -> new IPAddress(addr.as(String))).toArray();
 
-            assert String hostName := dName.splitMap().get("CN"), hostName.count('.') > 2
+            assert String hostName := dName.splitMap().get("CN"), hostName.count('.') >= 2
                     as "Invalid \"dName\" configuration value";
 
             File storeFile = platformDir.fileFor(names.PlatformKeyStore);

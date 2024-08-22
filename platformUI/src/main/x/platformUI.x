@@ -3,8 +3,8 @@
  */
 @WebApp
 module platformUI.xqiz.it {
-    package common import common.xqiz.it;
-    package stub   import stub.xqiz.it;
+    package common    import common.xqiz.it;
+    package challenge import challenge.xqiz.it;
 
     package auth   import webauth.xtclang.org;
     package crypto import crypto.xtclang.org;
@@ -67,9 +67,11 @@ module platformUI.xqiz.it {
         ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm);
 
         HostInfo route = new HostInfo(hostName);
+
+        import challenge.AcmeChallenge;
         HttpHandler.CatalogExtras extras =
             [
-            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor(".challenge").ensure())
+            AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure())
             ];
 
         server.addRoute(route, new HttpHandler(route, this, extras), keystore,

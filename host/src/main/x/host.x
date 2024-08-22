@@ -2,8 +2,9 @@
  * The platform host service.
  */
 module host.xqiz.it {
-    package common import common.xqiz.it;
-    package stub   import stub.xqiz.it;
+    package common    import common.xqiz.it;
+    package challenge import challenge.xqiz.it;
+    package stub      import stub.xqiz.it;
 
     package convert import convert.xtclang.org;
     package crypto  import crypto.xtclang.org;

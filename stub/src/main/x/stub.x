@@ -9,14 +9,12 @@ module stub.xqiz.it {
     import web.*;
     import web.responses.SimpleResponse;
 
-    @Inject Console console;
-
     /**
      * "The application is temporary not available" service.
      */
     @WebService("/")
     service Unavailable {
-        construct(Map<String, String> tags = []) {
+        construct(Map<String, String> tags) {
             String html = $./not-deployed.html;
             for ((String tag, String value) : tags) {
                 html = html.replace(tag, value);
@@ -43,28 +41,5 @@ module stub.xqiz.it {
         }
 
         private SimpleResponse unavailable() = new SimpleResponse(ServiceUnavailable);
-    }
-
-    /**
-     * The WebService for ACME protocol requests from "Let's Encrypt".
-     */
-    @WebService("/.well-known/acme-challenge")
-    service AcmeChallenge
-            incorporates StaticContent {
-
-        construct(Directory acmeChallengeDir) {
-            construct StaticContent(path, acmeChallengeDir, mediaType=Text);
-        }
-
-        // ----- Handler -------------------------------------------------------------------------------
-
-        @Override
-        @Get("{path}")
-//        @SessionOptional
-        conditional ResponseOut getResource(String path) {
-            console.print($"### challenge: {path}"); // TODO REMOVE
-
-            return super($".well-known/acme-challenge/{path}");
-        }
     }
 }

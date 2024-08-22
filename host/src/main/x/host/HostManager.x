@@ -84,9 +84,9 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
     // ----- common.HostManager API ----------------------------------------------------------------
 
     @Override
-    WebApp stubApp.get() {
-        assert Module stubApp := stub.isModuleImport(), stubApp.is(WebApp);
-        return stubApp;
+    WebApp challengeApp.get() {
+        assert Module webApp := challenge.isModuleImport(), webApp.is(WebApp);
+        return webApp;
     }
 
     @Override
@@ -244,11 +244,15 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
         File      store    = homeDir.fileFor(KeyStoreName);
         String    hostName = appInfo.hostName;
 
+        import challenge.AcmeChallenge;
+        import stub.Unavailable;
         HttpHandler.CatalogExtras extras =
             [
-            stub.Unavailable   = () -> new stub.Unavailable(["%deployment%"=hostName]),
-            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor(".challenge").ensure())
+            AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure()),
+            Unavailable   = () -> new Unavailable(["%deployment%"=hostName]),
             ];
+
+        assert Module stubApp := stub.isModuleImport(), stubApp.is(WebApp);
 
         HttpHandler handler = new HttpHandler(new HostInfo(hostName), stubApp, extras);
         if (store.exists && pwd != Null) {
@@ -298,9 +302,10 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
 
         // by convention, the "root" directory for ACME challenges is a ".challenge" sub-directory
         // of the directory containing the keystore itself, which in our case is `homeDir`
+        import challenge.AcmeChallenge;
         HttpHandler.CatalogExtras extras =
             [
-            stub.AcmeChallenge = () -> new stub.AcmeChallenge(homeDir.dirFor(".challenge").ensure())
+            AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure())
             ];
 
         common.HostManager mgr = &this.maskAs(common.HostManager);

@@ -280,7 +280,7 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
             if (request.uriString.startsWith("/.well-known/acme-challenge")) {
                 // this is a certificate challenge request; no need to load the app
                 if (!(handler ?= challengeHandler)) {
-                    handler          = new HttpHandler(route, hostManager.stubApp, extras);
+                    handler          = new HttpHandler(route, hostManager.challengeApp, extras);
                     challengeHandler = handler;
                 }
                 handler.handle^(request);

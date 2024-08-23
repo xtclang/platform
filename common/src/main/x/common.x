@@ -10,13 +10,15 @@ module common.xqiz.it {
 
     import ecstasy.text.SimpleLog;
 
+    typedef function void (String) as Reporting;
+
     /**
      * A Log as a service.
      */
     service ErrorLog
             extends SimpleLog {
 
-        void reportAll(function void (String) report) {
+        void reportAll(Reporting report) {
             for (String msg : messages) {
                 report(msg);
             }

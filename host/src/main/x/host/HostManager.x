@@ -9,6 +9,7 @@ import ecstasy.text.Log;
 import common.AccountManager;
 import common.AppHost;
 import common.DbHost;
+import common.ProxyManager;
 import common.WebHost;
 
 import common.model.DbAppInfo;
@@ -17,8 +18,6 @@ import common.model.WebAppInfo;
 import common.names;
 import common.utils;
 
-import convert.formats.Base64Format;
-
 import crypto.Certificate;
 import crypto.CertificateManager;
 import crypto.CryptoPassword;
@@ -26,8 +25,6 @@ import crypto.KeyStore;
 
 import net.Uri;
 
-import web.Client;
-import web.HttpClient;
 import web.ResponseIn;
 import web.WebApp;
 import web.WebService;
@@ -40,7 +37,7 @@ import xenia.HttpServer;
 /**
  * The module for basic hosting functionality.
  */
-service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receivers)
+service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager proxyManager)
         implements common.HostManager {
 
     @Inject Clock clock;
@@ -56,24 +53,14 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
     private Directory accountsDir;
 
     /**
-     * The receivers associated with proxy servers.
+     * The proxy manager.
      */
-    private Uri[] receivers;
+    private ProxyManager proxyManager;
 
     /**
      * Deployed AppHosts keyed by the deployment name.
      */
     private Map<String, AppHost> deployedHosts = new HashMap();
-
-    /**
-     * The client used to talk to external services.
-     */
-    @Lazy Client client.calc() = new HttpClient();
-
-    /**
-     * The timeout duration for receivers' updates.
-     */
-    static Duration receiverTimeout = Duration.ofSeconds(5);
 
     /**
      * The key store name to use.
@@ -168,10 +155,10 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
 
             @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
             assert Certificate cert := keystore.getCertificate(hostName), cert.valid;
-            updateProxyConfig(hostName, homeDir, keystore, pwd);
 
-            errors.add($|Info: {newStore ? "created" : "renewed"} a certificate for "{hostName}"
-                      );
+            log(homeDir, $|{newStore ? "Created" : "Renewed"} a certificate for "{hostName}"
+                          );
+            proxyManager.updateProxyConfig^(keystore, pwd, hostName, hostName, &log(homeDir));
             return True, cert;
         } catch (Exception e) {
             try {
@@ -187,51 +174,6 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
 
             errors.add($"Error: Failed to obtain a certificate for {hostName.quoted()}: {e.message}");
             return False;
-        }
-    }
-
-    /**
-     * For every proxy, there might be a receiver associated with it. Send the corresponding
-     * updates.
-     */
-    private void updateProxyConfig(String hostName, Directory homeDir,
-                                   KeyStore keystore, CryptoPassword pwd) {
-        @Inject CertificateManager manager;
-
-        for (Uri receiverUri : receivers) {
-            Byte[] bytes  = manager.extractKey(keystore, pwd, hostName);
-            String pemKey = $|-----BEGIN PRIVATE KEY-----
-                             |{Base64Format.Instance.encode(bytes, pad=True, lineLength=64)}
-                             |-----END PRIVATE KEY-----
-                             |
-                             ;
-
-            Boolean success;
-            try (val t = new Timeout(receiverTimeout)) {
-                ResponseIn response = client.put(
-                        receiverUri.with(path=$"/nginx/{hostName}/key"), pemKey, Text);
-
-                if (response.status == OK) {
-                    StringBuffer pemCert = new StringBuffer();
-                    for (Certificate cert : keystore.getCertificateChain(hostName)) {
-                        pemCert.append(
-                                $|-----BEGIN CERTIFICATE-----
-                                 |{Base64Format.Instance.encode(cert.toDerBytes(), pad=True, lineLength=64)}
-                                 |-----END CERTIFICATE-----
-                                 |
-                                 );
-                    }
-                    response = client.put(
-                        receiverUri.with(path=$"/nginx/{hostName}/cert"), pemCert.toString(), Text);
-                }
-                success = response.status == OK;
-            } catch (Exception e) {
-                success = False;
-            }
-
-            if (!success) {
-                log(homeDir, $"Failed to update the proxy server at {receiverUri}");
-            }
         }
     }
 
@@ -359,22 +301,9 @@ service HostManager(HttpServer httpServer, Directory accountsDir, Uri[] receiver
 
         Boolean keepLogs = True; // TODO soft code?
 
-        // notify the receivers
-        for (Uri receiverUri : receivers) {
-            using (new Timeout(receiverTimeout)) {
-                ResponseIn response = client.delete^(receiverUri.with(path=$"/nginx/{hostName}"));
-                if (keepLogs) {
-                    &response.whenComplete((r, e) -> {
-                        if (e != Null) {
-                            log(homeDir, $|Failed to remove "{hostName}" route from the proxy \
-                                          |server "{receiverUri}"
-                            );
-                        }
-                    });
-                }
-            }
-        }
         removeFiles(homeDir, keepLogs);
+
+        proxyManager.removeProxyConfig^(hostName, keepLogs ? &log(homeDir) : (_) -> {});
     }
 
 

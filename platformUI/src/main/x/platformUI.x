@@ -98,9 +98,9 @@ module platformUI.xqiz.it {
             // create WebHosts for all `autoStart` web applications
             for (AppInfo appInfo : accountInfo.apps.values) {
                 if (appInfo.is(WebAppInfo)) {
+                    CryptoPassword appPwd = accountManager.decrypt(appInfo.password);
                     if (appInfo.autoStart) {
-                        if (hostManager.createWebHost(accountName, appInfo,
-                                accountManager.decrypt(appInfo.password), errors)) {
+                        if (hostManager.createWebHost(accountName, appInfo, appPwd, errors)) {
                             reportInitialized(appInfo, "Web");
                             continue;
                         }
@@ -108,7 +108,7 @@ module platformUI.xqiz.it {
                         reportFailedInitialization(appInfo, "Web", errors);
                     }
                     // set up the stub in either case
-                    hostManager.addStubRoute(accountName, appInfo);
+                    hostManager.addStubRoute(accountName, appInfo, appPwd);
                 }
             }
         }

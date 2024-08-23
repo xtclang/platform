@@ -33,6 +33,7 @@ module kernel.xqiz.it {
 
     import common.ErrorLog;
     import common.HostManager;
+    import common.ProxyManager;
 
     import common.names;
     import common.utils;
@@ -181,6 +182,35 @@ module kernel.xqiz.it {
 
             @Inject(resourceName="server") HttpServer httpServer;
 
+            // load the proxy manager (pretend it may be missing)
+            ProxyManager proxyManager;
+            if (proxies.empty) {
+                proxyManager = NoProxies;
+            } else {
+                if (ModuleTemplate proxyModule := repository.getModule("proxy_manager.xqiz.it")) {
+                    proxyModule = proxyModule.parent.resolve(repository).mainModule;
+                    if (Container  container :=
+                            utils.createContainer(repository, proxyModule, hostDir, buildDir, True, [],
+                                (_) -> False, errors)) {
+                        // TODO: we should either soft-code the receiver's protocol and port or
+                        //       have the configuration supply the receivers' URI, from which we would
+                        //       compute the proxy addresses
+                        Uri[] receivers = new Uri[proxies.size]
+                                (i -> new Uri(scheme="https", ip=proxies[i], port=8091)).
+                                        freeze(inPlace=True);
+                        proxyManager = container.invoke("configure",
+                                        Tuple:(receivers))[0]. as(ProxyManager);
+                    } else {
+                        return;
+                    }
+                } else {
+                    proxyManager = NoProxies;
+                    console.print(\|Warning: Failed to load the ProxyManager; new deployment \
+                                   |configurations *will not be* propagated to proxy servers
+                                 );
+                }
+            }
+
             // create a container for the host manager and configure it
             console.print("Info: Starting the HostManager...");
 
@@ -189,13 +219,8 @@ module kernel.xqiz.it {
             if (Container  container :=
                     utils.createContainer(repository, hostModule, hostDir, buildDir, True, [],
                         (_) -> False, errors)) {
-                // TODO: we should either soft-code the receiver's protocol and port or
-                //       have the configuration supply the receivers' URI, from which we would
-                //       compute the proxy addresses
-                Uri[] receivers = new Uri[proxies.size]
-                        (i -> new Uri(scheme="https", ip=proxies[i], port=8091)).freeze(inPlace=True);
                 hostManager = container.invoke("configure",
-                                Tuple:(httpServer, accountsDir, receivers))[0]. as(HostManager);
+                                Tuple:(httpServer, accountsDir, proxyManager))[0]. as(HostManager);
             } else {
                 return;
             }

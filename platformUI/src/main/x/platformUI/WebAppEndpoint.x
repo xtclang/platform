@@ -289,7 +289,7 @@ service WebAppEndpoint
             return "[unknown]";
         }
 
-        Directory homeDir = hostManager.ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
+        Directory homeDir = hostManager.ensureDeploymentHomeDirectory(accountName, deployment);
         if (dbName != "") {
             homeDir = homeDir.dirFor(dbName);
         }

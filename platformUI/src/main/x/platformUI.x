@@ -16,6 +16,7 @@ module platformUI.xqiz.it {
     import common.AccountManager;
     import common.ErrorLog;
     import common.HostManager;
+    import common.ProxyManager;
     import common.WebHost;
 
     import common.names;
@@ -46,14 +47,15 @@ module platformUI.xqiz.it {
     import xenia.HttpHandler;
     import xenia.HttpServer;
 
+    @Inject Clock   clock;
     @Inject Console console;
 
     /**
      * Configure the controller.
      */
     void configure(HttpServer server, String hostName, String dName, String provider,
-                   Directory homeDir, KeyStore keystore, CryptoPassword pwd, Realm realm,
-                   AccountManager accountManager, HostManager hostManager,
+                   Directory homeDir, CryptoPassword pwd, Realm realm,
+                   AccountManager accountManager, HostManager hostManager, ProxyManager proxyManager,
                    ErrorLog errors) {
         // the 'hostName' is a full URI of the platform server, e.g. "xtc-platform.localhost.xqiz.it";
         // we need to extract the base domain ("localhost.xqiz.it")
@@ -64,7 +66,8 @@ module platformUI.xqiz.it {
             throw new IllegalState($"Invalid host address: {hostName.quoted()}");
         }
 
-        ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm);
+        File storeFile = homeDir.fileFor(names.PlatformKeyStore);
+        @Inject(opts=new KeyStore.Info(storeFile.contents, pwd)) KeyStore keystore;
 
         HostInfo route = new HostInfo(hostName);
 
@@ -74,10 +77,31 @@ module platformUI.xqiz.it {
             AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure())
             ];
 
+        if (checkCertificate(keystore, hostName, provider)) {
+            // schedule the next check in a week
+            clock.schedule(Duration.ofDays(7), () ->
+                    ensureCertificate(keystore, pwd, hostName, dName, provider, homeDir, proxyManager));
+        } else {
+            // before we proceed we need to create a certificate; for that to work (unless the
+            // provider is self-signing), we need to activate the challenge app
+            server.addRoute(route, new HttpHandler(route, hostManager.challengeApp, extras));
+            @Future Tuple result = createCertificate^(
+                    keystore, pwd, hostName, dName, provider, homeDir, proxyManager);
+            &result.whenComplete((r, e) -> {
+                if (e == Null) {
+                    server.removeRoute(route);
+
+                    // repeat from the top (reloading the keystore); it should go through now...
+                    configure(server, hostName, dName, provider, homeDir, pwd, realm,
+                       accountManager, hostManager, proxyManager, errors);
+                }});
+            return result;
+        }
+
+        ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm);
+
         server.addRoute(route, new HttpHandler(route, this, extras), keystore,
                         names.PlatformTlsKey, names.CookieEncryptionKey);
-
-        ensureCertificate^(keystore, pwd, hostName, dName, provider, homeDir);
 
         // create AppHosts for all `autoStart` applications
         for (AccountInfo accountInfo : accountManager.getAccounts()) {
@@ -137,41 +161,60 @@ module platformUI.xqiz.it {
      * Make sure the platform certificate is up-to-date.
      */
     void ensureCertificate(KeyStore keystore, CryptoPassword pwd, String hostName, String dName,
-                           String provider, Directory homeDir) {
-        // schedule the check once a week
-        @Inject Clock clock;
-        clock.schedule(Duration.ofDays(14), () ->
-                ensureCertificate(keystore, pwd, hostName, dName, provider, homeDir));
+                           String provider, Directory homeDir, ProxyManager proxyManager) {
+        // re-schedule the check in a week
+        clock.schedule(Duration.ofDays(7), () ->
+                ensureCertificate(keystore, pwd, hostName, dName, provider, homeDir, proxyManager));
 
-        Boolean exists = False;
-        CheckValid:
+        if (!checkCertificate(keystore, hostName, provider)) {
+            createCertificate(keystore, pwd, hostName, dName, provider, homeDir, proxyManager);
+        }
+    }
+
+    /**
+     * Check if the platform certificate exists and valid.
+     *
+     * @return `True` iff the certificate is valid
+     * @return `True` iff the certificate exists
+     */
+    (Boolean valid, Boolean exists) checkCertificate(KeyStore keystore, String hostName,
+                                                     String provider) {
         if (Certificate cert := keystore.getCertificate(names.PlatformTlsKey)) {
             String cname = cert.issuer.splitMap().getOrDefault("CN", "");
 
-            exists = True;
-            if (provider != "self" && cname == hostName) {
-                // the current certificate is self-issued; replace with a real one
-                break CheckValid;
+            if (cname == hostName && provider != "self") {
+                // the current certificate is self-issued; replace using the specified provider
+                return False, True;
             }
 
             Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
             if (daysLeft > 14) {
                 console.print($|Info: The certificate for "{cname}" is valid for {daysLeft} more days
                              );
-                return;
+                return True, True;
             }
         }
+        return False, False;
+    }
 
+    /**
+     * Create the platform certificate. This assumes that the "challenge" app is active.
+     */
+    @Concurrent
+    void createCertificate(KeyStore keystore, CryptoPassword pwd, String hostName, String dName,
+                           String provider, Directory homeDir, ProxyManager proxyManager) {
         File storeFile = homeDir.fileFor(names.PlatformKeyStore);
         assert storeFile.exists;
 
-        // create or renew the certificate
-        @Inject(opts=provider) CertificateManager manager;
+        Boolean exists = keystore.getCertificate(names.PlatformTlsKey);
 
+        @Inject(opts=provider) CertificateManager manager;
         manager.createCertificate(storeFile, pwd, names.PlatformTlsKey, dName);
 
         console.print($|Info: {exists ? "Renewed" : "Created"} a certificate for "{hostName}"
                      );
+        proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformKeyStore, hostName, console.&print);
+        );
     }
 
     /**

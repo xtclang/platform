@@ -199,7 +199,7 @@ module kernel.xqiz.it {
                                 (i -> new Uri(scheme="https", ip=proxies[i], port=8091)).
                                         freeze(inPlace=True);
                         proxyManager = container.invoke("configure",
-                                        Tuple:(receivers))[0]. as(ProxyManager);
+                                        Tuple:(receivers))[0].as(ProxyManager);
                     } else {
                         return;
                     }
@@ -220,7 +220,7 @@ module kernel.xqiz.it {
                     utils.createContainer(repository, hostModule, hostDir, buildDir, True, [],
                         (_) -> False, errors)) {
                 hostManager = container.invoke("configure",
-                                Tuple:(httpServer, accountsDir, proxyManager))[0]. as(HostManager);
+                                Tuple:(httpServer, accountsDir, proxyManager))[0].as(HostManager);
             } else {
                 return;
             }
@@ -244,9 +244,10 @@ module kernel.xqiz.it {
                 CryptoPassword pwd = new NamedPassword("", password);
 
                 container.invoke("configure",
-                        Tuple:(httpServer, hostName, dName, provider, platformDir, keystore,
+                        Tuple:(httpServer, hostName, dName, provider, platformDir,
                                &pwd.maskAs(CryptoPassword), realm,
-                               &accountManager.maskAs(common.AccountManager), hostManager, errors));
+                               &accountManager.maskAs(common.AccountManager), hostManager,
+                               proxyManager, errors));
             } else {
                 return;
             }

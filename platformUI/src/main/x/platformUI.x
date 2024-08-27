@@ -214,7 +214,6 @@ module platformUI.xqiz.it {
         console.print($|Info: {exists ? "Renewed" : "Created"} a certificate for "{hostName}"
                      );
         proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformKeyStore, hostName, console.&print);
-        );
     }
 
     /**

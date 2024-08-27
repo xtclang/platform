@@ -150,7 +150,8 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
             }
 
             // use the host name as a name for the certificate
-            String dName = CertificateManager.distinguishedName(hostName, org=accountName);
+            String dName = CertificateManager.distinguishedName(hostName,
+                                org=accountName, orgUnit=appInfo.deployment);
             manager.createCertificate(store, pwd, hostName, dName);
 
             @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;

@@ -217,6 +217,10 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
             return False;
         }
 
+        if (!ensureCertificate(accountName, webAppInfo, pwd, errors)) {
+            return False;
+        }
+
         Directory libDir   = ensureAccountLibDirectory(accountName);
         Directory buildDir = ensureAccountBuildDirectory(accountName);
 

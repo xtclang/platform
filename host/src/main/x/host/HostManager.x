@@ -112,7 +112,8 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
 
     @Override
     conditional Certificate ensureCertificate(String accountName, WebAppInfo appInfo,
-                                              CryptoPassword pwd, Log errors) {
+                                              CryptoPassword pwd, Log errors,
+                                              Boolean force = False) {
         (Directory homeDir, Boolean newHome) =
                 ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
 
@@ -121,16 +122,11 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
         Boolean newStore = !store.exists;
 
         try {
-            if (!newStore) {
+            if (!newStore && !force) {
                 @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
 
                 CheckValid:
                 if (Certificate cert := keystore.getCertificate(hostName)) {
-                    if (appInfo.provider != "self" &&
-                            cert.issuer.splitMap().getOrDefault("CN", "") == hostName) {
-                        // the current certificate is self-issued; replace with a real one
-                        break CheckValid;
-                    }
 
                     @Inject Clock clock;
                     Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
@@ -298,7 +294,7 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
         try {
             // revoke the certificate (in case of a future hostName reuse)
             if (store.exists) {
-                @Inject CertificateManager manager;
+                @Inject(opts=webAppInfo.provider) CertificateManager manager;
                 manager.revokeCertificate(store, pwd, hostName);
                 store.delete();
             }

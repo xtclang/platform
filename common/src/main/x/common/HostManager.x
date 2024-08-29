@@ -78,12 +78,14 @@ interface HostManager {
      * @param webAppInfo   the web application info
      * @param pwd          the password to use for the keystore
      * @param errors       the logger to report errors to
+     * @param force        (optional) if True, create a new certificate regardless of the expiry
      *
      * @return True iff the certificate exists and is valid; otherwise an error is logged
      * @return (conditional) the certificate
      */
     conditional Certificate ensureCertificate(String accountName, WebAppInfo appInfo,
-                                              CryptoPassword pwd, Log errors);
+                                              CryptoPassword pwd, Log errors,
+                                              Boolean force = False);
 
     /**
      * Add a stub route for the specified web app.

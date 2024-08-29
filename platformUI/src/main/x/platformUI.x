@@ -189,7 +189,7 @@ module platformUI.xqiz.it {
 
             Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
             if (daysLeft > 14) {
-                console.print($|Info: The certificate for "{cname}" is valid for {daysLeft} more days
+                console.print($|Info: The certificate for "{hostName}" is valid for {daysLeft} more days
                              );
                 return True, True;
             }

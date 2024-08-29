@@ -385,15 +385,20 @@ service WebAppEndpoint
             return appInfo;
         }
 
+        Boolean changeProvider = False;
         if (provider != appInfo.provider) {
-            appInfo = appInfo.with(provider=provider);
+            changeProvider = True;
+            appInfo        = appInfo.with(provider=provider);
         }
 
         CryptoPassword pwd   = accountManager.decrypt(appInfo.password);
         ErrorLog      errors = new ErrorLog();
 
-        if (Certificate cert := hostManager.ensureCertificate(accountName, appInfo, pwd, errors)) {
-            accountManager.addOrUpdateApp(accountName, appInfo);
+        if (Certificate cert := hostManager.ensureCertificate(accountName, appInfo, pwd, errors,
+                                    force=changeProvider)) {
+            if (changeProvider) {
+                accountManager.addOrUpdateApp(accountName, appInfo);
+            }
             return new SimpleResponse(OK, cert.toString());
         } else {
             return new SimpleResponse(Conflict, errors.collectErrors());

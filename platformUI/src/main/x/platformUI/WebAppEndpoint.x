@@ -312,44 +312,17 @@ service WebAppEndpoint
     @Put("/web{/deployment}{/moduleName}{/provider}")
     (AppInfo | SimpleResponse) registerWebApp(String deployment, String moduleName,
                                               String provider = "self") {
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return new SimpleResponse(NotFound, $"Account '{accountName}' is missing");
-        }
 
-        if (String error := reportInvalidName(deployment)) {
-            return new SimpleResponse(BadRequest,
-                $"Invalid deployment name {deployment.quoted()}: {error}");
+        (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
+        if (injections.is(SimpleResponse)) {
+            return injections;
         }
 
         // compute the full host name (e.g. "welcome.localhost.xqiz.it")
         String hostName = $"{deployment}.{baseDomain}".toLowercase();
 
-        if (httpServer.routes.keys.any(route -> route.host.toString() == hostName) ||
-                accountInfo.apps.contains(deployment)) {
+        if (httpServer.routes.keys.any(route -> route.host.toString() == hostName)) {
             return new SimpleResponse(Conflict, $"Deployment already exists: '{deployment}'");
-        }
-
-        if (!accountInfo.modules.contains(moduleName)) {
-            return new SimpleResponse(NotFound, $"Module is missing: '{moduleName}'");
-        }
-
-        Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
-        ModuleRepository accountRepo = utils.getModuleRepository(libDir);
-        Injections       injections;
-
-        // the deployment cannot be active until all injections are specified
-        if (InjectionKey[] injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName)) {
-            if (injectionKeys.empty) {
-                injections = [];
-            } else {
-                injections = new ListMap();
-                for (InjectionKey key : injectionKeys) {
-                    injections.put(key, "");
-                }
-            }
-        } else {
-            return new SimpleResponse(Conflict, $"Failed to load module: {moduleName.quoted()}");
         }
 
         // create a random password to be used to access the webapp's keystore
@@ -480,46 +453,18 @@ service WebAppEndpoint
     // ---- Db app end-points ----------------------------------------------------------------------
 
     /**
-     * Handle a request to register a db app for a module. REVIEW: merge with registerWebApp?
+     * Handle a request to register a db app for a module.
      */
     @Put("/db{/deployment}{/moduleName}")
     (AppInfo | SimpleResponse) registerDbApp(String deployment, String moduleName) {
-        AccountInfo accountInfo;
-        if (!(accountInfo := accountManager.getAccount(accountName))) {
-            return new SimpleResponse(Unauthorized, $"Account '{accountName}' is missing");
-        }
 
-        if (String error := reportInvalidName(deployment)) {
-            return new SimpleResponse(BadRequest,
-                $"Invalid deployment name {deployment.quoted()}: {error}");
-        }
-
-        if (!accountInfo.modules.contains(moduleName)) {
-            return new SimpleResponse(NotFound, $"Module is missing: '{moduleName}'");
-        }
-
-        Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
-        ModuleRepository accountRepo = utils.getModuleRepository(libDir);
-        Injections       injections;
-
-        // the deployment cannot be active until all injections are specified
-        if (InjectionKey[] injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName)) {
-            if (injectionKeys.empty) {
-                injections = [];
-            } else {
-                injections = new ListMap();
-                for (InjectionKey key : injectionKeys) {
-                    injections.put(key, "");
-                }
-            }
-        } else {
-            return new SimpleResponse(Conflict, $"Failed to load module: {moduleName.quoted()}");
+        (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
+        if (injections.is(SimpleResponse)) {
+            return injections;
         }
 
         DbAppInfo appInfo = new DbAppInfo(deployment, moduleName, injections=injections);
-
         accountManager.addOrUpdateApp(accountName, appInfo);
-
         return appInfo.redact();
     }
 
@@ -564,6 +509,50 @@ service WebAppEndpoint
     }
 
     /**
+     * Common preparation steps for a Web- or Db- module registration.
+     *
+     * @return an `Injections` map or a `SimpleResponse` if an error occurred
+     */
+    (Injections | SimpleResponse) prepareRegister(String deployment, String moduleName) {
+        AccountInfo accountInfo;
+        if (!(accountInfo := accountManager.getAccount(accountName))) {
+            return new SimpleResponse(NotFound, $"Account '{accountName}' is missing");
+        }
+
+        if (String error := validateDeploymentName(deployment)) {
+            return new SimpleResponse(BadRequest,
+                $"Invalid deployment name {deployment.quoted()}: {error}");
+        }
+
+        if (!accountInfo.modules.contains(moduleName)) {
+            return new SimpleResponse(NotFound, $"Module is missing: '{moduleName}'");
+        }
+
+        if (accountInfo.apps.contains(deployment)) {
+            return new SimpleResponse(Conflict, $"Deployment already exists: '{deployment}'");
+        }
+
+        Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
+        ModuleRepository accountRepo = utils.getModuleRepository(libDir);
+        Injections       injections;
+
+        // the deployment cannot be active until all injections are specified
+        if (InjectionKey[] injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName)) {
+            if (injectionKeys.empty) {
+                injections = [];
+            } else {
+                injections = new ListMap();
+                for (InjectionKey key : injectionKeys) {
+                    injections.put(key, "");
+                }
+            }
+            return injections;
+        } else {
+            return new SimpleResponse(Conflict, $"Failed to load module: {moduleName.quoted()}");
+        }
+    }
+
+    /**
      * @return True iff the specified deployment is active (in memory)
      */
     Boolean isActive(String deployment) {
@@ -576,12 +565,12 @@ service WebAppEndpoint
     /**
      * Check if the specified name could be used as a part of the "authority" section of the Uri.
      *
-     * @param name  the new domain name
+     * @param name  the deployment name
      *
      * @return True iff the name is invalid
      * @return (conditional) the error message
      */
-    static conditional String reportInvalidName(String name) {
+    static conditional String validateDeploymentName(String name) {
         if (name.endsWith('.')) {
             return True, "Name cannot end with a dot";
         }

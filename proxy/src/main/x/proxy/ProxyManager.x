@@ -49,6 +49,7 @@ service ProxyManager(Uri[] receivers)
                              ;
 
             Boolean success;
+            String  reason;
             try (val t = new Timeout(receiverTimeout)) {
                 ResponseIn response = client.put(
                         receiver.with(path=$"/nginx/{hostName}/key"), pemKey, Text);
@@ -67,12 +68,15 @@ service ProxyManager(Uri[] receivers)
                         receiver.with(path=$"/nginx/{hostName}/cert"), pemCert.toString(), Text);
                 }
                 success = response.status == OK;
+                reason  = $"Status: {response.status}";
             } catch (Exception e) {
                 success = False;
+                reason  = e.message;
             }
 
             if (!success) {
-                report($|Failed to update the route for "{hostName}" at the proxy server "{receiver}"
+                report($|Failed to update the route for "{hostName}" at the proxy server "{receiver}" \
+                        |reason="{reason}"
                       );
             }
         }

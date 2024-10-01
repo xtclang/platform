@@ -26,21 +26,28 @@ module platformCLI.xqiz.it
     void run(String[] args) {
         console.print("*** Platform Command Line Tool");
 
-        Uri platformUri = new Uri(
-                readLine($"Enter platform server URL [{PlatformURL}]: ", PlatformURL));
+        String uriString = args.size > 0
+            ? args[0]
+            : readLine($"Enter platform server URL [{PlatformURL}]: ", PlatformURL);
 
-        String? scheme = platformUri.scheme;
+        Uri     platformUri = new Uri(uriString);
+        String? scheme      = platformUri.scheme;
         if (scheme == Null) {
-            platformUri = platformUri.with(scheme = "https");
+            platformUri = new Uri($"https://{uriString}");
         } else {
-            assert scheme.toLowercase() == "https"
-                as "This tool can only operate over SSL";
+            assert scheme.toLowercase() == "https" as "This tool can only operate over SSL";
         }
+        console.print($"Connecting to \"{platformUri}\"");
 
         Gateway.platformUri = platformUri;
         Gateway.resetClient();
         while (True) {
-            Gateway.collectCredentials();
+            if (args.size > 2) {
+                Gateway.setCredentials(args[1], args[2]);
+                args = [];
+            } else {
+                Gateway.collectCredentials();
+            }
             String account = Gateway.sendRequest(GET, "/user/account");
             if (account != "") {
                 console.print($"Connected to the account {account}");
@@ -59,6 +66,11 @@ module platformCLI.xqiz.it
 
         void resetClient() {
             client = new HttpClient();
+        }
+
+        void setCredentials(String name, String password) {
+            this.name     = name;
+            this.password = password;
         }
 
         void collectCredentials() {

@@ -4,7 +4,36 @@ class WebAppManagement {
 
     @Command("apps", "Show all registered apps")
     String allApps() {
-        return Gateway.sendRequest(GET, "/apps/deployments");
+        String jsonString = Gateway.sendRequest(GET, "/apps/deployments");
+        try {
+            import json.JsonObject;
+
+            Doc doc = new Parser(jsonString.toReader()).parseDoc();
+            assert doc.is(JsonObject);
+            StringBuffer buf = new StringBuffer();
+            for ((String deployment, Doc info) : doc) {
+                if (!info.is(JsonObject)) {
+                    continue;
+                }
+
+                assert Doc moduleName := info.get("moduleName");
+                buf.append($"{deployment}: {moduleName}");
+                if (Doc hostName := info.get("hostName")) {
+                    buf.append(", hostName=").append(hostName);
+                }
+                Boolean started = info.getOrDefault("autoStart", False).as(Boolean);
+                if (started) {
+                    Boolean active = info.getOrDefault("active", False).as(Boolean);
+                    buf.append(active ? ", active" : ", inactive");
+                } else {
+                    buf.append(", not started");
+                }
+               buf.add('\n');
+            }
+            return buf.toString();
+        } catch (Exception e) {
+            return jsonString;
+        }
     }
 
     @Command("app", "Show the specified app")

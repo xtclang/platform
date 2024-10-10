@@ -13,9 +13,9 @@ class Repositories {
             for (Doc repo : repos) {
                 assert repo.is(Map<String, Doc>);
 
-                githubCLI.print($|name={repo.getOrNull("name")}
+                githubCLI.print($|
+                                 |name={repo.getOrNull("name")}
                                  |descr={repo.getOrNull("description")}
-                                 |
                                  );
             }
         } else {

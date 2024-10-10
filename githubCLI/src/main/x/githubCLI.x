@@ -90,18 +90,22 @@ module githubCLI.xqiz.it
     conditional String findToken() {
         @Inject Directory homeDir;
         if (File credentialsFile := homeDir.findFile(".git-credentials")) {
-            String tokenString = credentialsFile.contents.unpackUtf8();
-            if (Int newLine := tokenString.indexOf('\n')) {
-                tokenString = tokenString[0 ..< newLine];
-            }
-            try {
-                if  (String user ?= new Uri(tokenString).user,
-                    Int tokenDelim := user.indexOf(':')) {
-                    return True, user.substring(tokenDelim + 1);
+            for (String tokenString : credentialsFile.contents.unpackUtf8().split('\n')) {
+                if (tokenString.empty) {
+                    continue;
                 }
-            } catch (Exception e) {
-                console.print($"Failed to parse {credentialsFile} content: {e}");
-                return False;
+                try {
+                    // credential example: "https://joe:ghp_ABCDEFXYZ12345678@github.com"
+                    Uri uri = new Uri(tokenString);
+                    if (uri.host == "github.com",
+                        String user ?= uri.user, Int tokenDelim := user.indexOf(':')) {
+
+                        return True, user.substring(tokenDelim + 1);
+                    }
+                } catch (Exception e) {
+                    console.print($"Failed to parse {credentialsFile} content: {e}");
+                    return False;
+                }
             }
         }
         return False;
@@ -112,7 +116,6 @@ module githubCLI.xqiz.it
         return value == "" ? defaultValue : value;
     }
 
-    static String GithubURL           = "https://github.com/xtclang/examples";
     static String MediaType_GithubAPI = "application/vnd.github+json";
     static String Header_GithubAPI    = "X-GitHub-Api-Version";
 }

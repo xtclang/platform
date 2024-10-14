@@ -7,6 +7,7 @@
 module githubCLI.xqiz.it
         incorporates TerminalApp("Platform Github command line tool", "GH CLI>") {
     package cli  import cli.xtclang.org;
+    package conv import convert.xtclang.org;
     package json import json.xtclang.org;
     package net  import net.xtclang.org;
     package web  import web.xtclang.org;

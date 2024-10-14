@@ -16,9 +16,8 @@ class Repositories {
     @Command("repos", "List of the repositories")
     void listRepositories() {
         Doc|HttpStatus result = GithubGateway.sendRequest(GET, "orgs", "/repos");
-        if (result.is(Doc)) {
-            assert Doc[] repos := result.is(Doc[]);
-            for (Doc repo : repos) {
+        if (result.is(Doc[])) {
+            for (Doc repo : result) {
                 assert repo.is(JsonObject);
 
                 console.print($|
@@ -58,6 +57,26 @@ class Repositories {
 
             import conv.formats.Base64Format;
             console.print(Base64Format.Instance.decode(text).unpackUtf8());
+        } else {
+            console.print($"Request failed: {result}");
+        }
+    }
+
+    @Command("ls", "List directory contents")
+    void listDir(String path = "") {
+        if (!checkRepository()) {
+            return;
+        }
+
+        Doc|HttpStatus result =
+                GithubGateway.sendRequest(GET, "repos", $"/{repositoryName}/contents/{path}");
+        if (result.is(Doc[])) {
+            for (Doc node : result) {
+                assert node.is(JsonObject);
+                Doc name = node.getOrNull("name");
+                Doc type = node.getOrNull("type");
+                console.print($"{type}: {name}");
+            }
         } else {
             console.print($"Request failed: {result}");
         }

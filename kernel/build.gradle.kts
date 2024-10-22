@@ -14,7 +14,7 @@ tasks.register("build") {
     doLast {
         val src = fileTree("${projectDir}/src").files.stream().
                 mapToLong{f -> f.lastModified()}.max().orElse(0)
-        val dst = file("$libDir/kernel.xtc").lastModified()
+        val dst = file("${libDir}/kernel.xtc").lastModified()
 
         if (src > dst) {
             val srcModule = "${projectDir}/src/main/x/kernel.x"

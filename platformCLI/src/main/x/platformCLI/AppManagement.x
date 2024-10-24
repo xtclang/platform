@@ -1,4 +1,4 @@
-class WebAppManagement {
+class AppManagement {
 
     // ---- generic app end-points -----------------------------------------------------------------
 

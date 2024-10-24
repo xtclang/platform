@@ -25,11 +25,11 @@ import web.*;
 import web.responses.SimpleResponse;
 
 /**
- * Dedicated service for operations on WebApps.
+ * Dedicated service for operations on WebApps and DbApps.
  */
 @WebService("/apps")
 @LoginRequired
-service WebAppEndpoint
+service AppEndpoint
         extends CoreService {
 
     // ---- generic app end-points -----------------------------------------------------------------
@@ -74,6 +74,7 @@ service WebAppEndpoint
             switch (host.is(_)) {
             case DbHost:
                 return host.active ? $"Active; {host.dependees} users" : "Inactive";
+
             case WebHost:
                 return $|{host.active ? "Active" : "Inactive"}; {host.totalRequests} \
                         |processed requests

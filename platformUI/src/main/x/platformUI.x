@@ -180,10 +180,16 @@ module platformUI.xqiz.it {
     (Boolean valid, Boolean exists) checkCertificate(KeyStore keystore, String hostName,
                                                      String provider) {
         if (Certificate cert := keystore.getCertificate(names.PlatformTlsKey)) {
-            String cname = cert.issuer.splitMap().getOrDefault("CN", "");
 
-            if (cname == hostName && provider != "self") {
+            String issuerCN = cert.issuer.splitMap().getOrDefault("CN", "");
+            if (issuerCN == hostName && provider != "self") {
                 // the current certificate is self-issued; replace using the specified provider
+                return False, True;
+            }
+
+            String subjectCN = cert.subject.splitMap().getOrDefault("CN", "");
+            if (subjectCN != hostName) {
+                // the current certificate was issued for a different name; replace
                 return False, True;
             }
 

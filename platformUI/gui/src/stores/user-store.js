@@ -28,6 +28,7 @@ export const useUserStore = defineStore('user', {
           })
           .catch(error => {
             console.log(error.response);
+            this.user = null;
             this.$q.notify({
               color: "negative",
               position: "top",

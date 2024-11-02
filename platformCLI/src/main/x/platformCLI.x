@@ -107,9 +107,8 @@ module platformCLI.xqiz.it
                                     |   Utf8Codec.encode(credentials()))}
                                     ;
             RequestOut request =
-                client.createRequest(method, platformUri.with(path=path),
-                                            content, mediaType);
-            request.header.put(Header.Authorization, authorization);
+                client.createRequest(method, platformUri.with(path=path), content, mediaType);
+            request.header[Header.Authorization] = authorization;
             return request;
         }
 

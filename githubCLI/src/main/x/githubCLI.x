@@ -57,9 +57,9 @@ module githubCLI.xqiz.it
             Uri        uri     = new Uri($"https://api.github.com/{group}/{owner}{path}");
             RequestOut request = client.createRequest(method, uri, content);
 
-            request.header.put(Header.Accept,        MediaType_GithubAPI);
-            request.header.put(Header.Authorization, $"Bearer {token}");
-            request.header.put(Header_GithubAPI,     "2022-11-28");
+            request.header[Header.Accept       ] = MediaType_GithubAPI;
+            request.header[Header.Authorization] = $"Bearer {token}";
+            request.header[Header_GithubAPI    ] = "2022-11-28";
             return request;
         }
 

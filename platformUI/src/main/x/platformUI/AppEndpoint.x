@@ -18,6 +18,8 @@ import common.utils;
 import crypto.Certificate;
 import crypto.CryptoPassword;
 
+import json.JsonObject;
+
 import net.IPAddress;
 import net.Uri;
 
@@ -64,27 +66,36 @@ service AppEndpoint
      * Get the stats for a deployment.
      */
     @Get("/stats{/deployment}")
-    (String | SimpleResponse) getUseCount(String deployment) {
+    (JsonObject | SimpleResponse) getUseCount(String deployment) {
         (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
 
+        JsonObject stats = json.newObject();
         if (AppHost host := hostManager.getHost(deployment)) {
+            stats["deployed"] = True;
+            stats["active"]   = host.active;
+            stats["storage"]  = utils.storageSize(host.homeDir).toIntLiteral();
+
             switch (host.is(_)) {
             case DbHost:
-                return host.active ? $"Active; {host.dependees} users" : "Inactive";
-
+                if (host.active) {
+                    stats["users"] = host.dependees.toIntLiteral();
+                }
+                break;
             case WebHost:
-                return $|{host.active ? "Active" : "Inactive"}; {host.totalRequests} \
-                        |processed requests
-                        ;
+                if (host.active) {
+                    stats["requests"] = host.totalRequests.toIntLiteral();
+                }
+                break;
             default:
-                return $"Unknown deployment type for {host}";
+                return new SimpleResponse(NotFound, $"Unknown deployment type for {host}");
             }
         } else {
-            return "Not deployed";
+            stats["deployed"] = False;
         }
+        return stats.makeImmutable();
     }
 
     /**

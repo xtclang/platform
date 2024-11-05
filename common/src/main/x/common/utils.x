@@ -221,6 +221,18 @@ package utils {
     }
 
     /**
+     * Compute the size of all files in the specified directory (recursively).
+     */
+    static Int storageSize(Directory dir) {
+        Int size = 0;
+        for (File file : dir.filesRecursively()) {
+            size += file.size;
+        }
+        return size;
+    }
+
+
+    /**
      * Assemble a module repository for the specified account lib directory.
      */
      static ModuleRepository getModuleRepository(Directory libDir) {

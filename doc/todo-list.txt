@@ -1,4 +1,8 @@
+- soft-code the interval of inactivity per app and add a CLI command
 - add constraints to Timer and Clock injected by the web/db apps
 - test certificate revocation/removal with Let's Encrypt
+- always start registration with "self" provider (to create a temporary key) before "renewing"
+  with certbot; alternatively we can simply disallow passing a provider into "register" API
 
-
+- consider a possibility of multi-certificate "host", e.g. "host.cvs.com.xqiz.it" and
+  "xtc-host.cvs.com" both pointing to the same Azure hosted "xtc-host.eastus.cloudapp.azure.com"

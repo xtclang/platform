@@ -239,7 +239,7 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
             }
 
             for (AppHost dependent : dependencies) {
-                dependent.deactivate(explicit);
+                dependent.deactivate(False);
             }
             container?.kill();
 

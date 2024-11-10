@@ -101,10 +101,6 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
             addStubRoute(host.account, host.appInfo, host.pwd);
         }
 
-        try {
-            host.close();
-        } catch (Exception ignore) {}
-
         deployedHosts.remove(host.appInfo?.deployment) : assert;
     }
 

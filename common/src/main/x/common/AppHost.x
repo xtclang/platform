@@ -11,7 +11,7 @@ import model.AppInfo;
 class AppHost(String moduleName, AppInfo? appInfo, Directory homeDir)
         implements Closeable {
     /**
-     * The Container that hosts the module.
+     * The Container that hosts the module; always 'Null' for child hosts.
      */
     public/protected Container? container;
 

@@ -66,7 +66,7 @@ service AppEndpoint
      * Get the stats for a deployment.
      */
     @Get("/stats{/deployment}")
-    (JsonObject | SimpleResponse) getUseCount(String deployment) {
+    (JsonObject | SimpleResponse) getStats(String deployment) {
         (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;

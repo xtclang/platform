@@ -1,7 +1,5 @@
 class UserManagement {
 
-    // ----- commands --------------------------------------------------------------------------
-
     @Command("acc", "Get the account")
     String account() {
        return Gateway.sendRequest(GET, "/user/account");
@@ -28,23 +26,5 @@ class UserManagement {
             Gateway.setPassword(newPassword);
             Gateway.resetClient();
         }
-    }
-
-    // TEMPORARY
-    @Command("debug", "Bring the debugger")
-    void debug(String target = "server") {
-        if (target.equals("local")) {
-            assert:debug;
-            String msg = "Debugging the CLI tool itself!";
-        } else {
-            Gateway.sendRequest(POST, "/host/debug");
-        }
-    }
-
-    @Command("shutdown", "Shutdown the platform server")
-    void shutdown() {
-        try {
-            Gateway.sendRequest(POST, "/host/shutdown");
-        } catch (Exception e) {}
     }
 }

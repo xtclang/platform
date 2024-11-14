@@ -14,7 +14,7 @@ import oodb.RootSchema;
  * An abstract host for a DB module.
  */
 @Abstract
-class DbHost(ModuleRepository repository, String moduleName, DbAppInfo? appInfo,
+service DbHost(ModuleRepository repository, String moduleName, DbAppInfo? appInfo,
              Directory homeDir, Directory buildDir)
         extends AppHost(moduleName, appInfo, homeDir) {
 

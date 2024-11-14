@@ -1,4 +1,3 @@
-- soft-code the interval of inactivity per app and add a CLI command
 - add constraints to Timer and Clock injected by the web/db apps
 - test certificate revocation/removal with Let's Encrypt
 - always start registration with "self" provider (to create a temporary key) before "renewing"

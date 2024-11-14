@@ -11,6 +11,16 @@ import crypto.CryptoPassword;
  * The Host Manager API.
  */
 interface HostManager {
+
+    // ----- Controller management -----------------------------------------------------------------
+
+    /**
+     * The number of active applications to keep in memory. Eventually this will be replaced with a
+     * memory threshold.
+     */
+    Int activeAppThreshold;
+
+
     // ----- WebHost management --------------------------------------------------------------------
 
     /**

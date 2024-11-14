@@ -17,6 +17,7 @@ import common.model.WebAppInfo;
 
 import common.names;
 import common.utils;
+import common.utils.CircularBuffer;
 
 import crypto.Certificate;
 import crypto.CertificateManager;
@@ -37,9 +38,20 @@ import xenia.HttpServer;
 /**
  * The module for basic hosting functionality.
  */
-service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager proxyManager)
+service HostManager
         implements common.HostManager {
 
+    construct(HttpServer httpServer, Directory accountsDir, ProxyManager proxyManager) {
+        this.httpServer   = httpServer;
+        this.accountsDir  = accountsDir;
+        this.proxyManager = proxyManager;
+    } finally {
+        collectStats^();
+    }
+
+    /**
+     * The clock used to monitor the applications activity.
+     */
     @Inject Clock clock;
 
     /**
@@ -66,6 +78,141 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
      * The key store name to use.
      */
     static String KeyStoreName = "keystore.p12";
+
+
+    // ----- Controller management -----------------------------------------------------------------
+
+    /**
+     * The histogram "height"; how many last data points to keep.
+     */
+    static Int HistogramHeight = 10;
+
+    /**
+     * The histogram "minimum height"; how many cycles are guaranteed for newcomers before they
+     * could be evicted.
+     */
+    static Int MinHistogramHeight = 3;
+
+    /**
+     * The histogram collection interval; how often to collect the usage data.
+     */
+    static Duration UsageCheckDuration = Duration.ofSeconds(2);
+
+    /**
+     * The pause interval; how long to pause a WebApp for regardless of the incoming traffic.
+     */
+    static Duration PauseDuration = UsageCheckDuration*MinHistogramHeight;
+
+    /**
+     * The grace period interval; how long to wait before forcefully evicting a WebApp regardless
+     * of any pending requests.
+     */
+    static Duration GracePeriod = Duration.ofSeconds(1);
+
+    /**
+     * Activity check cancellation function; could be 'Null' if the metrics are within thresholds.
+     */
+    private Clock.Cancellable? cancelActivityCheck;
+
+    /**
+     * Activity histogram: while the activity check is active it contains the request counts
+     * snapshot for the last [HistogramHeight] reads going from most recent (at index 0) to the
+     * least recent.
+     */
+    private Map<String, CircularBuffer<Int>> activityHistogram = new HashMap();
+
+    @Override
+    Int activeAppThreshold {
+        @Override
+        void set(Int value) {
+            super(value);
+            checkLoad^();
+        }
+    } = 5; // TODO: how to compute the value until we replace it with memory based threshold?
+
+    /**
+     * Maintain optimum number of in-memory applications.
+     */
+    private void checkLoad() {
+        while (activityHistogram.size > activeAppThreshold) {
+            // let's try to remove the least recently used
+            String? maxInactiveName   = Null;
+            Int     maxInactiveCycles = 0;
+
+            for ((String name, CircularBuffer<Int> stats) : activityHistogram) {
+                if (stats.size <= MinHistogramHeight) {
+                    continue;
+                }
+
+                Int inactiveCycles = 0;
+                for (Int i : 1..<stats.size) {
+                    if (stats[i] == stats[i-1]) {
+                        inactiveCycles++;
+                    } else {
+                        break;
+                    }
+                }
+                if (inactiveCycles > maxInactiveCycles) {
+                    maxInactiveName   = name;
+                    maxInactiveCycles = inactiveCycles;
+                }
+            }
+            if (maxInactiveName != Null) {
+                pause(maxInactiveName, Inactivity);
+                continue;
+            }
+
+            // all the apps are active all the time; compute which one uses most of the resources
+            // and slow it down by pausing
+            // (Note: for now, we assume that all apps have the same SLAs)
+            String? maxActiveName = Null;
+            Int     maxActiveRate = -1;
+            for ((String name, CircularBuffer<Int> stats) : activityHistogram) {
+                if (stats.size <= MinHistogramHeight) {
+                    continue;
+                }
+                Int height      = stats.size;
+                Int requestRate = (stats[0] - stats[height-1])/height;
+                if (requestRate > maxActiveRate) {
+                    maxActiveName = name;
+                    maxActiveRate = requestRate;
+                }
+            }
+            if (maxActiveName != Null) {
+                pause(maxActiveName, HyperActivity);
+                continue;
+            }
+            // nothing we can do this cycle
+            return;
+        }
+
+        enum Reason {Inactivity, HyperActivity, Pending}
+        void pause(String deployment, Reason reason) {
+            assert AppHost host := getHost(deployment), host.is(WebHost);
+            if (host.deactivate(reason == Pending)) {
+                // to prevent an unnecessary churn, don't resume for some period of time
+                clock.schedule(PauseDuration, host.resume);
+            } else {
+                // deactivation failed; there are some pending requests; wait a bit
+                clock.schedule(GracePeriod, () -> pause(deployment, Pending));
+            }
+            activityHistogram.remove(deployment);
+        }
+    }
+
+    void collectStats() {
+        for ((String name, AppHost host) : deployedHosts) {
+            if (host.active && host.is(WebHost)) {
+                CircularBuffer<Int> stats = activityHistogram.computeIfAbsent(name,
+                    () -> new CircularBuffer(HistogramHeight));
+                stats.add(host.as(WebHost).totalRequests);
+            }
+        }
+        clock.schedule(UsageCheckDuration, collectStats);
+        if (activityHistogram.size > activeAppThreshold) {
+            checkLoad^();
+        }
+    }
 
 
     // ----- common.HostManager API ----------------------------------------------------------------
@@ -101,8 +248,12 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
             addStubRoute(host.account, host.appInfo, host.pwd);
         }
 
-        deployedHosts.remove(host.appInfo?.deployment) : assert;
+        String deployment = host.appInfo?.deployment : assert;
+        deployedHosts    .remove(deployment);
+        activityHistogram.remove(deployment);
+        checkLoad^();
     }
+
 
     // ----- WebApp management ---------------------------------------------------------------------
 
@@ -124,7 +275,6 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
                 CheckValid:
                 if (Certificate cert := keystore.getCertificate(hostName)) {
 
-                    @Inject Clock clock;
                     Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
                     if (daysLeft < 14) {
                         // less than two weeks left - renew the certificate
@@ -244,13 +394,40 @@ service HostManager(HttpServer httpServer, Directory accountsDir, ProxyManager p
             AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure())
             ];
 
+        // check if all the shared databases are deployed
+        Map<String, DbHost> sharedDbHosts;
+        if (webAppInfo.sharedDBs.empty) {
+            sharedDbHosts = [];
+        } else {
+            sharedDbHosts = new ListMap();
+            for (String dbDeployment : webAppInfo.sharedDBs) {
+                if (DbHost dbHost := getDbHost(dbDeployment)) {
+                    String dbModuleName = dbHost.moduleName;
+                    if (sharedDbHosts.contains(dbModuleName)) {
+                        errors.add($|Error: More than one dependency on the same database module \
+                                    |"{dbModuleName}"
+                                   );
+                        return False;
+                    } else {
+                        sharedDbHosts.put(dbModuleName, dbHost);
+                    }
+                } else {
+                    errors.add($|Error: Dependent database "{dbDeployment}" has not been deployed
+                              );
+                    return False;
+                }
+            }
+            sharedDbHosts.freeze(inPlace=True);
+        }
+
         common.HostManager mgr = &this.maskAs(common.HostManager);
-        WebHost webHost = new WebHost(mgr, route, accountName, repository, webAppInfo, pwd, extras,
-                            homeDir, buildDir);
+        WebHost webHost = new WebHost(route, accountName, repository, webAppInfo, pwd,
+                                      sharedDbHosts, challengeApp, extras, homeDir, buildDir);
         deployedHosts.put(deployment, webHost);
         httpServer.addRoute(hostName, webHost, keystore,
                 tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
 
+        checkLoad^();
         return True, webHost;
     }
 

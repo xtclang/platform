@@ -8,14 +8,14 @@ service Controller
     @Get("config")
     JsonObject showConfig() {
         JsonObject config = json.newObject();
-        config["activeThreshold"] = 0; // hostManager.activeAppThreshold.toIntLiteral();
+        config["activeThreshold"] = hostManager.activeAppThreshold.toIntLiteral();
         return config.makeImmutable();
     }
 
     @Post("config/active/{count}")
     void setActiveCount(Int count) {
         assert:bounds 0 <= count < 100;
-        // hostManager.activeAppThreshold = count;
+        hostManager.activeAppThreshold = count;
     }
 
     @Post("debug")

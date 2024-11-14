@@ -9,6 +9,7 @@ import crypto.CryptoPassword;
 import crypto.Decryptor;
 
 import web.HttpStatus;
+import web.WebApp;
 
 import web.http.HostInfo;
 
@@ -24,9 +25,9 @@ import common.model.WebAppInfo;
 /**
  * AppHost for a Web module.
  */
-service WebHost(HostManager hostManager, HostInfo route, String account, ModuleRepository repository,
-                WebAppInfo appInfo, CryptoPassword pwd, CatalogExtras extras, Directory homeDir,
-                Directory buildDir)
+service WebHost(HostInfo route, String account, ModuleRepository repository, WebAppInfo appInfo,
+                CryptoPassword pwd, Map<String, DbHost> sharedDbHosts, WebApp challengeApp,
+                CatalogExtras extras, Directory homeDir, Directory buildDir)
         extends AppHost(appInfo.moduleName, appInfo, homeDir)
         implements Handler {
 
@@ -37,9 +38,15 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
     Boolean active.get() = handler != Null;
 
     /**
-     * The HostManager instance.
+     * A Map of shared DBHosts keyed by their deployment names.
      */
-    protected HostManager hostManager;
+    protected Map<String, DbHost> sharedDbHosts;
+
+    /**
+     * The challenge WebApp, which is used to serve ACME challenge requests when a deployments have
+     * been registered, but either not yet deployed or deactivated.
+     */
+    protected WebApp challengeApp;
 
     /**
      * The account name this deployment belongs to.
@@ -98,28 +105,30 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
     /**
      * Total request counter (serves as an activity indicator).
      */
-    public/private Int totalRequests;
+    public/protected Int totalRequests;
 
     /**
-     * The clock used to monitor the application activity.
+     * Pending request counter.
      */
-    @Inject Clock clock;
+    protected Int pendingRequests;
 
     /**
-     * Activity check cancellation function.
+     * Pause indicator; a paused host
      */
-    private Clock.Cancellable? cancelActivityCheck;
+    protected Boolean paused;
 
     /**
-     * Indicates the number of attempted deactivations before forcefully killing the container.
+     * Requests that came while the WebHost was paused.
      */
-    private Int deactivationProgress;
+    protected RequestInfo[] deferredRequests = [];
 
     /**
-     * The inactivity duration limit; if no requests come within that period, the application
-     * will be deactivated.
+     * The maximum number of deferred requests.
      */
-    static Duration InactivityDuration = Duration.ofSeconds(20);
+    static Int MaxDeferredRequests = 50;
+
+
+    // ----- AppHost methods -----------------------------------------------------------------------
 
     /*
      * Activate the underlying WebApp.
@@ -151,30 +160,6 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
             return False;
         }
 
-        // check if all the shared databases are deployed
-        Map<String, DbHost> sharedDbHosts;
-        if (appInfo.sharedDBs.empty) {
-            sharedDbHosts = [];
-        } else {
-            sharedDbHosts = new ListMap();
-            for (String dbDeployment : appInfo.sharedDBs) {
-                if (DbHost dbHost := hostManager.getDbHost(dbDeployment)) {
-                    String dbModuleName = dbHost.moduleName;
-                    if (sharedDbHosts.contains(dbModuleName)) {
-                        errors.add($|Error: More than one dependency on the same database module \
-                                    |"{dbModuleName}"
-                                   );
-                        return False;
-                    } else {
-                        sharedDbHosts.put(dbModuleName, dbHost);
-                    }
-                } else {
-                    errors.add($"Error: Dependent database {dbDeployment.quoted()} has not been deployed");
-                    return False;
-                }
-            }
-        }
-
         if (ModuleTemplate webTemplate := new tools.ModuleGenerator(mainModule).
                 ensureWebModule(repository, buildDir, errors)) {
 
@@ -187,17 +172,6 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
 
                     this.container = container;
                     this.handler   = handler;
-
-                    // set the alarm, expecting at least one application request within next
-                    // "check interval"
-                    Int      currentCount = totalRequests + 1;
-                    Duration duration     = InactivityDuration;
-                    if (explicit) {
-                        // they explicitly started it; keep it up longer first time around
-                        duration = duration*2;
-                    }
-                    cancelActivityCheck =
-                        clock.schedule(duration, () -> checkActivity(currentCount));
 
                     // if a challengeHandler has been activated, close and drop it
                     challengeHandler?.close^();
@@ -215,46 +189,89 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
         return False;
     }
 
-    void checkActivity(Int prevRequests) {
-        if (totalRequests <= prevRequests) {
-            // no activity since the last check; deactivate the handler
-            deactivate(False);
-        } else {
-            // some activity detected; reschedule the check
-            Int currentCount = totalRequests;
-            cancelActivityCheck =
-                clock.schedule(InactivityDuration, () -> checkActivity(currentCount));
-        }
-    }
-
     @Override
     Boolean deactivate(Boolean explicit) {
         if (HttpHandler handler ?= this.handler) {
+            handler.close(); // clean up downstream
+            this.handler = Null;
 
-            cancelActivityCheck?();
-            handler.close();
+            if (!explicit) {
+                paused = True;
 
+                if (pendingRequests > 0) {
+                    // we need to give the app some time to finish up the current requests;
+                    // it's a responsibility of the HostManager to repeat deactivation
+                    return False;
+                }
+            }
+            unload(explicit);
+        } else if (paused && (explicit || pendingRequests == 0)) {
+            unload(explicit);
+        }
+        return True;
+
+        void unload(Boolean explicit) {
+            for (AppHost dependent : dependencies) {
+                dependent.deactivate(False);
+            }
             if (!explicit) {
                 // TODO: container.pause(); container.store();
             }
 
-            for (AppHost dependent : dependencies) {
-                dependent.deactivate(False);
-            }
             container?.kill();
 
-            this.dependencies         = [];
-            this.handler              = Null;
-            this.container            = Null;
-            this.deactivationProgress = 0;
-
-            // now is a good time to check if the certificate is up-to-date and renew it
-            // asynchronously if necessary
-            ErrorLog errors  = new ErrorLog();
-            Boolean  success = hostManager.ensureCertificate^(account, appInfo, pwd, errors);
-            &success.whenComplete((r, e) -> errors.reportAll(log));
+            dependencies = [];
+            container    = Null;
         }
+    }
+
+    // ----- "pausing" support ---------------------------------------------------------------------
+
+    /**
+     * Defer a request that came while the WebHost was paused.
+     *
+     * @return True if the request is deferred; False otherwise
+     */
+    Boolean deferRequest(RequestInfo request) {
+        RequestInfo[] deferredRequests = this.deferredRequests;
+        Int           deferredCount    = deferredRequests.size;
+        if (deferredCount == 0) {
+            deferredRequests      = new RequestInfo[]; // mutable
+            this.deferredRequests = deferredRequests;
+        } else if (deferredCount > MaxDeferredRequests) {
+            return False;
+        }
+        deferredRequests += request;
         return True;
+    }
+
+    /**
+     * Resume a paused WebHost.
+     */
+    void resume() {
+        if (!paused) {
+            return;
+        }
+        paused = False;
+
+        RequestInfo[] deferredRequests = this.deferredRequests;
+        if (deferredRequests.empty) {
+            // no need to activate
+            return;
+        }
+        this.deferredRequests = [];
+
+        Log errors = new ErrorLog();
+        if (activate(False, errors)) {
+            deferredRequests.forEach(request -> // handle^(request));
+            {
+            handle^(request);
+            });
+        } else {
+            errors.reportAll(log);
+            deferredRequests.forEach(request ->
+                    request.respond(HttpStatus.InternalServerError.code, [], [], []));
+        }
     }
 
 
@@ -269,48 +286,44 @@ service WebHost(HostManager hostManager, HostInfo route, String account, ModuleR
 
     @Override
     void handle(RequestInfo request) {
-        if (deactivationProgress > 0) {
-            // deactivation is in progress; would be nice to send back a corresponding page
-            request.respond(HttpStatus.ServiceUnavailable.code, [], [], []);
-            return;
-        }
-
         HttpHandler handler;
         if (!(handler ?= this.handler)) {
             if (request.uriString.startsWith("/.well-known/acme-challenge")) {
                 // this is a certificate challenge request; no need to load the app
                 if (!(handler ?= challengeHandler)) {
-                    handler          = new HttpHandler(route, hostManager.challengeApp, extras);
+                    handler          = new HttpHandler(route, challengeApp, extras);
                     challengeHandler = handler;
                 }
                 handler.handle^(request);
                 return;
             }
 
-            Log errors = new ErrorLog();
+            if (paused) {
+                if (!deferRequest(request)) {
+                    request.respond(HttpStatus.TooManyRequests.code, [], [], []);
+                }
+                return;
+            }
 
+            Log errors = new ErrorLog();
             if (!(handler := activate(False, errors))) {
                 errors.reportAll(log);
-
                 request.respond(HttpStatus.InternalServerError.code, [], [], []);
                 return;
             }
         }
 
         totalRequests++;
+        pendingRequests++;
 
+        request.observe((_) -> {--pendingRequests;});
         handler.handle^(request);
     }
-
 
     // ----- Closeable -----------------------------------------------------------------------------
 
     @Override
     void close(Exception? e = Null) {
-        for (AppHost dependent : dependencies) {
-            dependent.close(e);
-        }
-
-        super(e);
+        deactivate(True);
     }
 }

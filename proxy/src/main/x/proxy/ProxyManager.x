@@ -7,8 +7,6 @@ import crypto.KeyStore;
 
 import common.Reporting;
 
-import net.Uri;
-
 import web.Client;
 import web.HttpClient;
 import web.ResponseIn;

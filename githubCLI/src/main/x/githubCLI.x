@@ -9,7 +9,6 @@ module githubCLI.xqiz.it
     package cli  import cli.xtclang.org;
     package conv import convert.xtclang.org;
     package json import json.xtclang.org;
-    package net  import net.xtclang.org;
     package web  import web.xtclang.org;
 
     import cli.Command;
@@ -19,7 +18,6 @@ module githubCLI.xqiz.it
     import json.Doc;
     import json.Parser;
 
-    import net.Uri;
     import web.*;
 
     @Inject Console console;

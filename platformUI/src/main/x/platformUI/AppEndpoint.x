@@ -21,7 +21,6 @@ import crypto.CryptoPassword;
 import json.JsonObject;
 
 import net.IPAddress;
-import net.Uri;
 
 import web.*;
 import web.responses.SimpleResponse;

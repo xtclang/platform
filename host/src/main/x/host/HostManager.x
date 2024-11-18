@@ -24,8 +24,6 @@ import crypto.CertificateManager;
 import crypto.CryptoPassword;
 import crypto.KeyStore;
 
-import net.Uri;
-
 import web.ResponseIn;
 import web.WebApp;
 import web.WebService;

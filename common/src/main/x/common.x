@@ -5,6 +5,7 @@ module common.xqiz.it {
     package crypto import crypto.xtclang.org;
     package jsondb import jsondb.xtclang.org;
     package oodb   import oodb.xtclang.org;
+    package sec    import sec.xtclang.org;
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 

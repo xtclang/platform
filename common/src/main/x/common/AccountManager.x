@@ -6,7 +6,7 @@ import common.model.UserInfo;
 
 import crypto.CryptoPassword;
 
-import web.security.Realm.HashInfo;
+import sec.Realm.HashInfo;
 
 /**
  * The account management API.

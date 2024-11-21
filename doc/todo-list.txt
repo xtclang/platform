@@ -1,3 +1,4 @@
+- use "notifyOnClose" handler to report a connection failure due to unloaded db app
 - add constraints to Timer and Clock injected by the web/db apps
 - test certificate revocation/removal with Let's Encrypt
 - always start registration with "self" provider (to create a temporary key) before "renewing"

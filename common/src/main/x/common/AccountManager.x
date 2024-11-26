@@ -6,7 +6,6 @@ import common.model.UserInfo;
 
 import crypto.CryptoPassword;
 
-import sec.Realm.HashInfo;
 
 /**
  * The account management API.
@@ -129,13 +128,12 @@ interface AccountManager {
     /**
      * Update the specified user.
      *
-     * @param user       the UserInfo object that contains updated information
-     * @param pwdHashes  (optional) new password hashes
+     * @param user  the UserInfo object that contains updated information
      *
      * @return True iff the user info has been successfully updated; False if any information is
      *         invalid (e.g. the user email has changed, but the new one is not available)
      */
-    Boolean updateUser(UserInfo user, HashInfo? pwdHashes = Null);
+    Boolean updateUser(UserInfo user);
 
 
     // ----- secrets management --------------------------------------------------------------------

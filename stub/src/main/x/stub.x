@@ -35,8 +35,7 @@ module stub.xqiz.it {
         }
 
         @OnError
-        ResponseOut onError(Session? session, RequestIn request,
-                            (Exception|String|HttpStatus) cause) {
+        ResponseOut onError(RequestIn request, (Exception|String|HttpStatus) cause) {
             return unavailable();
         }
 

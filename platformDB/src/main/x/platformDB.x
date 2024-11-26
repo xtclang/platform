@@ -8,8 +8,6 @@ module platformDB.xqiz.it {
     package common import common.xqiz.it;
     package web    import web.xtclang.org;
 
-    import web.security.Realm.HashInfo;
-
     import common.model.AccountId;
     import common.model.AccountInfo;
     import common.model.UserId;
@@ -103,7 +101,7 @@ module platformDB.xqiz.it {
         /**
          * @see [AccountManager.updateUser]
          */
-        Boolean update(UserInfo user, HashInfo? pwdHashes = Null) {
+        Boolean update(UserInfo user) {
             UserId   userId = user.id;
             UserInfo current;
             if (!(current := get(userId))) {
@@ -119,12 +117,6 @@ module platformDB.xqiz.it {
             if (current.email != email &&
                 values.any(info -> info.email == email)) {
                 return False;
-            }
-
-            if (pwdHashes != Null) {
-                auth.Users users = dbRoot.as(Schema).authSchema.users;
-                assert auth.User authUser := users.get(userId);
-                users.put(userId, authUser.with(passwordHashes=pwdHashes));
             }
             put(userId, current.with(name, email));
             return True;

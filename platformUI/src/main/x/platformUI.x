@@ -10,6 +10,7 @@ module platformUI.xqiz.it {
     package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
     package net    import net.xtclang.org;
+    package sec    import sec.xtclang.org;
     package web    import web.xtclang.org;
     package xenia  import xenia.xtclang.org;
 
@@ -33,6 +34,8 @@ module platformUI.xqiz.it {
 
     import json.Schema;
 
+    import sec.Realm;
+
     import web.HttpsRequired;
     import web.StaticContent;
     import web.WebApp;
@@ -42,7 +45,6 @@ module platformUI.xqiz.it {
 
     import web.security.Authenticator;
     import web.security.TokenAuthenticator;
-    import web.security.Realm;
 
     import xenia.HttpHandler;
     import xenia.HttpServer;

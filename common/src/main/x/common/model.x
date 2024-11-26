@@ -2,12 +2,10 @@ package model {
     typedef Int as AccountId;
     typedef Int as UserId;
 
-    enum UserRole {Admin, Developer, Observer}
-
     const AccountInfo(AccountId id, String name,
                       Map<String, ModuleInfo> modules = [], // keyed by the fully qualified name
                       Map<String, AppInfo>    apps    = [], // keyed by the deployment name
-                      Map<UserId, UserRole>   users   = []
+                      UserId[]                users   = []
                       ) {
 
         AccountInfo addOrUpdateModule(ModuleInfo info) {
@@ -18,8 +16,11 @@ package model {
             return new AccountInfo(id, name, modules.remove(moduleName), apps, users);
         }
 
-        AccountInfo addOrUpdateUser(UserId userId, UserRole role) {
-            return new AccountInfo(id, name, modules, apps, users.put(userId, role));
+        AccountInfo addOrUpdateUser(UserId userId) {
+            if (UserId[] users := this.users.addIfAbsent(userId)) {
+                return new AccountInfo(id, name, modules, apps, users);
+            }
+            return this;
         }
 
         AccountInfo removeUser(UserId userId) {

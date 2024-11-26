@@ -9,7 +9,6 @@ import web.*;
 import web.http.FormDataFile;
 import web.responses.SimpleResponse;
 
-import web.security.Realm;
 
 /*
  * Dedicated service for user management.
@@ -20,7 +19,7 @@ service UserEndpoint
     construct() {
         construct CoreService();
 
-        realm = ControllerConfig.realm;
+        realm = ControllerConfig.realm; // TODO: not needed; webApp.authenticator.realm
     }
 
     /**
@@ -33,7 +32,7 @@ service UserEndpoint
      */
     @Get("id")
     SimpleResponse getUserId() {
-        return new SimpleResponse(OK, bytes=session?.userId?.utf8())
+        return new SimpleResponse(OK, bytes=session?.principal?.name.utf8())
              : new SimpleResponse(NoContent);
     }
 
@@ -66,13 +65,11 @@ service UserEndpoint
     @LoginRequired
     void setPassword(@BodyParam String password) {
         import common.model.UserInfo;
-        import web.security.Realm.HashInfo;
 
         String userId = session?.userId? : assert;
         assert UserInfo userInfo := accountManager.getUser(userId);
 
-        (_, HashInfo pwdHashes) = realm.createHashes(userId, password);
-        accountManager.updateUser(userInfo, pwdHashes);
+        Principal principal = realm.findPrincipal(DigestCredentials.Scheme, userId);
     }
 
     /*

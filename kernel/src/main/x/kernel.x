@@ -17,6 +17,7 @@ module kernel.xqiz.it {
     package jsondb  import jsondb.xtclang.org;
     package oodb    import oodb.xtclang.org;
     package net     import net.xtclang.org;
+    package sec     import sec.xtclang.org;
     package web     import web.xtclang.org;
     package xenia   import xenia.xtclang.org;
 
@@ -163,20 +164,22 @@ module kernel.xqiz.it {
 
                 import common.model.AccountInfo;
                 import common.model.UserInfo;
+                import sec.Principal;
+                import web.security.DigestCredential;
+
                 using (val tx = connection.createTransaction()) {
                     Configuration initConfig = new Configuration(
-                        initUserPass  = [userName=password],
-                        initRoleUsers = ["Admin"=[userName]]
+                        initUserPass = [userName=password],
+                        credScheme   = DigestCredential.Scheme,
                         );
 
-                    realm = new DBRealm(names.PlatformRealm,
-                                rootSchema = connection, initConfig = initConfig);
+                    realm = new DBRealm(names.PlatformRealm, rootSchema=connection, initConfig=initConfig);
 
-                    assert auth.User   user    := tx.authSchema.users.findByName(userName);
+                    assert Principal   user    := realm.findPrincipal(DigestCredential.Scheme, userName);
                     assert AccountInfo account := accountManager.createAccount(accountName);
-                    assert UserInfo    admin   := accountManager.createUser(user.userId, userName,
+                    assert UserInfo    admin   := accountManager.createUser(user.principalId, userName,
                                                     $"{userName}@{hostName}");
-                    assert accountManager.updateAccount(account.addOrUpdateUser(admin.id, Admin));
+                    assert accountManager.updateAccount(account.addOrUpdateUser(admin.id));
                 }
             }
 

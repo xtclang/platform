@@ -1,5 +1,5 @@
-import common.model.UserInfo;
-import common.model.UserRole;
+import sec.Entitlement;
+import sec.Principal;
 
 import web.Session;
 
@@ -13,31 +13,30 @@ mixin SessionData
         accountName    = "";
     }
 
-    @Unassigned
     private AccountManager accountManager;
 
     String accountName;
 
     @Override
-    void sessionAuthenticated(String user) {
-        Collection<AccountInfo> accounts = accountManager.getAccounts(user);
+    void sessionAuthenticated(Principal? principal, Entitlement[] entitlements) {
+        if (principal != Null) {
+            String                  user     = principal.name;
+            Collection<AccountInfo> accounts = accountManager.getAccounts(user);
 
-        // TODO choose an account this user was last associated with
-        if (AccountInfo account := accounts.any()) {
-            accountName = account.name;
+            // TODO choose an account this user was last associated with
+            if (AccountInfo account := accounts.any()) {
+                accountName = account.name;
 
-            assert UserInfo userInfo := accountManager.getUser(user);
-            if (UserRole userRole := account.users.get(userInfo.id)) {
-                roles = [userRole.name]; // TODO: allow multiple roles
+                assert accountManager.getUser(user);
             }
         }
-        super(user);
+        super(principal, entitlements);
     }
 
     @Override
-    void sessionDeauthenticated(String user) {
+    void sessionDeauthenticated(Principal? principal, Entitlement[] entitlements) {
         accountName = "";
 
-        super(user);
+        super(principal, entitlements);
     }
 }

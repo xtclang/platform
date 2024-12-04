@@ -29,6 +29,11 @@ service DbHost(ModuleRepository repository, String moduleName, DbAppInfo? appInf
     protected Directory buildDir;
 
     /**
+     * True iff the DbHost is a standalone host shared by multiple web applications.
+     */
+    protected Boolean shared.get() = appInfo != Null;
+
+    /**
      * The number of hosts that depend on this DbHost. This counter is only used for shared DB apps.
      */
     Int dependees;
@@ -52,7 +57,7 @@ service DbHost(ModuleRepository repository, String moduleName, DbAppInfo? appInf
      */
     @Override
     conditional function Connection(DBUser) activate(Boolean explicit, Log errors) {
-        if (!explicit) {
+        if (shared && !explicit) {
             dependees++;
         }
         return True, _ -> throw new NotImplemented();
@@ -60,7 +65,9 @@ service DbHost(ModuleRepository repository, String moduleName, DbAppInfo? appInf
 
     @Override
     Boolean deactivate(Boolean explicit) {
-        --dependees;
+        if (shared) {
+            --dependees;
+        }
         return explicit || dependees == 0;
     }
 }

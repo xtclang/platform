@@ -1,14 +1,10 @@
 class HostManagement {
 
     @Command("config", "Get the current configuration values")
-    String getConfig() {
-        return Gateway.sendRequest(GET, "/host/config");
-    }
+    String getConfig() = platformCLI.get("/host/config");
 
     @Command("set-active", "Set the active application threshold value")
-    void setActiveThreshold(Int value) {
-        Gateway.sendRequest(POST, $"/host/config/active/{value}");
-    }
+    void setActiveThreshold(Int value) = platformCLI.post($"/host/config/active/{value}");
 
     // TEMPORARY
     @Command("debug", "Bring the debugger")
@@ -17,14 +13,14 @@ class HostManagement {
             assert:debug;
             String msg = "Debugging the CLI tool itself!";
         } else {
-            Gateway.sendRequest(POST, "/host/debug");
+            platformCLI.post("/host/debug");
         }
     }
 
     @Command("shutdown", "Shutdown the platform server")
     void shutdown() {
         try {
-            Gateway.sendRequest(POST, "/host/shutdown");
+            platformCLI.post("/host/shutdown");
         } catch (Exception e) {}
     }
 }

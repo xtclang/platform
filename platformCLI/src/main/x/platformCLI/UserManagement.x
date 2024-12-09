@@ -1,30 +1,31 @@
 class UserManagement {
 
     @Command("acc", "Get the account")
-    String account() {
-       return Gateway.sendRequest(GET, "/user/account");
-    }
+    String account() = platformCLI.get("/user/account");
 
     @Command("password", "Change the credentials and the session cookies")
     void changePassword() {
-        String newPassword;
+        String password;
         do {
             @Inject Console console;
 
-            newPassword = console.readLine("New password:", suppressEcho=True);
-            if (newPassword == "") {
+            password = console.readLine("New password:", suppressEcho=True);
+            if (password == "") {
                 platformCLI.print("Cancelled");
                 return;
             }
 
-        } while (newPassword != console.readLine("Confirm password:", suppressEcho=True));
+        } while (password != console.readLine("Confirm password:", suppressEcho=True));
 
-        RequestOut request = Gateway.createRequest(PUT, "/user/password", newPassword, Text);
+        import web.HttpStatus;
+        import web.RequestOut;
+
+        RequestOut request = Gateway.createRequest(PUT, "/user/password", password, Text);
         (_, HttpStatus status) = Gateway.send(request);
 
         if (status == OK) {
-            Gateway.setPassword(newPassword);
-            Gateway.resetClient();
+            Gateway.resetClient(uriString=Gateway.serverUri(), authString=$"admin:{password}");
+            platformCLI.showAccount();
         }
     }
 }

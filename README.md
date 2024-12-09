@@ -91,11 +91,18 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 
 16. Click on the URL to launch your application web page.
 
-17. To stop the server cleanly, from a separate shell run this command:
+17. To control the hosting platform via the command line interface (CLI), start the command line tool:
+    
+    xec -L lib platformCLI.xqiz.it https://xtc-platform.localhost.xqiz.it admin:[password]
+
+    Type "help" to see all available commands.
+
+18. To stop the server cleanly, use a CLI "shutdown" command or from a separate shell run this:
 
         curl -k -b cookies.txt -L -i -w '\n' -X POST https://xtc-platform.localhost.xqiz.it/host/shutdown
 
     If you do not stop the server cleanly, the next start-up will be much slower, since the databases on the server will need to be recovered.
+
 
 ## License
 
@@ -109,7 +116,7 @@ derivative forms thereof) is Creative Commons CC-BY-4.0, unless explicitly noted
 To help ensure clean IP (which will help us keep this project free and open source), pull requests
 for source code changes require a signed contributor agreement to be submitted in advance. We use
 the Apache contributor model agreements (modified to identify this specific project), which can be
-found in the [license](./license) directory. Contributors are required to sign and submit an Ecstasy
+found in the [license](./LICENSE) file. Contributors are required to sign and submit an Ecstasy
 Project Individual Contributor License Agreement (ICLA), or be a named employee on an Ecstasy
 Project Corporate Contributor License Agreement (CCLA), both derived directly from the Apache
 agreements of the same name. (Sorry for the paper-work! We hate it, too!)

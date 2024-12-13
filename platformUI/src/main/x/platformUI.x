@@ -44,8 +44,12 @@ module platformUI.xqiz.it {
     import web.http.HostInfo;
 
     import web.security.Authenticator;
+    import web.security.DigestAuthenticator;
     import web.security.TokenAuthenticator;
 
+    import web.sessions.Broker;
+
+    import xenia.CookieBroker;
     import xenia.HttpHandler;
     import xenia.HttpServer;
 
@@ -248,8 +252,15 @@ module platformUI.xqiz.it {
      * WebApp.AuthenticatorFactory API.
      */
     Authenticator createAuthenticator() {
-        return new TokenAuthenticator(ControllerConfig.realm);
+        return new DigestAuthenticator(ControllerConfig.realm);
     }
+
+    /**
+     * WebApp.SessionBrokerFactory API.
+     */
+    Broker createSessionBroker() = cookieBroker;
+
+    private @Lazy CookieBroker cookieBroker.calc() = new CookieBroker(this);
 
     /**
      * The singleton service holding configuration info.

@@ -30,11 +30,11 @@ service UserEndpoint
      */
     @Post("login{/userName}")
     @HttpsRequired
-    SimpleResponse login(SessionData session, String userName, @BodyParam String password="") {
+    SimpleResponse login(SessionData session, String userName, @BodyParam String password = "") {
         Realm realm = webApp.authenticator.realm;
 
         // the code below is a part of DigestAuthenticator.authenticate(); TODO: create a helper there
-        if (Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName)) {
+        if (Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName.quoted())) {
             Authenticator.Status status = principal.calcStatus(realm) == Active ? Success : NotActive;
 
             Hash hash = DigestCredential.passwordHash(userName, realm.name, password, sha512_256);
@@ -45,6 +45,7 @@ service UserEndpoint
                         && credential.active) {
 
                     if (credential.password_sha512_256 == hash) {
+                        session.authenticate(principal);
                         return getUserId();
                     }
                 }
@@ -58,6 +59,7 @@ service UserEndpoint
      */
     @Get("account")
     @LoginRequired
+    @SessionRequired
     String account() {
         return accountName;
     }
@@ -72,10 +74,10 @@ service UserEndpoint
 
         Realm realm = webApp.authenticator.realm;
 
-        String userId = session.principal?.name : assert;
-        assert UserInfo userInfo := accountManager.getUser(userId);
+        String userName = session.principal?.name : assert;
+        assert UserInfo userInfo := accountManager.getUser(userName);
 
-        assert Principal principal := realm.findPrincipal(DigestCredential.Scheme, userId);
+        assert Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName.quoted());
         TODO
     }
 

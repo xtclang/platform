@@ -168,14 +168,15 @@ module kernel.xqiz.it {
                 import web.security.DigestCredential;
 
                 using (val tx = connection.createTransaction()) {
+                    String        credScheme = DigestCredential.Scheme;
                     Configuration initConfig = new Configuration(
                         initUserPass = [userName=password],
-                        credScheme   = DigestCredential.Scheme,
+                        credScheme   = credScheme,
                         );
 
                     realm = new DBRealm(names.PlatformRealm, rootSchema=connection, initConfig=initConfig);
 
-                    assert Principal   user    := realm.findPrincipal(DigestCredential.Scheme, userName);
+                    assert Principal   user    := realm.findPrincipal(credScheme, userName.quoted());
                     assert AccountInfo account := accountManager.createAccount(accountName);
                     assert UserInfo    admin   := accountManager.createUser(user.principalId, userName,
                                                     $"{userName}@{hostName}");

@@ -28,6 +28,7 @@ import common.utils;
  */
 @WebService("/module")
 @LoginRequired
+@SessionRequired
 service ModuleEndpoint
         extends CoreService {
 

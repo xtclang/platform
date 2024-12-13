@@ -11,7 +11,7 @@ import crypto.KeyStore;
 
 import web.security.Authenticator;
 
-import web.ssssion.Broker;
+import web.sessions.Broker;
 
 import model.InjectionKey;
 import model.Injections;

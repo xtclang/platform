@@ -1,15 +1,14 @@
-import ecstasy.mgmt.Container;
-
-import ecstasy.reflect.ModuleTemplate;
-
-import common.ErrorLog;
-import common.WebHost;
+import sec.Credential;
+import sec.Principal;
+import sec.Realm;
 
 import web.*;
-import web.http.FormDataFile;
 import web.responses.SimpleResponse;
+import web.security.DigestCredential;
 
-import web.security.Realm;
+import DigestCredential.Hash;
+import DigestCredential.sha512_256;
+
 
 /*
  * Dedicated service for user management.
@@ -17,23 +16,12 @@ import web.security.Realm;
 @WebService("/user")
 service UserEndpoint
         extends CoreService {
-    construct() {
-        construct CoreService();
-
-        realm = ControllerConfig.realm;
-    }
-
-    /**
-     * The Realm used for authentication.
-     */
-    protected Realm realm;
-
     /*
      * Return the SimpleResponse with the current user id or `NoContent`.
      */
     @Get("id")
     SimpleResponse getUserId() {
-        return new SimpleResponse(OK, bytes=session?.userId?.utf8())
+        return new SimpleResponse(OK, bytes=session?.principal?.name.utf8())
              : new SimpleResponse(NoContent);
     }
 
@@ -42,10 +30,26 @@ service UserEndpoint
      */
     @Post("login{/userName}")
     @HttpsRequired
-    SimpleResponse login(SessionData session, String userName, @BodyParam String password="") {
-        if (realm.authenticate(userName, password)) {
-            session.authenticate(userName);
-            return getUserId();
+    SimpleResponse login(SessionData session, String userName, @BodyParam String password = "") {
+        Realm realm = webApp.authenticator.realm;
+
+        // the code below is a part of DigestAuthenticator.authenticate(); TODO: create a helper there
+        if (Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName.quoted())) {
+            Authenticator.Status status = principal.calcStatus(realm) == Active ? Success : NotActive;
+
+            Hash hash = DigestCredential.passwordHash(userName, realm.name, password, sha512_256);
+            for (Credential credential : principal.credentials) {
+                if (credential.scheme == DigestCredential.Scheme
+                        && credential.is(DigestCredential)
+                        && credential.isUser(userName)
+                        && credential.active) {
+
+                    if (credential.password_sha512_256 == hash) {
+                        session.authenticate(principal);
+                        return getUserId();
+                    }
+                }
+            }
         }
         return new SimpleResponse(Unauthorized);
     }
@@ -55,6 +59,7 @@ service UserEndpoint
      */
     @Get("account")
     @LoginRequired
+    @SessionRequired
     String account() {
         return accountName;
     }
@@ -64,15 +69,16 @@ service UserEndpoint
      */
     @Put("password")
     @LoginRequired
-    void setPassword(@BodyParam String password) {
+    void setPassword(Session session, @BodyParam String password) {
         import common.model.UserInfo;
-        import web.security.Realm.HashInfo;
 
-        String userId = session?.userId? : assert;
-        assert UserInfo userInfo := accountManager.getUser(userId);
+        Realm realm = webApp.authenticator.realm;
 
-        (_, HashInfo pwdHashes) = realm.createHashes(userId, password);
-        accountManager.updateUser(userInfo, pwdHashes);
+        String userName = session.principal?.name : assert;
+        assert UserInfo userInfo := accountManager.getUser(userName);
+
+        assert Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName.quoted());
+        TODO
     }
 
     /*

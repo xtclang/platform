@@ -30,6 +30,7 @@ import web.responses.SimpleResponse;
  */
 @WebService("/apps")
 @LoginRequired
+@SessionRequired
 service AppEndpoint
         extends CoreService {
 

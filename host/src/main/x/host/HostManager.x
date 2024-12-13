@@ -242,6 +242,8 @@ service HostManager
         host.deactivate(True);
 
         if (host.is(WebHost)) {
+            httpServer.removeRoute(host.appInfo.hostName);
+
             // leave the webapp stub active
             addStubRoute(host.account, host.appInfo, host.pwd);
         }

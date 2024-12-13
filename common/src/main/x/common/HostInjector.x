@@ -11,6 +11,8 @@ import crypto.KeyStore;
 
 import web.security.Authenticator;
 
+import web.ssssion.Broker;
+
 import model.InjectionKey;
 import model.Injections;
 
@@ -168,11 +170,17 @@ service HostInjector(Directory appHomeDir, Boolean platform, Injections injectio
                 return Null;
             };
 
+        case (Broker?, "sessionBroker"):
+            return (InjectedRef.Options address) -> {
+                // TODO GG/CP: this is another todo...
+                return Null;
+            };
+
         default:
             if (platform) {
                 @Inject ecstasy.reflect.Injector injector;
                 return (InjectedRef.Options opts) -> injector.inject(type, name, opts);
-                }
+            }
 
             // see utils.collectDestringableInjections()
             if (String value := injections.get(new InjectionKey(name, type.toString()))) {
@@ -180,6 +188,11 @@ service HostInjector(Directory appHomeDir, Boolean platform, Injections injectio
                                                        ;
                 return new type.DataType(value);
             }
+            if (Null.is(type)) {
+                // allow any Nullable injection that we are not aware of
+                return Null;
+            }
+
             return (InjectedRef.Options address) ->
                 throw new Exception($|Invalid resource: name="{name}", type="{type}"
                                    );

@@ -15,7 +15,7 @@ module platformCLI.xqiz.it
 
     @Override
     void run(String[] args) =
-        Gateway.run(this, args, auth=Token, forceTls=True, init=showAccount);
+        Gateway.run(this, args, auth=Password, forceTls=True, init=showAccount);
 
     void showAccount() {
         import web.HttpStatus;

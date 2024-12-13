@@ -23,7 +23,6 @@ module challenge.xqiz.it {
 
         @Override
         @Get("{path}")
-//        @SessionOptional
         conditional ResponseOut getResource(String path) {
             @Inject Console console;
             console.print($"### acme challenge: {path}"); // TODO REMOVE

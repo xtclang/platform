@@ -20,15 +20,18 @@ module platformCLI.xqiz.it
     void showAccount() {
         import web.HttpStatus;
 
+        (String name, String password) = Gateway.getPassword();
         while (True) {
-            (String account, HttpStatus status) = Gateway.sendRequest(GET, "/user/account");
+            (_, HttpStatus status) = Gateway.sendRequest(POST, $"/user/login/{name}", password, Text);
+
             if (status == OK) {
+                String account = Gateway.sendRequest(GET, "/user/account");
                 print($"Connected to the account {account}");
                 break;
             }
 
             print($"Failed to connect: {status}");
-            Gateway.resetClient(forceTls=True);
+            (name, password) = Gateway.getPassword(force=True);
         }
     }
 }

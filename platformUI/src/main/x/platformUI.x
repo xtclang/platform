@@ -249,18 +249,9 @@ module platformUI.xqiz.it {
     }
 
     /**
-     * WebApp.AuthenticatorFactory API.
-     */
-    Authenticator createAuthenticator() {
-        return new DigestAuthenticator(ControllerConfig.realm);
-    }
-
-    /**
      * WebApp.SessionBrokerFactory API.
      */
-    Broker createSessionBroker() = cookieBroker;
-
-    private @Lazy CookieBroker cookieBroker.calc() = new CookieBroker(this);
+    Broker createSessionBroker() = new CookieBroker(this);
 
     /**
      * The singleton service holding configuration info.

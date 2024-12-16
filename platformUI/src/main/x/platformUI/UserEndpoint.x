@@ -21,7 +21,7 @@ service UserEndpoint
      */
     @Get("id")
     SimpleResponse getUserId() {
-        return new SimpleResponse(OK, bytes=session?.principal?.name.utf8())
+        return new SimpleResponse(OK, Text, bytes=session?.principal?.name.utf8())
              : new SimpleResponse(NoContent);
     }
 
@@ -31,23 +31,17 @@ service UserEndpoint
     @Post("login{/userName}")
     @HttpsRequired
     SimpleResponse login(SessionData session, String userName, @BodyParam String password = "") {
-        Realm realm = webApp.authenticator.realm;
+        Realm realm = ControllerConfig.realm;
 
-        // the code below is a part of DigestAuthenticator.authenticate(); TODO: create a helper there
-        if (Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName.quoted())) {
-            Authenticator.Status status = principal.calcStatus(realm) == Active ? Success : NotActive;
+        if (Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName.quoted()),
+                      principal.calcStatus(realm) == Active) {
 
             Hash hash = DigestCredential.passwordHash(userName, realm.name, password, sha512_256);
             for (Credential credential : principal.credentials) {
-                if (credential.scheme == DigestCredential.Scheme
-                        && credential.is(DigestCredential)
-                        && credential.isUser(userName)
-                        && credential.active) {
-
-                    if (credential.password_sha512_256 == hash) {
-                        session.authenticate(principal);
-                        return getUserId();
-                    }
+                if (credential.is(DigestCredential) &&
+                        credential.matches(userName, hash)) {
+                    session.authenticate(principal);
+                    return getUserId();
                 }
             }
         }

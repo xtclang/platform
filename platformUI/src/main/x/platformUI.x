@@ -7,6 +7,7 @@ module platformUI.xqiz.it {
     package challenge import challenge.xqiz.it;
 
     package auth   import webauth.xtclang.org;
+    package conv   import convert.xtclang.org;
     package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
     package net    import net.xtclang.org;

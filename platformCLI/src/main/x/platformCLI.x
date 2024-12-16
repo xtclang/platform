@@ -6,6 +6,8 @@
  */
 module platformCLI.xqiz.it
         incorporates TerminalApp("Platform Command Line Tool", "Platform CLI>") {
+
+    package convert import convert.xtclang.org;
     package web     import web.xtclang.org;
     package webcli  import webcli.xtclang.org;
 

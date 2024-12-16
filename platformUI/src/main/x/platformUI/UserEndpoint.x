@@ -60,19 +60,47 @@ service UserEndpoint
 
     /*
      * Change the password.
+     *
+     * The client must append "Base64(oldPassword):Base64(newPassword)" as a message body.
      */
     @Put("password")
     @LoginRequired
-    void setPassword(Session session, @BodyParam String password) {
+    SimpleResponse setPassword(Session session, @BodyParam String passwords) {
         import common.model.UserInfo;
+        import convert.formats.Base64Format;
 
-        Realm realm = webApp.authenticator.realm;
+        assert Int delim := passwords.indexOf(':');
+
+        String b64Old = passwords[0 ..< delim];
+        String b64New = passwords.substring(delim+1);
+
+        String passwordOld = Base64Format.Instance.decode(b64Old).unpackUtf8();
+        String passwordNew = Base64Format.Instance.decode(b64New).unpackUtf8();
 
         String userName = session.principal?.name : assert;
-        assert UserInfo userInfo := accountManager.getUser(userName);
+        Realm  realm    = ControllerConfig.realm;
 
-        assert Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName.quoted());
-        TODO
+        if (Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName.quoted()),
+                      principal.calcStatus(realm) == Active) {
+
+            Hash hashOld = DigestCredential.passwordHash(userName, realm.name, passwordOld, sha512_256);
+            Hash hashNew = DigestCredential.passwordHash(userName, realm.name, passwordNew, sha512_256);
+
+            Credential[] credentials = principal.credentials;
+            FindOld: for (Credential credential : credentials) {
+                if (credential.is(DigestCredential) &&
+                        credential.matches(userName, hashOld)) {
+                    credentials = credentials.reify(Mutable);
+                    credentials[FindOld.count] = credential.with(password_sha512_256=hashNew);
+                    credentials = credentials.toArray(Constant, inPlace=True);
+                    principal   = realm.updatePrincipal(principal.with(credentials=credentials));
+
+                    session.authenticate(principal);
+                    return new SimpleResponse(OK);
+                }
+            }
+        }
+        return new SimpleResponse(Unauthorized);
     }
 
     /*

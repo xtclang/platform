@@ -2,6 +2,7 @@
  * The module for all platform APIs.
  */
 module common.xqiz.it {
+    package auth   import webauth.xtclang.org;
     package crypto import crypto.xtclang.org;
     package jsondb import jsondb.xtclang.org;
     package oodb   import oodb.xtclang.org;

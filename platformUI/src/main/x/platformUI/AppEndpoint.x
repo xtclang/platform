@@ -63,6 +63,42 @@ service AppEndpoint
     }
 
     /**
+     * Set an AppInfo attribute for the specified deployment.
+     */
+    @Put("/deployments{/deployment}")
+    (AppInfo | SimpleResponse) changeInfo(String deployment,
+            @QueryParam Boolean? autoStart  = Null,
+            @QueryParam Boolean? useCookies = Null,
+            @QueryParam Boolean? useAuth    = Null,
+            ) {
+        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+
+        Boolean update = False;
+        if (autoStart != Null && appInfo.autoStart != autoStart) {
+            appInfo = appInfo.with(autoStart=autoStart);
+            update  = True;
+        }
+        if (appInfo.is(WebAppInfo)) {
+            if (useCookies != Null && appInfo.useCookies != useCookies) {
+                appInfo = appInfo.with(useCookies=useCookies);
+                update  = True;
+            }
+            if (useAuth != Null && appInfo.useAuth != useAuth) {
+                appInfo = appInfo.with(useAuth=useAuth);
+                update  = True;
+            }
+        }
+
+        if (update) {
+            accountManager.addOrUpdateApp(accountName, appInfo);
+        }
+        return appInfo.redact();
+    }
+
+    /**
      * Get the stats for a deployment.
      */
     @Get("/stats{/deployment}")
@@ -285,7 +321,7 @@ service AppEndpoint
             if (appInfo.autoStart) {
                 // there's no host, but the deployment is marked as `autoStart`; fix it
                 accountManager.addOrUpdateApp(accountName, appInfo.with(autoStart=False));
-                }
+            }
             return new SimpleResponse(OK, "The application is not active");
         }
     }

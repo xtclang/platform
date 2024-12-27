@@ -42,6 +42,18 @@ class AppManagement {
     @Command("app", "Show the specified app")
     String appInfo(String deploymentName) = platformCLI.get($"/apps/deployments/{deploymentName}");
 
+    @Command("auto-start", "Set the 'auto-start' attribute")
+    String setAutoStart(String deploymentName, Boolean on) =
+        platformCLI.put($"/apps/deployments/{deploymentName}?autoStart={on ? "true" : "false"}");
+
+    @Command("use-cookies", "Set the 'use-cookies' attribute")
+    String setUseCookies(String deploymentName, Boolean on) =
+        platformCLI.put($"/apps/deployments/{deploymentName}?useCookies={on ? "true" : "false"}");
+
+    @Command("use-auth", "Set the 'use-auth' attribute")
+    String setUseSetAuth(String deploymentName, Boolean on) =
+        platformCLI.put($"/apps/deployments/{deploymentName}?useAuth={on ? "true" : "false"}");
+
     @Command("unregister", "Delete the deployment")
     String unregister(String deploymentName, Boolean force = False) {
         if (!force) {

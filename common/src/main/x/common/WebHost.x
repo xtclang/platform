@@ -163,8 +163,9 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
         if (ModuleTemplate webTemplate := new tools.ModuleGenerator(mainModule).
                 ensureWebModule(repository, buildDir, errors)) {
 
-            if ((Container container, dependencies) := utils.createContainer(repository, webTemplate,
-                        homeDir, buildDir, False, appInfo.injections, sharedDbHosts.get, errors)) {
+            if ((Container container, dependencies) :=
+                    utils.createContainer(repository, webTemplate, appInfo, homeDir, buildDir,
+                                          False, appInfo.injections, sharedDbHosts.get, errors)) {
                 try {
                     Tuple       result  = container.invoke("createHandler_", Tuple:(route, extras));
                     HttpHandler handler = result[0].as(HttpHandler);

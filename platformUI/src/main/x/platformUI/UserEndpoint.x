@@ -54,9 +54,7 @@ service UserEndpoint
     @Get("account")
     @LoginRequired
     @SessionRequired
-    String account() {
-        return accountName;
-    }
+    String account() = accountName;
 
     /*
      * Change the password.

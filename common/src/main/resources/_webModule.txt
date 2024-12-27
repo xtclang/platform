@@ -8,7 +8,11 @@ module %appName%_web%qualifier% {
             web_.http.HostInfo route,
             Map<Class<web_.WebService>, web_.WebService.Constructor> extras = []) {
 
+        return new xenia_.HttpHandler(route, hostedWebApp_(), extras);
+    }
+
+    web_.WebApp hostedWebApp_() {
         assert Module webApp := hosted_.isModuleImport(), webApp.is(web_.WebApp);
-        return new xenia_.HttpHandler(route, webApp, extras);
+        return webApp;
     }
 }

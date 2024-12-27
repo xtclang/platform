@@ -9,25 +9,38 @@ import ecstasy.mgmt.ResourceProvider;
 import crypto.Algorithms;
 import crypto.KeyStore;
 
-import web.security.Authenticator;
+import web.WebApp;
+import web.WebService;
 
 import web.sessions.Broker;
 
+import model.AppInfo;
 import model.InjectionKey;
 import model.Injections;
+import model.WebAppInfo;
 
 /**
  * The ResourceProvider used for hosted containers.
  */
-service HostInjector(Directory appHomeDir, Boolean platform, Injections injections)
+service HostInjector(AppInfo? appInfo, Directory appHomeDir, Boolean platform, Injections injections)
         implements ResourceProvider {
 
-    @Lazy FileStore store.calc() {
-        import ecstasy.fs.DirectoryFileStore;
+    /**
+     * The hosted container.
+     *
+     * Quite naturally, there is a catch-22: we need an injector to instantiate a container, so this
+     * value can get provided only after the container is created.
+     */
+    @Unassigned Container hostedContainer;
 
-        return new DirectoryFileStore(appHomeDir);
-    }
+    /**
+     * The [FileStore] allocated for the hosted container.
+     */
+    @Lazy FileStore store.calc() = new ecstasy.fs.DirectoryFileStore(appHomeDir);
 
+    /**
+     * The [Console] for the hosted container.
+     */
     @Lazy ConsoleImpl consoleImpl.calc() {
         File consoleFile = appHomeDir.fileFor("console.log");
         if (consoleFile.exists) {
@@ -164,32 +177,49 @@ service HostInjector(Directory appHomeDir, Boolean platform, Injections injectio
                 return keystore;
             };
 
-        case (Authenticator?, "providedAuthenticator"):
-            return (InjectedRef.Options address) -> {
-                // TODO GG/CP: this is a big todo...
-                return Null;
-            };
-
         case (Broker?, "sessionBroker"):
-            return (InjectedRef.Options address) -> {
-                // TODO GG/CP: this is another todo...
-                return Null;
+            return (InjectedRef.Options opts) -> {
+                AppInfo? appInfo = this.appInfo;
+                WebApp   webApp;
+                if (platform) {
+                    // platformUI (WebApp) uses CookieBroker
+                    if (webApp := hostedContainer.innerTypeSystem.primaryModule.is(WebApp)) {
+                    } else {
+                        return Null;
+                    }
+                } else {
+                    if (appInfo.is(WebAppInfo) && appInfo.useCookies) {
+                        // main module is a wrapper (see _webModule.txt resource)
+                        webApp = hostedContainer.invoke("hostedWebApp_")[0].as(WebApp);
+                    } else {
+                        return Null;
+                    }
+                }
+
+                val broker = new xenia.CookieBroker(webApp);
+
+                // TODO: ideally, what we want is to mask an intersection, but WebService
+                //       is a mixin, and is not proxy-able atm
+                // return &broker.maskAs(Broker+WebService);
+
+                // this relies on sharing "xenia" module with the hosted container
+                return broker;
             };
 
         default:
             if (platform) {
+                // give the platform modules whatever they ask for
                 @Inject ecstasy.reflect.Injector injector;
                 return (InjectedRef.Options opts) -> injector.inject(type, name, opts);
             }
 
             // see utils.collectDestringableInjections()
             if (String value := injections.get(new InjectionKey(name, type.toString()))) {
-                assert type.is(Type<Destringable>) as $|Type is not Destringable: "{type}"
-                                                       ;
+                assert type.is(Type<Destringable>) as $"Type is not Destringable: \"{type}\"";
                 return new type.DataType(value);
             }
             if (Null.is(type)) {
-                // allow any Nullable injection that we are not aware of
+                // allow any Nullable injections that we are not aware of
                 return Null;
             }
 

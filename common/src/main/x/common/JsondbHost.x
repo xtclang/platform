@@ -54,12 +54,14 @@ service JsondbHost(ModuleRepository repository, String moduleName, DbAppInfo? ap
             ModuleTemplate  template;
 
             if (!(template := generator.ensureDBModule(repository, buildDir, errors))) {
-                errors.add($"Error: Failed to create a DB host for {moduleName}");
+                errors.add($"Error: Failed to create a DB host for {moduleName.quoted()}");
                 return False;
             }
 
-            Container container = new Container(template, Lightweight, repository,
-                                    new HostInjector(homeDir, False, injections));
+            HostInjector injector  = new HostInjector(appInfo, homeDir, False, injections);
+            Container    container = new Container(template, Lightweight, repository, injector);
+
+            injector.hostedContainer = container;
 
             CatalogMetadata meta = container.innerTypeSystem.primaryModule.as(CatalogMetadata);
 

@@ -29,9 +29,6 @@ module kernel.xqiz.it {
 
     import ecstasy.reflect.ModuleTemplate;
 
-    import auth.Configuration;
-    import auth.DBRealm;
-
     import common.ErrorLog;
     import common.HostManager;
     import common.ProxyManager;
@@ -155,6 +152,8 @@ module kernel.xqiz.it {
             AccountManager accountManager = new AccountManager();
             Connection     connection     = accountManager.init(repository, hostDir, buildDir,
                                                                 decryptor, errors);
+            import auth.DBRealm;
+
             DBRealm realm;
             if (accountManager.initialized) {
                 realm = new DBRealm(names.PlatformRealm, connection);
@@ -162,6 +161,7 @@ module kernel.xqiz.it {
                 String userName    = "admin";
                 String accountName = "self";
 
+                import auth.Configuration;
                 import common.model.AccountInfo;
                 import common.model.UserInfo;
                 import sec.Principal;
@@ -194,8 +194,8 @@ module kernel.xqiz.it {
                 if (ModuleTemplate proxyModule := repository.getModule("proxy_manager.xqiz.it")) {
                     proxyModule = proxyModule.parent.resolve(repository).mainModule;
                     if (Container  container :=
-                            utils.createContainer(repository, proxyModule, hostDir, buildDir, True, [],
-                                (_) -> False, errors)) {
+                            utils.createContainer(repository, proxyModule, Null, hostDir, buildDir,
+                                True, [], (_) -> False, errors)) {
                         // TODO: we should either soft-code the receiver's protocol and port or
                         //       have the configuration supply the receivers' URI, from which we would
                         //       compute the proxy addresses
@@ -221,7 +221,7 @@ module kernel.xqiz.it {
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
             if (Container  container :=
-                    utils.createContainer(repository, hostModule, hostDir, buildDir, True, [],
+                    utils.createContainer(repository, hostModule, Null, hostDir, buildDir, True, [],
                         (_) -> False, errors)) {
                 hostManager = container.invoke("configure",
                                 Tuple:(httpServer, accountsDir, proxyManager))[0].as(HostManager);
@@ -234,7 +234,7 @@ module kernel.xqiz.it {
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
-                    utils.createContainer(repository, uiModule, hostDir, buildDir, True, [],
+                    utils.createContainer(repository, uiModule, Null, hostDir, buildDir, True, [],
                         (_) -> False, errors)) {
                 import HttpServer.ProxyCheck;
 

@@ -143,6 +143,8 @@ package model {
             Boolean    active     = False,  // @see AppInfo
             Injections injections = [],     // @see AppInfo
             String[]   sharedDBs  = [],     // names of shared DB deployments
+            Boolean    useCookies = True,   // use CookieBroker as a session broker
+            Boolean    useAuth    = True,   // use DBRealm for authentication
             )
             extends AppInfo(deployment, moduleName, autoStart, active, injections) {
 
@@ -155,6 +157,8 @@ package model {
             String?     password   = Null,
             String?     provider   = Null,
             String[]?   sharedDBs  = Null,
+            Boolean?    useCookies = Null,
+            Boolean?    useAuth    = Null,
             ) {
             return new WebAppInfo(deployment, moduleName,
                 hostName   ?: this.hostName,
@@ -164,6 +168,8 @@ package model {
                 active     ?: this.active,
                 injections ?: this.injections,
                 sharedDBs  ?: this.sharedDBs,
+                useCookies ?: this.useCookies,
+                useAuth    ?: this.useAuth,
                 );
         }
 

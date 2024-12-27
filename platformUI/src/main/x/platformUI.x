@@ -6,7 +6,6 @@ module platformUI.xqiz.it {
     package common    import common.xqiz.it;
     package challenge import challenge.xqiz.it;
 
-    package auth   import webauth.xtclang.org;
     package conv   import convert.xtclang.org;
     package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
@@ -44,13 +43,6 @@ module platformUI.xqiz.it {
 
     import web.http.HostInfo;
 
-    import web.security.Authenticator;
-    import web.security.DigestAuthenticator;
-    import web.security.TokenAuthenticator;
-
-    import web.sessions.Broker;
-
-    import xenia.CookieBroker;
     import xenia.HttpHandler;
     import xenia.HttpServer;
 
@@ -248,11 +240,6 @@ module platformUI.xqiz.it {
             return super(defaultPage);
         }
     }
-
-    /**
-     * WebApp.SessionBrokerFactory API.
-     */
-    Broker createSessionBroker() = new CookieBroker(this);
 
     /**
      * The singleton service holding configuration info.

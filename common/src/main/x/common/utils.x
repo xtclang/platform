@@ -12,8 +12,10 @@ import ecstasy.reflect.TypeTemplate;
 
 import ecstasy.text.Log;
 
+import model.AppInfo;
 import model.DbAppInfo;
 import model.Injections;
+import model.WebAppInfo;
 
 /**
  * The package for helper functions.
@@ -24,6 +26,7 @@ package utils {
      *
      * @param repository  the [ModuleRepository] to load the module(s) from
      * @param template    the [ModuleTemplate] for the "main" module
+     * @param appInfo     optional [AppInfo] for the hosted module (`Null` for platform containers)
      * @param deployDir   the "home" directory for the deployment
      *                    (e.g. "~/xqiz.it/accounts/self/deploy/banking)"
      * @param buildDir    the directory for auto-generated modules
@@ -39,8 +42,8 @@ package utils {
      *         loaded along the "main" container
      */
     static conditional (Container, AppHost[]) createContainer(
-                    ModuleRepository repository, ModuleTemplate template, Directory deployDir,
-                    Directory buildDir, Boolean platform, Injections injections,
+                    ModuleRepository repository, ModuleTemplate template, AppInfo? appInfo,
+                    Directory deployDir, Directory buildDir, Boolean platform, Injections injections,
                     function conditional DbHost(String) findDbHost, Log errors) {
         DbHost[]     dbHosts;
         HostInjector injector;
@@ -61,17 +64,36 @@ package utils {
             }
             dbHosts.makeImmutable();
 
-            injector = createDbInjector(dbHosts, deployDir, injections);
+            assert appInfo != Null; // platform modules don't inject the DB
+            injector = new DbInjector(appInfo, dbHosts, deployDir, injections);
         } else {
             dbHosts  = [];
-            injector = new HostInjector(deployDir, platform, injections);
+            injector = new HostInjector(appInfo, deployDir, platform, injections);
+        }
+
+        Module[] sharedModules = [];
+        if (isWebModule(template)) {
+            if (platform || appInfo.is(WebAppInfo) && appInfo.useCookies) {
+                assert Module xeniaModule := xenia.isModuleImport();
+                sharedModules += xeniaModule;
+            }
+            if (!platform && appInfo.is(WebAppInfo) && appInfo.useAuth) {
+                assert Module authModule := auth.isModuleImport();
+                sharedModules += authModule;
+            }
         }
 
         try {
-            return True, new Container(template, Lightweight, repository, injector), dbHosts;
+            Container container = new Container(template, Lightweight, repository, injector,
+                                        sharedModules=sharedModules);
+            injector.hostedContainer = container;
+            return True, container, dbHosts;
         } catch (Exception e) {
-            errors.add($|Error: Failed to load "{template.displayName}": {e.message}
+            errors.add($|Error: Failed to create a container for "{template.displayName}": {e.message}
                       );
+            for (DbHost dbHost : dbHosts) {
+                dbHost.close(e);
+            }
             return False;
         }
     }
@@ -101,7 +123,7 @@ package utils {
      *
      * @param repository  the [ModuleRepository] to load the module(s) from
      * @param moduleName  the name of `Database` module (fully qualified)
-     * @param appInfo     (optional) DbAppInfo (Null for embedded DB)
+     * @param appInfo     (optional) [DbAppInfo] (`Null` for embedded DB)
      * @param dbImpl      the database implementation name (currently always "jsondb")
      * @param deployDir   the application deployment directory
      *                    (e.g. "~/xqiz.it/accounts/self/deploy/banking")
@@ -127,73 +149,6 @@ package utils {
             errors.add($"Error: Unknown db implementation: {dbImpl}");
             return False;
         }
-    }
-
-    /**
-     * Create a database [HostInjector].
-     *
-     * @param dbHosts     the array of [DbHost]s for databases the Injector should be able to provide
-     *                    connections to
-     * @param deployDir   the "home" directory for the deployment
-     *                    (e.g. "~/xqiz.it/accounts/self/deploy/shopping")
-     * @param injections  the custom injections
-     *
-     * @return a HostInjector that injects db connections based on the arrays of the specified DbHosts
-     */
-    static HostInjector createDbInjector(DbHost[] dbHosts, Directory deployDir, Injections injections) {
-        import oodb.Connection;
-        import oodb.RootSchema;
-        import oodb.DBUser;
-
-        return new HostInjector(deployDir, False, injections) {
-            private Connection[] connections = new Connection[];
-
-            @Override
-            Supplier getResource(Type type, String name) {
-                if (type.is(Type<RootSchema>)) {
-                    Type schemaType = type;
-                    if (type.is(Type<Connection>)) {
-                        assert schemaType := type.resolveFormalType("Schema");
-                    }
-
-                    Log errors = new ErrorLog();
-
-                    for (DbHost dbHost : dbHosts) {
-                        // the actual type that "createConnection" produces is:
-                        // RootSchema + Connection<RootSchema>;
-
-                        function Connection(DBUser) createConnection;
-                        if (!(createConnection := dbHost.activate(False, errors))) {
-                            errors.reportAll(consoleImpl.print);
-                            throw new Exception($"Failed to activate the database {type}/{name}");
-                        }
-
-                        Type dbSchemaType   = dbHost.schemaType;
-                        Type typeConnection = Connection;
-
-                        typeConnection = dbSchemaType + typeConnection.parameterize([dbSchemaType]);
-                        if (typeConnection.isA(schemaType)) {
-                            return (InjectedRef.Options opts) -> {
-                                // consider the injector to be passed some info about the calling
-                                // container, so the host could figure out the user
-                                DBUser     user = new oodb.model.User(1, "test");
-                                Connection conn = createConnection(user);
-                                connections += conn;
-                                return type.is(Type<Connection>)
-                                        ? &conn.maskAs<Connection>(type)
-                                        : &conn.maskAs<RootSchema>(type);
-                            };
-                        }
-                    }
-                }
-                return super(type, name);
-            }
-
-            @Override
-            void close(Exception? cause = Null) {
-                connections.forEach(c -> c.close(cause));
-            }
-        };
     }
 
     /**

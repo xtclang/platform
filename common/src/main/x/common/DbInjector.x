@@ -2,6 +2,7 @@ import ecstasy.annotations.InjectedRef;
 
 import ecstasy.text.Log;
 
+import auth.AuthEndpoint;
 import auth.Configuration;
 import auth.DBRealm;
 
@@ -10,6 +11,8 @@ import oodb.RootSchema;
 import oodb.DBUser;
 
 import oodb.model.User;
+
+import web.WebApp;
 
 import web.security.Authenticator;
 import web.security.DigestAuthenticator;
@@ -140,8 +143,15 @@ service DbInjector
                             db = schema;
                         }
                     }
-                    return new DigestAuthenticator(
-                        new DBRealm(appInfo.deployment, rootSchema=db, initConfig=initConfig));
+
+                    // main module is a wrapper (see _webModule.txt resource)
+                    WebApp  webApp = hostedContainer.invoke("hostedWebApp_")[0].as(WebApp);
+                    DBRealm realm  = new DBRealm(appInfo.deployment,
+                                                 rootSchema=db, initConfig=initConfig);
+
+                    // this relies on sharing "webauth" module with the hosted container
+                    // (see utils.createContainer)
+                    return new AuthEndpoint(webApp, new DigestAuthenticator(realm), realm);
                 }
                 return Null;
             };

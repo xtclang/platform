@@ -203,6 +203,7 @@ service HostInjector(AppInfo? appInfo, Directory appHomeDir, Boolean platform, I
                 // return &broker.maskAs(Broker+WebService);
 
                 // this relies on sharing "xenia" module with the hosted container
+                // (see utils.createContainer)
                 return broker;
             };
 

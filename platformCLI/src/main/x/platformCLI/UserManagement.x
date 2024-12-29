@@ -37,7 +37,7 @@ class UserManagement {
             Gateway.resetClient(uriString=Gateway.serverUri(), authString=$"admin:{newPassword}");
             platformCLI.showAccount();
         } else {
-            platformCLI.print($"Failed to reset the password: status");
+            platformCLI.print($"Failed to reset the password: {status}");
         }
     }
 }

@@ -43,15 +43,15 @@ class AppManagement {
     String appInfo(String deploymentName) = platformCLI.get($"/apps/deployments/{deploymentName}");
 
     @Command("auto-start", "Set the 'auto-start' attribute")
-    String setAutoStart(String deploymentName, Boolean on) =
+    String setAutoStart(String deploymentName, Boolean on = True) =
         platformCLI.put($"/apps/deployments/{deploymentName}?autoStart={on ? "true" : "false"}");
 
     @Command("use-cookies", "Set the 'use-cookies' attribute")
-    String setUseCookies(String deploymentName, Boolean on) =
+    String setUseCookies(String deploymentName, Boolean on = True) =
         platformCLI.put($"/apps/deployments/{deploymentName}?useCookies={on ? "true" : "false"}");
 
     @Command("use-auth", "Set the 'use-auth' attribute")
-    String setUseSetAuth(String deploymentName, Boolean on) =
+    String setUseSetAuth(String deploymentName, Boolean on = True) =
         platformCLI.put($"/apps/deployments/{deploymentName}?useAuth={on ? "true" : "false"}");
 
     @Command("unregister", "Delete the deployment")

@@ -6,6 +6,7 @@ module platformUI.xqiz.it {
     package common    import common.xqiz.it;
     package challenge import challenge.xqiz.it;
 
+    package auth   import webauth.xtclang.org;
     package conv   import convert.xtclang.org;
     package crypto import crypto.xtclang.org;
     package json   import json.xtclang.org;
@@ -70,10 +71,14 @@ module platformUI.xqiz.it {
 
         HostInfo route = new HostInfo(hostName);
 
+        import auth.AuthEndpoint;
+        import auth.DBRealm;
         import challenge.AcmeChallenge;
+        import web.security.NeverAuthenticator;
         HttpHandler.CatalogExtras extras =
             [
-            AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure())
+            AuthEndpoint  = () -> new AuthEndpoint(this, new NeverAuthenticator(), realm.as(DBRealm)),
+            AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure()),
             ];
 
         if (checkCertificate(keystore, hostName, provider)) {

@@ -1,5 +1,5 @@
 /*
- * Build the "platformCLI" module.
+ * Build the "githubCLI" module.
  */
 
 tasks.register("build") {

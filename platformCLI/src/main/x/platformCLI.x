@@ -9,6 +9,7 @@ module platformCLI.xqiz.it
 
     package convert import convert.xtclang.org;
     package web     import web.xtclang.org;
+    package webauth import webauth.xtclang.org;
     package webcli  import webcli.xtclang.org;
 
     import webcli.*;

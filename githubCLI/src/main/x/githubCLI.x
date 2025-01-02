@@ -102,7 +102,7 @@ module githubCLI.xqiz.it
                         return True, user.substring(tokenDelim + 1);
                     }
                 } catch (Exception e) {
-                    console.print($"Failed to parse {credentialsFile} content: {e}");
+                    console.print($"Failed to parse {credentialsFile} content: {e.message}");
                     return False;
                 }
             }

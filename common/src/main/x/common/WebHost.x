@@ -180,7 +180,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
 
                     return True, handler;
                 } catch (Exception e) {
-                    errors.add($"Error: Failed to create a container; {e}");
+                    errors.add($"Error: Failed to create a container; {e.message}");
                     container.kill();
                 }
             }

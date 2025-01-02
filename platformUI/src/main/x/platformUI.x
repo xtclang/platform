@@ -78,7 +78,7 @@ module platformUI.xqiz.it {
         import webauth.DBRealm;
         HttpHandler.CatalogExtras extras =
             [
-            AuthEndpoint  = () -> new AuthEndpoint(this, new NeverAuthenticator(), realm.as(DBRealm)),
+            AuthEndpoint  = () -> new AuthEndpoint(this, new NeverAuthenticator(this), realm.as(DBRealm)),
             AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure()),
             ];
 

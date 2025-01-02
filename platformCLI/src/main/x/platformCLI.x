@@ -12,6 +12,8 @@ module platformCLI.xqiz.it
     package webauth import webauth.xtclang.org;
     package webcli  import webcli.xtclang.org;
 
+    package platformAuth import auth.xqiz.it;
+
     import webcli.*;
 
     @Inject Console console;

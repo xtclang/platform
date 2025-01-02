@@ -3,10 +3,10 @@
  */
 @oodb.Database
 module platformDB.xqiz.it {
-    package auth   import webauth.xtclang.org;
-    package oodb   import oodb.xtclang.org;
-    package common import common.xqiz.it;
-    package web    import web.xtclang.org;
+    package oodb    import oodb.xtclang.org;
+    package common  import common.xqiz.it;
+    package web     import web.xtclang.org;
+    package webauth import webauth.xtclang.org;
 
     import common.model.AccountId;
     import common.model.AccountInfo;
@@ -40,7 +40,7 @@ module platformDB.xqiz.it {
         /**
          * Embedded AuthSchema.
          */
-        @RO auth.AuthSchema authSchema;
+        @RO webauth.AuthSchema authSchema;
     }
 
     mixin Accounts

@@ -7,6 +7,9 @@ tasks.register("build") {
     val srcModule = "${projectDir}/src/main/x/platformCLI.x"
 
     project.exec {
-        commandLine("xcc", "-o", libDir, srcModule)
+        commandLine("xcc",
+            "-o", libDir,
+            "-L", libDir,
+            srcModule)
     }
 }

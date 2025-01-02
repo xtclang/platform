@@ -2,10 +2,6 @@ import ecstasy.annotations.InjectedRef;
 
 import ecstasy.text.Log;
 
-import auth.AuthEndpoint;
-import auth.Configuration;
-import auth.DBRealm;
-
 import oodb.Connection;
 import oodb.RootSchema;
 import oodb.DBUser;
@@ -18,9 +14,14 @@ import web.security.Authenticator;
 import web.security.DigestAuthenticator;
 import web.security.DigestCredential;
 
+import webauth.Configuration;
+import webauth.DBRealm;
+
 import model.AppInfo;
 import model.Injections;
 import model.WebAppInfo;
+
+import platformAuth.AuthEndpoint;
 
 /**
  * HostInjector that is aware of the databases to be injected.
@@ -149,9 +150,15 @@ service DbInjector
                     DBRealm realm  = new DBRealm(appInfo.deployment,
                                                  rootSchema=db, initConfig=initConfig);
 
-                    // this relies on sharing "webauth" module with the hosted container
+                    Authenticator authenticator =
+                        new AuthEndpoint(webApp, new DigestAuthenticator(realm), realm);
+
+                    // ideally, what we want is (see HostInjector)
+                    //  return &authenticator.maskAs(Authenticator+WebService);
+
+                    // this relies on sharing "platformAuth" module with the hosted container
                     // (see utils.createContainer)
-                    return new AuthEndpoint(webApp, new DigestAuthenticator(realm), realm);
+                    return authenticator;
                 }
                 return Null;
             };

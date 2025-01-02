@@ -2,8 +2,6 @@
  * Build the "platformUI" module.
  */
 
-val common = project(":common")
-
 val libDir = "${rootProject.projectDir}/lib"
 
 val guiDir     = "$projectDir/gui"
@@ -20,7 +18,7 @@ tasks.register("build") {
     group       = "Build"
     description = "Build this module"
 
-    dependsOn(common.tasks["build"])
+    dependsOn(project(":common").tasks["build"])
 
     // there must be a way to tell quasar not to rebuild if nothing changed, but I cannot
     // figure it out and have to use a manual timestamp check

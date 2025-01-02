@@ -3,17 +3,18 @@
  */
 @WebApp
 module platformUI.xqiz.it {
-    package common    import common.xqiz.it;
-    package challenge import challenge.xqiz.it;
+    package common       import common.xqiz.it;
+    package challenge    import challenge.xqiz.it;
+    package platformAuth import auth.xqiz.it;
 
-    package auth   import webauth.xtclang.org;
-    package conv   import convert.xtclang.org;
-    package crypto import crypto.xtclang.org;
-    package json   import json.xtclang.org;
-    package net    import net.xtclang.org;
-    package sec    import sec.xtclang.org;
-    package web    import web.xtclang.org;
-    package xenia  import xenia.xtclang.org;
+    package conv    import convert.xtclang.org;
+    package crypto  import crypto.xtclang.org;
+    package json    import json.xtclang.org;
+    package net     import net.xtclang.org;
+    package sec     import sec.xtclang.org;
+    package web     import web.xtclang.org;
+    package webauth import webauth.xtclang.org;
+    package xenia   import xenia.xtclang.org;
 
     import common.AccountManager;
     import common.ErrorLog;
@@ -71,10 +72,10 @@ module platformUI.xqiz.it {
 
         HostInfo route = new HostInfo(hostName);
 
-        import auth.AuthEndpoint;
-        import auth.DBRealm;
         import challenge.AcmeChallenge;
+        import platformAuth.AuthEndpoint;
         import web.security.NeverAuthenticator;
+        import webauth.DBRealm;
         HttpHandler.CatalogExtras extras =
             [
             AuthEndpoint  = () -> new AuthEndpoint(this, new NeverAuthenticator(), realm.as(DBRealm)),

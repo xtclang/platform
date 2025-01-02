@@ -72,15 +72,13 @@ package utils {
         }
 
         Module[] sharedModules = [];
-        if (isWebModule(template)) {
-            if (platform || appInfo.is(WebAppInfo) && appInfo.useCookies) {
-                assert Module xeniaModule := xenia.isModuleImport();
-                sharedModules += xeniaModule;
-            }
-            if (!platform && appInfo.is(WebAppInfo) && appInfo.useAuth) {
-                assert Module authModule := auth.isModuleImport();
-                sharedModules += authModule;
-            }
+        if (platform && isWebModule(template) || appInfo.is(WebAppInfo) && appInfo.useCookies) {
+            assert Module xeniaModule := xenia.isModuleImport();
+            sharedModules += xeniaModule;
+        }
+        if (!platform && appInfo.is(WebAppInfo) && appInfo.useAuth) {
+            assert Module authModule := platformAuth.isModuleImport();
+            sharedModules += authModule;
         }
 
         try {

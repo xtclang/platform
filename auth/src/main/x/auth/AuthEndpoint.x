@@ -1,10 +1,12 @@
 import sec.Credential;
 import sec.Entitlement;
+import sec.Entity;
 import sec.Group;
+import sec.Permission;
 import sec.Principal;
+import sec.Subject;
 
 import web.*;
-import web.responses.SimpleResponse;
 import web.security.Authenticator;
 import web.security.DigestCredential;
 
@@ -21,6 +23,7 @@ import DigestCredential.sha512_256;
  */
 @WebService("/.well-known/auth")
 @LoginRequired
+@SessionRequired
 service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
         implements Authenticator
         delegates Authenticator - Duplicable(authenticator) {
@@ -37,13 +40,21 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
      */
     AuthSchema db.get() = realm.db;
 
+    // ----- "self management" operations ----------------------------------------------------------
+
+    /**
+     * Retrieve the current user.
+     */
+    @Get("/profile")
+    Principal getUser(Session session) = redact(session.principal?) : assert;
+
     /*
      * Change the password for the current user.
      *
      * The client must append "Base64(oldPassword):Base64(newPassword)" as a message body.
      */
-    @Post("/pwd")
-    SimpleResponse changePassword(Session session, @BodyParam String passwords) {
+    @Patch("/profile/password")
+    HttpStatus changePassword(Session session, @BodyParam String passwords) {
         import convert.formats.Base64Format;
 
         assert Principal principal ?= session.principal;
@@ -69,23 +80,368 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
 
                 principal = realm.updatePrincipal(principal.with(credentials=credentials));
                 session.authenticate(principal);
-                return new SimpleResponse(OK);
+                return OK;
             }
         }
-        return new SimpleResponse(Conflict, "Invalid old password");
+        return Conflict;
+    }
+
+    // ----- "user by id management" operations ----------------------------------------------------
+
+    /**
+     * Create a new user.
+     */
+    @Post("/users/{name}")
+    @Restrict("MANAGE:/users")
+    Principal|HttpStatus createUser(String name, @BodyParam String password) {
+        try {
+            Credential credential = new DigestCredential(realm.name, name, password);
+            Principal  principal  = new Principal(0, name, credentials=[credential]);
+            return redact(realm.createPrincipal(principal));
+        } catch (Exception e) {
+            return Conflict; // already exists
+        }
     }
 
     /**
-     * Retrieve the current user.
+     * Retrieve the user by id.
      */
-    @Get("/user")
-    Principal getUser(Session session) = session.principal?.with(credentials=[]): assert;
+    @Get("/users/{userId}")
+    @Restrict("GET:/users")
+    Principal|HttpStatus getUser(Int userId) {
+        if (Principal principal := realm.readPrincipal(userId)) {
+            return redact(principal);
+        }
+        return NotFound;
+    }
 
     /**
-     * Add user
+     * Retrieve the user by name.
      */
-    @Post("/user/{name}")
-    Principal addUser(String name, @BodyParam String password) {
-        TODO
+    @Get("/users?name={name}")
+    @Restrict("GET:/users")
+    Principal[] findUser(String name) {
+        return realm.findPrincipals(p -> p.name == name)
+                    .map(p -> redact(p))
+                    .toArray(Constant);
+    }
+
+    /*
+     * Change the password for the user.
+     */
+    @Patch("/users/{userId}/password")
+    HttpStatus resetPassword(Int userId, @BodyParam String password) {
+        if (userId == 0) {
+             // only the root user can change its password and only via "changePassword"
+            return Unauthorized;
+        }
+
+        using (db.connection.createTransaction()) {
+            if (Principal principal := realm.readPrincipal(userId)) {
+                Credential credential = new DigestCredential(realm.name, principal.name, password);
+                realm.updatePrincipal(principal.with(credentials=[credential]));
+                return OK;
+            } else {
+                return NotFound;
+            }
+        }
+    }
+
+    /**
+     * Add a permission to the user.
+     */
+    @Post("/users/{userId}/permissions")
+    @Restrict("MANAGE:/users")
+    Principal|HttpStatus addUserPermission(Int userId, @BodyParam String permText) {
+        try {
+            using (db.connection.createTransaction()) {
+                if (Principal principal := realm.readPrincipal(userId)) {
+                    if (principal := addPermission(principal, permText)) {
+                        realm.updatePrincipal(principal);
+                    }
+                    return redact(principal);
+                } else {
+                    return NotFound;
+                }
+            }
+        } catch (Exception e) {
+            return Conflict;
+        }
+    }
+
+    /**
+     * Remove a permission for the user.
+     */
+    @Delete("/users/{userId}/permissions")
+    @Restrict("MANAGE:/users")
+    Principal|HttpStatus deleteUserPermission(Int userId, @BodyParam String permText) {
+        try {
+            using (db.connection.createTransaction()) {
+                if (Principal principal := realm.readPrincipal(userId)) {
+                    if (principal := removePermission(principal, permText)) {
+                        realm.updatePrincipal(principal);
+                    }
+                    return redact(principal);
+                } else {
+                    return NotFound;
+                }
+            }
+        } catch (Exception e) {
+            return Conflict;
+        }
+    }
+
+    /**
+     * Add the user to the group.
+     */
+    @Post("/users/{userId}/groups/{groupId}")
+    @Restrict("MANAGE:/users")
+    Principal|HttpStatus addUserToGroup(Int userId, Int groupId) {
+        using (db.connection.createTransaction()) {
+            if (Principal principal := realm.readPrincipal(userId),
+                                       realm.readGroup(groupId)) {
+                if (addToGroup(principal, groupId)) {
+                    realm.updatePrincipal(principal);
+                }
+                return redact(principal);
+            }
+        }
+        return NotFound;
+    }
+
+    /**
+     * Remove the user from the group.
+     */
+    @Delete("/users/{userId}/groups/{groupId}")
+    @Restrict("MANAGE:/users")
+    Principal|HttpStatus removeUserFromGroup(Int userId, Int groupId) {
+        using (db.connection.createTransaction()) {
+            if (Principal principal := realm.readPrincipal(userId),
+                                       realm.readGroup(groupId)) {
+                if (removeFromGroup(principal, groupId)) {
+                    realm.updatePrincipal(principal);
+                }
+                return redact(principal);
+            }
+        }
+        return NotFound;
+    }
+
+    /**
+     * Delete the user.
+     */
+    @Delete("/users/{userId}")
+    @Restrict("MANAGE:/users")
+    HttpStatus deleteUser(Int userId) {
+        if (userId == 0) {
+            return Unauthorized; // cannot remove the root user
+        }
+        return realm.deletePrincipal(userId) ? OK : NotFound;
+    }
+
+    // ----- "group management" operations ---------------------------------------------------------
+
+    /**
+     * Create a new group.
+     */
+    @Post("/groups/{name}")
+    @Restrict("MANAGE:/groups")
+    Group|HttpStatus createGroup(String name) {
+        try {
+            Group group = realm.createGroup(new Group(0, name));
+            return redact(group);
+        } catch (Exception e) {
+            return Conflict; // already exists
+        }
+    }
+
+    /**
+     * Retrieve the group by id.
+     */
+    @Get("/groups/{groupId}")
+    @Restrict("GET:/groups")
+    Group|HttpStatus getGroup(Int groupId) {
+        if (Group group := realm.readGroup(groupId)) {
+            return redact(group);
+        }
+        return NotFound;
+    }
+
+    /**
+     * Retrieve the group by name.
+     */
+    @Get("/groups?name={name}")
+    @Restrict("GET:/groups")
+    Group[] findGroup(String name) {
+        return realm.findGroups(g -> g.name == name)
+                    .map(g -> redact(g))
+                    .toArray(Constant);
+    }
+
+    /**
+     * Add a permission to the group.
+     */
+    @Post("/groups/{groupId}/permissions")
+    @Restrict("MANAGE:/groups")
+    Group|HttpStatus addGroupPermission(Int groupId, @BodyParam String permText) {
+        try {
+            using (db.connection.createTransaction()) {
+                if (Group group := realm.readGroup(groupId)) {
+                    if (group := addPermission(group, permText)) {
+                        realm.updateGroup(group);
+                    }
+                    return redact(group);
+                } else {
+                    return NotFound;
+                }
+            }
+        } catch (Exception e) {
+            return Conflict;
+        }
+    }
+
+    /**
+     * Remove a permission for the group.
+     */
+    @Delete("/groups/{groupId}/permissions")
+    @Restrict("MANAGE:/groups")
+    Group|HttpStatus deleteGroupPermission(Int groupId, @BodyParam String permText) {
+        try {
+            using (db.connection.createTransaction()) {
+                if (Group group := realm.readGroup(groupId)) {
+                    if (group := removePermission(group, permText)) {
+                        realm.updateGroup(group);
+                    }
+                    return redact(group);
+                } else {
+                    return NotFound;
+                }
+            }
+        } catch (Exception e) {
+            return Conflict;
+        }
+    }
+
+    /**
+     * Add the group to another group.
+     */
+    @Post("/groups/{groupId}/group/{groupId2}")
+    @Restrict("MANAGE:/groups")
+    Group|HttpStatus addGroupToGroup(Int groupId, Int groupId2) {
+        if (Group group := realm.readGroup(groupId),
+                           realm.readGroup(groupId2)) {
+            if (group := addToGroup(group, groupId2)) {
+                realm.updateGroup(group);
+            }
+            return redact(group);
+        } else {
+            return NotFound;
+        }
+    }
+
+    /**
+     * Remove the group from another group.
+     */
+    @Delete("/groups/{groupId}/group/{groupId2}")
+    @Restrict("MANAGE:/groups")
+    Group|HttpStatus removeGroupFromGroup(Int groupId, Int groupId2) {
+        if (Group group := realm.readGroup(groupId)) {
+            if (group := removeFromGroup(group, groupId2)) {
+                realm.updateGroup(group);
+            }
+            return redact(group);
+        } else {
+            return NotFound;
+        }
+    }
+
+    /**
+     * Delete the group.
+     */
+    @Delete("/groups/{groupId}")
+    @Restrict("MANAGE:/groups")
+    HttpStatus deleteGroup(Int groupId) {
+        try {
+            return realm.deleteGroup(groupId) ? OK : NotFound;
+        } catch (Exception e) {
+            return Conflict;
+        }
+    }
+
+    // ----- helpers -------------------------------------------------------------------------------
+
+    /**
+     * Remove any information from the `Subject` that should not be passed to the client.
+     */
+    static <SubjectType extends Subject> SubjectType redact(SubjectType subject) {
+        return subject.with(credentials=[]);
+    }
+
+    /**
+     * Add a permission to the `Subject`.
+     *
+     * @return True iff the subject has been changed
+     * @return (optional) the changed subject
+     */
+    static <SubjectType extends Subject> conditional SubjectType addPermission(
+            SubjectType subject, String permText) {
+
+        Permission[] permissions = subject.permissions;
+        Permission   permission  = new Permission(permText);
+        if (permissions.contains(permission)) {
+            return False;
+        }
+        return True, subject.with(permissions=permissions + permission);
+    }
+
+    /**
+     * Remove a permission from the `Subject`.
+     *
+     * @return True iff the subject has been changed
+     * @return (optional) the changed subject
+     */
+    static <SubjectType extends Subject> conditional SubjectType removePermission(
+            SubjectType subject, String permText) {
+
+        Permission[] permissions = subject.permissions;
+        Permission   permission  = new Permission(permText);
+        if (permissions := permissions.removeIfPresent(permission)) {
+            return True, subject.with(permissions=permissions);
+        }
+        return False;
+    }
+
+    /**
+     * Add the `Entity` to the group.
+     *
+     * @return True iff the entity has been changed
+     * @return (optional) the changed entity
+     */
+    static <EntityType extends Entity> conditional EntityType addToGroup(
+            EntityType entity, Int groupId) {
+
+        Int[] groupIds = entity.groupIds;
+        if (groupIds.contains(groupId)) {
+            return False;
+        } else {
+            return True, entity.with(groupIds=groupIds + groupId);
+        }
+    }
+
+    /**
+     * Remove the `Entity` from the group.
+     *
+     * @return True iff the entity has been changed
+     * @return (optional) the changed entity
+     */
+    static <EntityType extends Entity> conditional EntityType removeFromGroup(
+            EntityType entity, Int groupId) {
+
+        Int[] groupIds = entity.groupIds;
+        if (groupIds := groupIds.removeIfPresent(groupId)) {
+            return True, entity.with(groupIds=groupIds + groupId);
+        } else {
+            return False;
+        }
     }
 }

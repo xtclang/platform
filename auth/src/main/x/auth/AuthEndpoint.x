@@ -148,39 +148,21 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     }
 
     /**
-     * Add a permission to the user.
+     * Set permissions for the user.
+     *
+     * @param permText  comma-delimited list of permissions (e.g.: "GET:/,!*:/.well_known/auth")
      */
     @Post("/users/{userId}/permissions")
     @Restrict("MANAGE:/users")
-    Principal|HttpStatus addUserPermission(Int userId, @BodyParam String permText) {
-        try {
-            using (db.connection.createTransaction()) {
-                if (Principal principal := realm.readPrincipal(userId)) {
-                    if (principal := addPermission(principal, permText)) {
-                        realm.updatePrincipal(principal);
-                    }
-                    return redact(principal);
-                } else {
-                    return NotFound;
-                }
-            }
-        } catch (Exception e) {
-            return Conflict;
+    Principal|HttpStatus setUserPermission(Int userId, @BodyParam String permText) {
+        if (userId == 0) {
+            return Unauthorized; // cannot change the root user permissions
         }
-    }
-
-    /**
-     * Remove a permission for the user.
-     */
-    @Delete("/users/{userId}/permissions")
-    @Restrict("MANAGE:/users")
-    Principal|HttpStatus deleteUserPermission(Int userId, @BodyParam String permText) {
         try {
             using (db.connection.createTransaction()) {
                 if (Principal principal := realm.readPrincipal(userId)) {
-                    if (principal := removePermission(principal, permText)) {
-                        realm.updatePrincipal(principal);
-                    }
+                    principal = setPermissions(principal, permText);
+                    realm.updatePrincipal(principal);
                     return redact(principal);
                 } else {
                     return NotFound;
@@ -279,39 +261,18 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     }
 
     /**
-     * Add a permission to the group.
+     * Set permissions for the group.
+     *
+     * @param permText  a comma-delimited list of permissions (e.g.: "GET:/,*:/.well_known")
      */
     @Post("/groups/{groupId}/permissions")
     @Restrict("MANAGE:/groups")
-    Group|HttpStatus addGroupPermission(Int groupId, @BodyParam String permText) {
+    Group|HttpStatus setGroupPermission(Int groupId, @BodyParam String permText) {
         try {
             using (db.connection.createTransaction()) {
                 if (Group group := realm.readGroup(groupId)) {
-                    if (group := addPermission(group, permText)) {
-                        realm.updateGroup(group);
-                    }
-                    return redact(group);
-                } else {
-                    return NotFound;
-                }
-            }
-        } catch (Exception e) {
-            return Conflict;
-        }
-    }
-
-    /**
-     * Remove a permission for the group.
-     */
-    @Delete("/groups/{groupId}/permissions")
-    @Restrict("MANAGE:/groups")
-    Group|HttpStatus deleteGroupPermission(Int groupId, @BodyParam String permText) {
-        try {
-            using (db.connection.createTransaction()) {
-                if (Group group := realm.readGroup(groupId)) {
-                    if (group := removePermission(group, permText)) {
-                        realm.updateGroup(group);
-                    }
+                    group = setPermissions(group, permText);
+                    realm.updateGroup(group);
                     return redact(group);
                 } else {
                     return NotFound;
@@ -378,37 +339,22 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     }
 
     /**
-     * Add a permission to the `Subject`.
+     * Set permissions to the `Subject`.
      *
-     * @return True iff the subject has been changed
-     * @return (optional) the changed subject
+     * @param permText  comma-delimited array of permission strings
+     *
+     * @return the changed subject
      */
-    static <SubjectType extends Subject> conditional SubjectType addPermission(
+    static <SubjectType extends Subject> SubjectType setPermissions(
             SubjectType subject, String permText) {
 
-        Permission[] permissions = subject.permissions;
-        Permission   permission  = new Permission(permText);
-        if (permissions.contains(permission)) {
-            return False;
+        String[] permTexts = permText.split(',', omitEmpty=True, trim=True);
+        if (permTexts.empty) {
+            return subject.with(permissions=[]);
         }
-        return True, subject.with(permissions=permissions + permission);
-    }
 
-    /**
-     * Remove a permission from the `Subject`.
-     *
-     * @return True iff the subject has been changed
-     * @return (optional) the changed subject
-     */
-    static <SubjectType extends Subject> conditional SubjectType removePermission(
-            SubjectType subject, String permText) {
-
-        Permission[] permissions = subject.permissions;
-        Permission   permission  = new Permission(permText);
-        if (permissions := permissions.removeIfPresent(permission)) {
-            return True, subject.with(permissions=permissions);
-        }
-        return False;
+        Permission[] permissions = permTexts.map(s -> new Permission(s)).toArray(Constant);
+        return subject.with(permissions=permissions);
     }
 
     /**

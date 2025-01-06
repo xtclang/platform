@@ -41,9 +41,10 @@ class UserManagement {
         String b64Old = Base64Format.Instance.encode(oldPassword.utf8());
         String b64New = Base64Format.Instance.encode(newPassword.utf8());
 
-        RequestOut request = Gateway.createRequest(PATCH, $"{Path}/profile", $"{b64Old}:{b64New}", Text);
-        (_, HttpStatus status) = Gateway.send(request);
+        RequestOut request = Gateway.createRequest(PATCH,
+                $"{Path}/profile/password", $"{b64Old}:{b64New}", Text);
 
+        (_, HttpStatus status) = Gateway.send(request);
         if (status == OK) {
             Gateway.resetClient(uriString=Gateway.serverUri(), authString=$"admin:{newPassword}");
         } else {
@@ -67,13 +68,10 @@ class UserManagement {
     String resetPassword(Int userId, String password) =
             auth.patch($"{Path}/users/{userId}/password", password, Text);
 
-    @Command("add-user-permission", "Add user permission")
-    String addUserPermission(Int userId, String action, String target) =
-            auth.post($"{Path}/users/{userId}/permissions", $"{target}:{action}", Text);
-
-    @Command("remove-user-permission", "Remove user permission")
-    String removeUserPermission(Int userId, String action, String target) =
-            auth.delete($"{Path}/users/{userId}/permissions", $"{target}:{action}", Text);
+    @Command("set-user-permissions", "Set user permissions")
+    String setUserPermission(Int userId,
+                             @Desc("Comma delimited list of permissions") String permText) =
+            auth.post($"{Path}/users/{userId}/permissions", permText, Text);
 
     @Command("add-user-group", "Add user to the group")
     String addUserToGroup(Int userId, Int groupId) =
@@ -89,21 +87,18 @@ class UserManagement {
     // ----- "group management" operations ---------------------------------------------------------
 
     @Command("create-group", "Create group")
-    String createGroup(String name) = auth.patch($"{Path}/groups/{name}");
+    String createGroup(String name) = auth.post($"{Path}/groups/{name}");
 
     @Command("show-group", "Get group by id")
-    String showGroup(Int groupId) = auth.patch($"{Path}/groups/{groupId}");
+    String showGroup(Int groupId) = auth.get($"{Path}/groups/{groupId}");
 
     @Command("find-group", "Find group by name")
     String findGroup(String name) = auth.get($"{Path}/groups?{name=}");
 
-    @Command("add-group-permission", "Add group permission")
-    String addGroupPermission(Int groupId, String action, String target) =
-            auth.post($"{Path}/groups/{groupId}/permissions", $"{target}:{action}", Text);
-
-    @Command("remove-group-permission", "Remove group permission")
-    String removeGroupPermission(Int groupId, String action, String target) =
-            auth.delete($"{Path}/groups/{groupId}/permissions", $"{target}:{action}", Text);
+    @Command("set-group-permissions", "Set group permission")
+    String addGroupPermission(Int groupId,
+                              @Desc("Comma delimited list of permissions") String permText) =
+            auth.post($"{Path}/groups/{groupId}/permissions", permText, Text);
 
     @Command("add-group-group", "Add group to the group")
     String addGroupToGroup(@Desc("Group to add to another group")   Int groupId,

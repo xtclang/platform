@@ -12,7 +12,7 @@ service Controller
         return config.makeImmutable();
     }
 
-    @Post("config/active/{count}")
+    @Post("config/active{/count}")
     void setActiveCount(Int count) {
         assert:bounds 0 <= count < 100;
         hostManager.activeAppThreshold = count;

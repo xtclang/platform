@@ -91,7 +91,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Create a new user.
      */
-    @Post("/users/{name}")
+    @Post("/users{/name}")
     @Restrict("MANAGE:/users")
     Principal|HttpStatus createUser(String name, @BodyParam String password) {
         try {
@@ -106,7 +106,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Retrieve the user by id.
      */
-    @Get("/users/{userId}")
+    @Get("/users{/userId}")
     @Restrict("GET:/users")
     Principal|HttpStatus getUser(Int userId) {
         if (Principal principal := realm.readPrincipal(userId)) {
@@ -118,7 +118,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Retrieve the user by name.
      */
-    @Get("/users?name={name}")
+    @Get("/users{?name}")
     @Restrict("GET:/users")
     Principal[] findUser(String name) {
         return realm.findPrincipals(p -> p.name == name)
@@ -126,10 +126,10 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
                     .toArray(Constant);
     }
 
-    /*
+    /**
      * Change the password for the user.
      */
-    @Patch("/users/{userId}/password")
+    @Patch("/users{/userId}/password")
     HttpStatus resetPassword(Int userId, @BodyParam String password) {
         if (userId == 0) {
              // only the root user can change its password and only via "changePassword"
@@ -152,7 +152,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
      *
      * @param permText  comma-delimited list of permissions (e.g.: "GET:/,!*:/.well_known/auth")
      */
-    @Post("/users/{userId}/permissions")
+    @Post("/users{/userId}/permissions")
     @Restrict("MANAGE:/users")
     Principal|HttpStatus setUserPermission(Int userId, @BodyParam String permText) {
         if (userId == 0) {
@@ -176,7 +176,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Add the user to the group.
      */
-    @Post("/users/{userId}/groups/{groupId}")
+    @Post("/users{/userId}/groups{/groupId}")
     @Restrict("MANAGE:/users")
     Principal|HttpStatus addUserToGroup(Int userId, Int groupId) {
         using (db.connection.createTransaction()) {
@@ -194,7 +194,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Remove the user from the group.
      */
-    @Delete("/users/{userId}/groups/{groupId}")
+    @Delete("/users{/userId}/groups{/groupId}")
     @Restrict("MANAGE:/users")
     Principal|HttpStatus removeUserFromGroup(Int userId, Int groupId) {
         using (db.connection.createTransaction()) {
@@ -212,7 +212,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Delete the user.
      */
-    @Delete("/users/{userId}")
+    @Delete("/users{/userId}")
     @Restrict("MANAGE:/users")
     HttpStatus deleteUser(Int userId) {
         if (userId == 0) {
@@ -226,7 +226,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Create a new group.
      */
-    @Post("/groups/{name}")
+    @Post("/groups{/name}")
     @Restrict("MANAGE:/groups")
     Group|HttpStatus createGroup(String name) {
         try {
@@ -240,7 +240,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Retrieve the group by id.
      */
-    @Get("/groups/{groupId}")
+    @Get("/groups{/groupId}")
     @Restrict("GET:/groups")
     Group|HttpStatus getGroup(Int groupId) {
         if (Group group := realm.readGroup(groupId)) {
@@ -252,7 +252,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Retrieve the group by name.
      */
-    @Get("/groups?name={name}")
+    @Get("/groups{?name}")
     @Restrict("GET:/groups")
     Group[] findGroup(String name) {
         return realm.findGroups(g -> g.name == name)
@@ -265,7 +265,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
      *
      * @param permText  a comma-delimited list of permissions (e.g.: "GET:/,*:/.well_known")
      */
-    @Post("/groups/{groupId}/permissions")
+    @Post("/groups{/groupId}/permissions")
     @Restrict("MANAGE:/groups")
     Group|HttpStatus setGroupPermission(Int groupId, @BodyParam String permText) {
         try {
@@ -286,7 +286,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Add the group to another group.
      */
-    @Post("/groups/{groupId}/group/{groupId2}")
+    @Post("/groups{/groupId}/group{/groupId2}")
     @Restrict("MANAGE:/groups")
     Group|HttpStatus addGroupToGroup(Int groupId, Int groupId2) {
         if (Group group := realm.readGroup(groupId),
@@ -303,7 +303,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Remove the group from another group.
      */
-    @Delete("/groups/{groupId}/group/{groupId2}")
+    @Delete("/groups{/groupId}/group{/groupId2}")
     @Restrict("MANAGE:/groups")
     Group|HttpStatus removeGroupFromGroup(Int groupId, Int groupId2) {
         if (Group group := realm.readGroup(groupId)) {
@@ -319,7 +319,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     /**
      * Delete the group.
      */
-    @Delete("/groups/{groupId}")
+    @Delete("/groups{/groupId}")
     @Restrict("MANAGE:/groups")
     HttpStatus deleteGroup(Int groupId) {
         try {

@@ -22,7 +22,7 @@ module challenge.xqiz.it {
         // ----- Handler -------------------------------------------------------------------------------
 
         @Override
-        @Get("{path}")
+        @Get("{/path}")
         conditional ResponseOut getResource(String path) {
             @Inject Console console;
             console.print($"### acme challenge: {path}"); // TODO REMOVE

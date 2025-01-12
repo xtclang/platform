@@ -27,9 +27,9 @@ module stub.xqiz.it {
          */
         private Byte[] bytes;
 
-        @Get("{path}")
+        @Get("{/path}")
         SimpleResponse getResource(String path) {
-            return path == "/" || path == "" || path == "index.html"
+            return path == "" || path == "index.html"
                 ? new SimpleResponse(OK, HTML, bytes)
                 : unavailable();
         }

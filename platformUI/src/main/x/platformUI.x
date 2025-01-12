@@ -237,7 +237,7 @@ module platformUI.xqiz.it {
         import web.Get;
         import web.ResponseOut;
 
-        @Get("{path}")
+        @Get("{/path}")
         @Override
         conditional ResponseOut getResource(String path) {
             if (ResponseOut response := super(path)) {

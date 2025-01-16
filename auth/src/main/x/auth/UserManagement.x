@@ -4,6 +4,8 @@
 import webcli.*;
 
 class UserManagement {
+    @Inject Console console;
+
     /**
      * The URI of the [AuthEndpoint] web service.
      */
@@ -18,8 +20,6 @@ class UserManagement {
     void changePassword(String oldPassword = "", String newPassword = "") {
         if (oldPassword.empty || newPassword.empty) {
             do {
-                @Inject Console console;
-
                 oldPassword = console.readLine("Old password:", suppressEcho=True);
                 if (oldPassword == "") {
                     auth.print("Cancelled");
@@ -52,7 +52,27 @@ class UserManagement {
         }
     }
 
-    // ----- "user by id management" operations ----------------------------------------------------
+    @Command("create-my-entitlement", "Create an entitlement for the current user")
+    String createMyEntitlement(String name) {
+        String key = auth.post($"{Path}/profile/entitlements/{name}");
+
+        console.print("Make sure to copy your entitlement token now. You won’t be able to see it again!");
+        return key;
+    }
+
+    @Command("find-my-entitlement", "Find the entitlement for the current user by name")
+    String findMyEntitlement(String name) = auth.get($"{Path}/profile/entitlements?{name=}");
+
+    @Command("set-my-entitlement-permissions", "Set the permission for the current user entitlement")
+    String addMyEntitlementPermission(Int entitlementId,
+                              @Desc("Comma delimited list of permissions") String permText) =
+            auth.post($"{Path}/profile/entitlements/{entitlementId}/permissions", permText, Text);
+
+    @Command("delete-my-entitlement", "Delete the entitlement for the current user")
+    String deleteMyEntitlement(Int entitlementId) =
+            auth.delete($"{Path}/profile/entitlements/{entitlementId}");
+
+    // ----- user management operations ------------------------------------------------------------
 
     @Command("create-user", "Create user")
     String createUser(String name, String password) =
@@ -112,4 +132,23 @@ class UserManagement {
 
     @Command("delete-group", "Delete group")
     String deleteGroup(Int groupId) = auth.delete($"{Path}/groups/{groupId}");
+
+    // ----- "entitlement management" operations ----------------------------------------------------
+
+    @Command("create-entitlement", "Create entitlement")
+    String createEntitlement(Int userId, String name) = auth.post($"{Path}/users/{userId}/entitlements/{name}");
+
+    @Command("show-entitlement", "Get entitlement by id")
+    String showEntitlement(Int entitlementId) = auth.get($"{Path}/entitlements/{entitlementId}");
+
+    @Command("find-entitlement", "Find entitlement for the user by name")
+    String findEntitlement(Int userId, String name) = auth.get($"{Path}/users/{userId}/entitlements?{name=}");
+
+    @Command("set-entitlement-permissions", "Set entitlement permission")
+    String addEntitlementPermission(Int entitlementId,
+                              @Desc("Comma delimited list of permissions") String permText) =
+            auth.post($"{Path}/entitlements/{entitlementId}/permissions", permText, Text);
+
+    @Command("delete-entitlement", "Delete entitlement")
+    String deleteEntitlement(Int entitlementId) = auth.delete($"{Path}/entitlements/{entitlementId}");
 }

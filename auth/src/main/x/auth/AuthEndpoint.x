@@ -1,7 +1,10 @@
+import convert.formats.Base64Format;
+
 import sec.Credential;
 import sec.Entitlement;
 import sec.Entity;
 import sec.Group;
+import sec.KeyCredential;
 import sec.Permission;
 import sec.Principal;
 import sec.Subject;
@@ -46,7 +49,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
      * Retrieve the current user.
      */
     @Get("/profile")
-    Principal getUser(Session session) = redact(session.principal?) : assert;
+    Principal getUser() = redact(session?.principal?) : assert;
 
     /*
      * Change the password for the current user.
@@ -55,9 +58,7 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
      */
     @Patch("/profile/password")
     HttpStatus changePassword(Session session, @BodyParam String passwords) {
-        import convert.formats.Base64Format;
-
-        assert Principal principal ?= session.principal;
+        Principal principal = session.principal? : assert;
 
         assert Int delim := passwords.indexOf(':');
 
@@ -71,14 +72,11 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
 
         Credential[] credentials = principal.credentials;
         FindOld: for (Credential credential : credentials) {
-            if (credential.is(DigestCredential) &&
-                    credential.matches(principal.name, hashOld)) {
-                credentials = credentials.reify(Mutable);
-                credentials[FindOld.count] =
-                    credential.with(realmName=realm.name, password=passwordNew);
-                credentials = credentials.toArray(Constant, inPlace=True);
+            if (credential.is(DigestCredential) && credential.matches(principal.name, hashOld)) {
 
-                principal = realm.updatePrincipal(principal.with(credentials=credentials));
+                credentials = credentials.replace(FindOld.count,
+                                    credential.with(realmName=realm.name, password=passwordNew));
+                principal   = realm.updatePrincipal(principal.with(credentials=credentials));
                 session.authenticate(principal);
                 return OK;
             }
@@ -86,7 +84,82 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
         return Conflict;
     }
 
-    // ----- "user by id management" operations ----------------------------------------------------
+    /**
+     * Create a new entitlement for the current user.
+     */
+    @Post("/profile/entitlements{/name}")
+    String|HttpStatus createProfileEntitlement(String name) {
+        try {
+            @Inject Random random;
+            String     key        = Base64Format.Instance.encode(random.bytes(32));
+            Credential credential = new KeyCredential(realm.name, key);
+
+            Int userId = session?.principal?.principalId : assert;
+
+            realm.createEntitlement(new Entitlement(0, name, userId, credentials=[credential]));
+
+            return key; // this is the last time we see it; the client *must* retain it
+        } catch (Exception e) {
+            return Conflict; // already exists
+        }
+    }
+
+    /**
+     * Retrieve the entitlement for the current user by the entitlement name.
+     */
+    @Get("/profile/entitlements{?name}")
+    Entitlement[] findProfileEntitlement(String name) {
+        Int userId = session?.principal?.principalId : assert;
+
+        return findEntitlement(userId, name);
+    }
+
+    /**
+     * Set permissions for the entitlement for the current user.
+     *
+     * @param permText  a comma-delimited list of permissions (e.g.: "GET:/,*:/.well_known")
+     */
+    @Post("/profile/entitlements{/entitlementId}/permissions")
+    Entitlement|HttpStatus setProfileEntitlementPermission(Int entitlementId, @BodyParam String permText) {
+        Int userId = session?.principal?.principalId : assert;
+
+        try {
+            using (db.connection.createTransaction()) {
+                if (Entitlement entitlement := realm.readEntitlement(entitlementId),
+                                entitlement.principalId == userId) {
+                    entitlement = setPermissions(entitlement, permText);
+                    realm.updateEntitlement(entitlement);
+                    return redact(entitlement);
+                } else {
+                    return NotFound;
+                }
+            }
+        } catch (Exception e) {
+            return Conflict;
+        }
+    }
+
+    /**
+     * Delete the entitlement for the current user.
+     */
+    @Delete("/profile/entitlements{/entitlementId}")
+    HttpStatus deleteProfileEntitlement(Int entitlementId) {
+        Int userId = session?.principal?.principalId : assert;
+
+        try (val tx = db.connection.createTransaction()) {
+            if (Entitlement entitlement := realm.readEntitlement(entitlementId),
+                            entitlement.principalId == userId,
+                            realm.deleteEntitlement(entitlementId)) {
+                return OK;
+            } else {
+                return NotFound;
+            }
+        } catch (Exception e) {
+            return Conflict;
+        }
+    }
+
+    // ----- "user management" operations ----------------------------------------------------------
 
     /**
      * Create a new user.
@@ -324,6 +397,83 @@ service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
     HttpStatus deleteGroup(Int groupId) {
         try {
             return realm.deleteGroup(groupId) ? OK : NotFound;
+        } catch (Exception e) {
+            return Conflict;
+        }
+    }
+
+    // ----- "entitlement management" operations ---------------------------------------------------
+
+    /**
+     * Create a new entitlement for the specified user.
+     */
+    @Post("/users{/userId}/entitlements{/name}")
+    @Restrict("MANAGE:/entitlements")
+    Entitlement|HttpStatus createEntitlement(Int userId, String name, @BodyParam String key) {
+        try {
+            Credential  credential  = new KeyCredential(realm.name, key);
+            Entitlement entitlement = new Entitlement(0, name, userId, credentials=[credential]);
+
+            return redact(realm.createEntitlement(entitlement));
+        } catch (Exception e) {
+            return Conflict; // already exists
+        }
+    }
+
+    /**
+     * Retrieve the entitlement by id.
+     */
+    @Get("/entitlements{/entitlementId}")
+    @Restrict("GET:/entitlements")
+    Entitlement|HttpStatus getEntitlement(Int entitlementId) {
+        if (Entitlement entitlement := realm.readEntitlement(entitlementId)) {
+            return redact(entitlement);
+        }
+        return NotFound;
+    }
+
+    /**
+     * Retrieve the entitlement for the specified user by the entitlement name.
+     */
+    @Get("/users{/userId}/entitlements{?name}")
+    @Restrict("GET:/entitlements")
+    Entitlement[] findEntitlement(Int userId, String name) {
+        return realm.findEntitlements(e -> e.principalId == userId && e.name == name)
+                    .map(e -> redact(e))
+                    .toArray(Constant);
+    }
+
+    /**
+     * Set permissions for the entitlement.
+     *
+     * @param permText  a comma-delimited list of permissions (e.g.: "GET:/,*:/.well_known")
+     */
+    @Post("/entitlements{/entitlementId}/permissions")
+    @Restrict("MANAGE:/entitlements")
+    Entitlement|HttpStatus setEntitlementPermission(Int entitlementId, @BodyParam String permText) {
+        try {
+            using (db.connection.createTransaction()) {
+                if (Entitlement entitlement := realm.readEntitlement(entitlementId)) {
+                    entitlement = setPermissions(entitlement, permText);
+                    realm.updateEntitlement(entitlement);
+                    return redact(entitlement);
+                } else {
+                    return NotFound;
+                }
+            }
+        } catch (Exception e) {
+            return Conflict;
+        }
+    }
+
+    /**
+     * Delete the entitlement.
+     */
+    @Delete("/entitlements{/entitlementId}")
+    @Restrict("MANAGE:/entitlements")
+    HttpStatus deleteEntitlement(Int entitlementId) {
+        try {
+            return realm.deleteEntitlement(entitlementId) ? OK : NotFound;
         } catch (Exception e) {
             return Conflict;
         }

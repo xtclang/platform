@@ -11,8 +11,10 @@ import oodb.model.User;
 import web.WebApp;
 
 import web.security.Authenticator;
+import web.security.ChainAuthenticator;
 import web.security.DigestAuthenticator;
 import web.security.DigestCredential;
+import web.security.TokenAuthenticator;
 
 import webauth.Configuration;
 import webauth.DBRealm;
@@ -149,9 +151,12 @@ service DbInjector
                     WebApp  webApp = hostedContainer.invoke("hostedWebApp_")[0].as(WebApp);
                     DBRealm realm  = new DBRealm(appInfo.deployment,
                                                  rootSchema=db, initConfig=initConfig);
-
-                    Authenticator authenticator =
-                        new AuthEndpoint(webApp, new DigestAuthenticator(realm), realm);
+                    // allow both digest (principal) and token based (entitlements) authentication
+                    Authenticator authenticator = new AuthEndpoint(webApp, realm,
+                        new ChainAuthenticator(realm, [
+                            new DigestAuthenticator(realm),
+                            new TokenAuthenticator(realm),
+                        ]));
 
                     // ideally, what we want is (see HostInjector)
                     //  return &authenticator.maskAs(Authenticator+WebService);

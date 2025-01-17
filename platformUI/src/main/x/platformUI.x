@@ -45,6 +45,8 @@ module platformUI.xqiz.it {
 
     import web.http.HostInfo;
 
+    import webauth.DBRealm;
+
     import xenia.HttpHandler;
     import xenia.HttpServer;
 
@@ -55,7 +57,7 @@ module platformUI.xqiz.it {
      * Configure the controller.
      */
     void configure(HttpServer server, String hostName, String dName, String provider,
-                   Directory homeDir, CryptoPassword pwd, Realm realm,
+                   Directory homeDir, CryptoPassword pwd, DBRealm realm,
                    AccountManager accountManager, HostManager hostManager, ProxyManager proxyManager,
                    ErrorLog errors) {
         // the 'hostName' is a full URI of the platform server, e.g. "xtc-platform.localhost.xqiz.it";
@@ -75,10 +77,9 @@ module platformUI.xqiz.it {
         import challenge.AcmeChallenge;
         import platformAuth.AuthEndpoint;
         import web.security.NeverAuthenticator;
-        import webauth.DBRealm;
         HttpHandler.CatalogExtras extras =
             [
-            AuthEndpoint  = () -> new AuthEndpoint(this, new NeverAuthenticator(this), realm.as(DBRealm)),
+            AuthEndpoint  = () -> new AuthEndpoint(this, realm, new NeverAuthenticator(this)),
             AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure()),
             ];
 

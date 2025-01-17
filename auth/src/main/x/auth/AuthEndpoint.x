@@ -27,21 +27,26 @@ import DigestCredential.sha512_256;
 @WebService("/.well-known/auth")
 @LoginRequired
 @SessionRequired
-service AuthEndpoint(WebApp app, Authenticator authenticator, DBRealm realm)
-        implements Authenticator
+service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
+        implements Authenticator, WebService.ExtrasAware
         delegates Authenticator - Duplicable(authenticator) {
 
     @Override
     construct(AuthEndpoint that) {
         this.app           = that.app;
-        this.authenticator = that.authenticator;
         this.realm         = that.realm;
+        this.authenticator = that.authenticator;
     }
 
     /**
      * The AuthSchema db.
      */
     AuthSchema db.get() = realm.db;
+
+    // ----- ExtrasAware interface -----------------------------------------------------------------
+
+    @Override
+    (Duplicable+WebService)[] extras.get() = [this];
 
     // ----- "self management" operations ----------------------------------------------------------
 

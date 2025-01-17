@@ -60,8 +60,11 @@ class UserManagement {
         return key;
     }
 
+    @Command("list-my-entitlements", "Find the entitlement for the current user by name")
+    String listMyEntitlements() = auth.get($"{Path}/profile/entitlements");
+
     @Command("find-my-entitlement", "Find the entitlement for the current user by name")
-    String findMyEntitlement(String name) = auth.get($"{Path}/profile/entitlements?{name=}");
+    String findMyEntitlement(String name) = auth.get($"{Path}/profile/entitlements/{name}");
 
     @Command("set-my-entitlement-permissions", "Set the permission for the current user entitlement")
     String addMyEntitlementPermission(Int entitlementId,
@@ -141,8 +144,11 @@ class UserManagement {
     @Command("show-entitlement", "Get entitlement by id")
     String showEntitlement(Int entitlementId) = auth.get($"{Path}/entitlements/{entitlementId}");
 
+    @Command("list-entitlements", "Find the entitlement for the current user by name")
+    String listEntitlements(Int userId) = auth.get($"{Path}/users/{userId}/entitlements");
+
     @Command("find-entitlement", "Find entitlement for the user by name")
-    String findEntitlement(Int userId, String name) = auth.get($"{Path}/users/{userId}/entitlements?{name=}");
+    String findEntitlement(Int userId, String name) = auth.get($"{Path}/users/{userId}/entitlements/{name}");
 
     @Command("set-entitlement-permissions", "Set entitlement permission")
     String addEntitlementPermission(Int entitlementId,

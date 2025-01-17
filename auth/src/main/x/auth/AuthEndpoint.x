@@ -110,13 +110,24 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     }
 
     /**
-     * Retrieve the entitlement for the current user by the entitlement name.
+     * Retrieve all the entitlements for the current user.
      */
-    @Get("/profile/entitlements{?name}")
-    Entitlement[] findProfileEntitlement(String name) {
+    @Get("/profile/entitlements")
+    Entitlement[] allProfileEntitlements() {
         Int userId = session?.principal?.principalId : assert;
 
-        return findEntitlement(userId, name);
+        return allEntitlements(userId);
+    }
+
+    /**
+     * Retrieve the entitlement for the current user by the entitlement name.
+     */
+    @Get("/profile/entitlements{/name}")
+    Entitlement|HttpStatus findProfileEntitlement(String name) {
+        Int userId = session?.principal?.principalId : assert;
+
+        Entitlement[] entitlements = findEntitlements(userId, name);
+        return entitlements.empty ? NotFound : entitlements[0];
     }
 
     /**
@@ -438,11 +449,22 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     }
 
     /**
+     * Retrieve all entitlement for the specified user.
+     */
+    @Get("/users{/userId}/entitlements")
+    @Restrict("GET:/entitlements")
+    Entitlement[] allEntitlements(Int userId) {
+        return realm.findEntitlements(e -> e.principalId == userId)
+                    .map(e -> redact(e))
+                    .toArray(Constant);
+    }
+
+    /**
      * Retrieve the entitlement for the specified user by the entitlement name.
      */
-    @Get("/users{/userId}/entitlements{?name}")
+    @Get("/users{/userId}/entitlements{/name}")
     @Restrict("GET:/entitlements")
-    Entitlement[] findEntitlement(Int userId, String name) {
+    Entitlement[] findEntitlements(Int userId, String name) {
         return realm.findEntitlements(e -> e.principalId == userId && e.name == name)
                     .map(e -> redact(e))
                     .toArray(Constant);

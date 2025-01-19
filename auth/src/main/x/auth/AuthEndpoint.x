@@ -137,15 +137,19 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
      */
     @Post("/profile/entitlements{/entitlementId}/permissions")
     Entitlement|HttpStatus setProfileEntitlementPermission(Int entitlementId, @BodyParam String permText) {
-        Int userId = session?.principal?.principalId : assert;
+        Principal principal = session?.principal? : assert;
+        Int       userId    = principal.principalId;
 
         try {
             using (db.connection.createTransaction()) {
                 if (Entitlement entitlement := realm.readEntitlement(entitlementId),
                                 entitlement.principalId == userId) {
-                    entitlement = setPermissions(entitlement, permText);
-                    realm.updateEntitlement(entitlement);
-                    return redact(entitlement);
+                    if (entitlement := setPermissions(entitlement, permText, principal)) {
+                        realm.updateEntitlement(entitlement);
+                        return redact(entitlement);
+                    } else {
+                        return Forbidden;
+                    }
                 } else {
                     return NotFound;
                 }
@@ -247,12 +251,17 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
         if (userId == 0) {
             return Unauthorized; // cannot change the root user permissions
         }
+
+        Principal grantor = session?.principal? : assert;
         try {
             using (db.connection.createTransaction()) {
                 if (Principal principal := realm.readPrincipal(userId)) {
-                    principal = setPermissions(principal, permText);
-                    realm.updatePrincipal(principal);
-                    return redact(principal);
+                    if (principal := setPermissions(principal, permText, grantor)) {
+                        realm.updatePrincipal(principal);
+                        return redact(principal);
+                    } else {
+                        return Forbidden;
+                    }
                 } else {
                     return NotFound;
                 }
@@ -357,12 +366,16 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     @Post("/groups{/groupId}/permissions")
     @Restrict("MANAGE:/groups")
     Group|HttpStatus setGroupPermission(Int groupId, @BodyParam String permText) {
+        Principal grantor = session?.principal? : assert;
         try {
             using (db.connection.createTransaction()) {
                 if (Group group := realm.readGroup(groupId)) {
-                    group = setPermissions(group, permText);
-                    realm.updateGroup(group);
-                    return redact(group);
+                    if (group := setPermissions(group, permText, grantor)) {
+                        realm.updateGroup(group);
+                        return redact(group);
+                    } else {
+                        return Forbidden;
+                    }
                 } else {
                     return NotFound;
                 }
@@ -478,12 +491,16 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     @Post("/entitlements{/entitlementId}/permissions")
     @Restrict("MANAGE:/entitlements")
     Entitlement|HttpStatus setEntitlementPermission(Int entitlementId, @BodyParam String permText) {
+        Principal grantor = session?.principal? : assert;
         try {
             using (db.connection.createTransaction()) {
                 if (Entitlement entitlement := realm.readEntitlement(entitlementId)) {
-                    entitlement = setPermissions(entitlement, permText);
-                    realm.updateEntitlement(entitlement);
-                    return redact(entitlement);
+                    if (entitlement := setPermissions(entitlement, permText, grantor)) {
+                        realm.updateEntitlement(entitlement);
+                        return redact(entitlement);
+                    } else {
+                        return Forbidden;
+                    }
                 } else {
                     return NotFound;
                 }
@@ -518,20 +535,27 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     /**
      * Set permissions to the `Subject`.
      *
+     * @param subject   the `Subject` to set permissions for
      * @param permText  comma-delimited array of permission strings
+     * @param grantor   the Principal that warrants the change
      *
-     * @return the changed subject
+     * @return True iff the operations succeeded
+     * @return (conditional) the changed subject
      */
-    static <SubjectType extends Subject> SubjectType setPermissions(
-            SubjectType subject, String permText) {
+    static <SubjectType extends Subject> conditional SubjectType setPermissions(
+            SubjectType subject, String permText, Principal grantor) {
 
         String[] permTexts = permText.split(',', omitEmpty=True, trim=True);
         if (permTexts.empty) {
-            return subject.with(permissions=[]);
+            return True, subject.with(permissions=[]);
         }
 
         Permission[] permissions = permTexts.map(s -> new Permission(s)).toArray(Constant);
-        return subject.with(permissions=permissions);
+
+        // new permissions must not exceed permissions of the grantor
+        return permissions.all(p -> p.coveredBy(grantor.permissions))
+               ? (True, subject.with(permissions=permissions))
+               : False;
     }
 
     /**

@@ -9,6 +9,7 @@ import oodb.DBUser;
 import oodb.model.User;
 
 import web.WebApp;
+import web.WebService;
 
 import web.security.Authenticator;
 import web.security.ChainAuthenticator;
@@ -157,13 +158,7 @@ service DbInjector
                             new DigestAuthenticator(realm),
                             new TokenAuthenticator(realm),
                         ]));
-
-                    // ideally, what we want is (see HostInjector)
-                    //  return &authenticator.maskAs(Authenticator+WebService);
-
-                    // this relies on sharing "platformAuth" module with the hosted container
-                    // (see utils.createContainer)
-                    return authenticator;
+                    return &authenticator.maskAs(Authenticator+WebService.ExtrasAware);
                 }
                 return Null;
             };

@@ -197,14 +197,7 @@ service HostInjector(AppInfo? appInfo, Directory appHomeDir, Boolean platform, I
                 }
 
                 val broker = new xenia.CookieBroker(webApp);
-
-                // TODO: ideally, what we want is to mask an intersection, but WebService
-                //       is a mixin, and is not proxy-able atm
-                // return &broker.maskAs(Broker+WebService);
-
-                // this relies on sharing "xenia" module with the hosted container
-                // (see utils.createContainer)
-                return broker;
+                return &broker.maskAs(Broker+WebService.ExtrasAware);
             };
 
         default:

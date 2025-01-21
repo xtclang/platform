@@ -71,19 +71,8 @@ package utils {
             injector = new HostInjector(appInfo, deployDir, platform, injections);
         }
 
-        Module[] sharedModules = [];
-        if (platform && isWebModule(template) || appInfo.is(WebAppInfo) && appInfo.useCookies) {
-            assert Module xeniaModule := xenia.isModuleImport();
-            sharedModules += xeniaModule;
-        }
-        if (!platform && appInfo.is(WebAppInfo) && appInfo.useAuth) {
-            assert Module authModule := platformAuth.isModuleImport();
-            sharedModules += authModule;
-        }
-
         try {
-            Container container = new Container(template, Lightweight, repository, injector,
-                                        sharedModules=sharedModules);
+            Container container = new Container(template, Lightweight, repository, injector);
             injector.hostedContainer = container;
             return True, container, dbHosts;
         } catch (Exception e) {

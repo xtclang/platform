@@ -53,7 +53,7 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     /**
      * Retrieve the current user.
      */
-    @Get("/profile")
+    @Get("/users/me")
     Principal getUser() = redact(session?.principal?) : assert;
 
     /*
@@ -61,7 +61,7 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
      *
      * The client must append "Base64(oldPassword):Base64(newPassword)" as a message body.
      */
-    @Patch("/profile/password")
+    @Patch("/users/me/password")
     HttpStatus changePassword(Session session, @BodyParam String passwords) {
         Principal principal = session.principal? : assert;
 
@@ -92,7 +92,7 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     /**
      * Create a new entitlement for the current user.
      */
-    @Post("/profile/entitlements{/name}")
+    @Post("/users/me/entitlements{/name}")
     String|HttpStatus createProfileEntitlement(String name) {
         try {
             @Inject Random random;
@@ -112,7 +112,7 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     /**
      * Retrieve all the entitlements for the current user.
      */
-    @Get("/profile/entitlements")
+    @Get("/users/me/entitlements")
     Entitlement[] allProfileEntitlements() {
         Int userId = session?.principal?.principalId : assert;
 
@@ -122,7 +122,7 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     /**
      * Retrieve the entitlement for the current user by the entitlement name.
      */
-    @Get("/profile/entitlements{/name}")
+    @Get("/users/me/entitlements{/name}")
     Entitlement|HttpStatus findProfileEntitlement(String name) {
         Int userId = session?.principal?.principalId : assert;
 
@@ -135,7 +135,7 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
      *
      * @param permText  a comma-delimited list of permissions (e.g.: "GET:/,*:/.well_known")
      */
-    @Post("/profile/entitlements{/entitlementId}/permissions")
+    @Post("/users/me/entitlements{/entitlementId}/permissions")
     Entitlement|HttpStatus setProfileEntitlementPermission(Int entitlementId, @BodyParam String permText) {
         Principal principal = session?.principal? : assert;
         Int       userId    = principal.principalId;
@@ -162,7 +162,7 @@ service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     /**
      * Delete the entitlement for the current user.
      */
-    @Delete("/profile/entitlements{/entitlementId}")
+    @Delete("/users/me/entitlements{/entitlementId}")
     HttpStatus deleteProfileEntitlement(Int entitlementId) {
         Int userId = session?.principal?.principalId : assert;
 

@@ -14,7 +14,7 @@ class UserManagement {
     // ----- "self management" operations ----------------------------------------------------------
 
     @Command("user", "Show current user")
-    String getUser() = auth.get($"{Path}/profile");
+    String getUser() = auth.get($"{Path}/users/me");
 
     @Command("password", "Change password for current user")
     void changePassword(String oldPassword = "", String newPassword = "") {
@@ -42,7 +42,7 @@ class UserManagement {
         String b64New = Base64Format.Instance.encode(newPassword.utf8());
 
         RequestOut request = Gateway.createRequest(PATCH,
-                $"{Path}/profile/password", $"{b64Old}:{b64New}", Text);
+                $"{Path}/users/me/password", $"{b64Old}:{b64New}", Text);
 
         (_, HttpStatus status) = Gateway.send(request);
         if (status == OK) {
@@ -54,26 +54,26 @@ class UserManagement {
 
     @Command("create-my-entitlement", "Create an entitlement for the current user")
     String createMyEntitlement(String name) {
-        String key = auth.post($"{Path}/profile/entitlements/{name}");
+        String key = auth.post($"{Path}/users/me/entitlements/{name}");
 
         console.print("Make sure to copy your entitlement token now. You won’t be able to see it again!");
         return key;
     }
 
     @Command("list-my-entitlements", "Find the entitlement for the current user by name")
-    String listMyEntitlements() = auth.get($"{Path}/profile/entitlements");
+    String listMyEntitlements() = auth.get($"{Path}/users/me/entitlements");
 
     @Command("find-my-entitlement", "Find the entitlement for the current user by name")
-    String findMyEntitlement(String name) = auth.get($"{Path}/profile/entitlements/{name}");
+    String findMyEntitlement(String name) = auth.get($"{Path}/users/me/entitlements/{name}");
 
     @Command("set-my-entitlement-permissions", "Set the permission for the current user entitlement")
     String addMyEntitlementPermission(Int entitlementId,
                               @Desc("Comma delimited list of permissions") String permText) =
-            auth.post($"{Path}/profile/entitlements/{entitlementId}/permissions", permText, Text);
+            auth.post($"{Path}/users/me/entitlements/{entitlementId}/permissions", permText, Text);
 
     @Command("delete-my-entitlement", "Delete the entitlement for the current user")
     String deleteMyEntitlement(Int entitlementId) =
-            auth.delete($"{Path}/profile/entitlements/{entitlementId}");
+            auth.delete($"{Path}/users/me/entitlements/{entitlementId}");
 
     // ----- user management operations ------------------------------------------------------------
 

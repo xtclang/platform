@@ -20,19 +20,19 @@ import DigestCredential.Hash;
 import DigestCredential.sha512_256;
 
 /**
- * The `AuthEndPoint` is a [WebService] wrapper around an [Authenticator] that uses a [DBRealm].
+ * The `UserEndpoint` is a [WebService] wrapper around an [Authenticator] that uses a [DBRealm].
  *
  * It provides out-the-box REST API to manage the underlying [auth database](AuthSchema).
  */
-@WebService("/.well-known/auth")
+@WebService("/.well-known/auth/mgmt")
 @LoginRequired
 @SessionRequired
-service AuthEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
+service UserEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
         implements Authenticator, WebService.ExtrasAware
         delegates Authenticator - Duplicable(authenticator) {
 
     @Override
-    construct(AuthEndpoint that) {
+    construct(UserEndpoint that) {
         this.app           = that.app;
         this.realm         = that.realm;
         this.authenticator = that.authenticator;

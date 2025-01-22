@@ -2,7 +2,7 @@
  * This module contains an REST API endpoint that provides user authentication management
  * functionality to web applications that are hosted on the platform.
  *
- * Additionally, it contains a command line tool that communicates with the [AuthEndpoint] web
+ * Additionally, it contains a command line tool that communicates with the [UserEndpoint] web
  * service. To run it, use the following command:
  *
  *      xec auth.xqiz.it [server URI]

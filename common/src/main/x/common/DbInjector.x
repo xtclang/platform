@@ -24,7 +24,7 @@ import model.AppInfo;
 import model.Injections;
 import model.WebAppInfo;
 
-import platformAuth.AuthEndpoint;
+import platformAuth.UserEndpoint;
 
 /**
  * HostInjector that is aware of the databases to be injected.
@@ -153,7 +153,7 @@ service DbInjector
                     DBRealm realm  = new DBRealm(appInfo.deployment,
                                                  rootSchema=db, initConfig=initConfig);
                     // allow both digest (principal) and token based (entitlements) authentication
-                    Authenticator authenticator = new AuthEndpoint(webApp, realm,
+                    Authenticator authenticator = new UserEndpoint(webApp, realm,
                         new ChainAuthenticator(realm, [
                             new DigestAuthenticator(realm),
                             new TokenAuthenticator(realm),

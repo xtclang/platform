@@ -75,11 +75,11 @@ module platformUI.xqiz.it {
         HostInfo route = new HostInfo(hostName);
 
         import challenge.AcmeChallenge;
-        import platformAuth.AuthEndpoint;
+        import platformAuth.UserEndpoint;
         import web.security.NeverAuthenticator;
         HttpHandler.CatalogExtras extras =
             [
-            AuthEndpoint  = () -> new AuthEndpoint(this, realm, new NeverAuthenticator(this)),
+            UserEndpoint  = () -> new UserEndpoint(this, realm, new NeverAuthenticator(this)),
             AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure()),
             ];
 

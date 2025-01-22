@@ -1,5 +1,5 @@
 /**
- * Web CLI commands for auth user management (see [AuthEndpoint] web service).
+ * Web CLI commands for auth user management (see [UserEndpoint] web service).
  */
 import webcli.*;
 
@@ -7,9 +7,9 @@ class UserManagement {
     @Inject Console console;
 
     /**
-     * The URI of the [AuthEndpoint] web service.
+     * The URI of the [UserEndpoint] web service.
      */
-    static String Path = "/.well-known/auth";
+    static String Path = "/.well-known/auth/mgmt";
 
     // ----- "self management" operations ----------------------------------------------------------
 

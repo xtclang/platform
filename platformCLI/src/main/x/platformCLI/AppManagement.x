@@ -21,9 +21,7 @@ class AppManagement {
 
                 assert Doc moduleName := info.get("moduleName");
                 buf.append($"{deployment}: {moduleName}");
-                if (Doc hostName := info.get("hostName")) {
-                    buf.append(", hostName=").append(hostName);
-                }
+                buf.append(", hostName=").append(info.get("hostName")?);
                 Boolean started = info.getOrDefault("autoStart", False).as(Boolean);
                 if (started) {
                     Boolean active = info.getOrDefault("active", False).as(Boolean);

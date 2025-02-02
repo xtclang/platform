@@ -200,8 +200,7 @@ service AppEndpoint
             return new SimpleResponse(Conflict, key);
         }
 
-        assert String value := appInfo.injections.get(key);
-        return new SimpleResponse(OK, value);
+        return new SimpleResponse(OK, appInfo.injections.get(key) ?: assert);
     }
 
     /**
@@ -528,9 +527,7 @@ service AppEndpoint
             return new SimpleResponse(NotFound, $"Account '{accountName}' is missing");
         }
 
-        if (AppInfo appInfo := accountInfo.apps.get(deployment)) {
-            return appInfo;
-        }
+        return accountInfo.apps.get(deployment)?;
         return new SimpleResponse(NotFound, $"Unknown deployment '{deployment}'");
     }
 

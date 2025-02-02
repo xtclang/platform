@@ -34,8 +34,5 @@ service CoreService {
     /**
      * The current account name.
      */
-    String accountName.get() {
-        assert SessionData session := this.session.is(SessionData);
-        return session.accountName;
-    }
+    String accountName.get() = this.session.is(SessionData)?.accountName : assert;
 }

@@ -71,8 +71,17 @@ package utils {
             injector = new HostInjector(appInfo, deployDir, platform, injections);
         }
 
+        Module[] sharedModules = [];
+        if (appInfo.is(WebAppInfo)?.useAuth) {
+            // for UserEndpoint (which is an injected Authenticator) to work as a web service, it
+            // needs to be a part of the TypeSystem
+            assert Module authModule := platformAuth.isModuleImport();
+            sharedModules = [authModule];
+        }
+
         try {
-            Container container = new Container(template, Lightweight, repository, injector);
+            Container container = new Container(template, Lightweight, repository, injector,
+                                                sharedModules=sharedModules);
             injector.hostedContainer = container;
             return True, container, dbHosts;
         } catch (Exception e) {

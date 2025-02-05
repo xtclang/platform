@@ -46,7 +46,7 @@ service UserEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     // ----- ExtrasAware interface -----------------------------------------------------------------
 
     @Override
-    (Duplicable+WebService)[] extras.get() = [&this.maskAs(Duplicable+WebService)];
+    (Duplicable+WebService)[] extras.get() = [this];
 
     // ----- "self management" operations ----------------------------------------------------------
 

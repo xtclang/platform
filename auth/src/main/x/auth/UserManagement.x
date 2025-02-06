@@ -41,10 +41,8 @@ class UserManagement {
         String b64Old = Base64Format.Instance.encode(oldPassword.utf8());
         String b64New = Base64Format.Instance.encode(newPassword.utf8());
 
-        RequestOut request = Gateway.createRequest(PATCH,
-                $"{Path}/users/me/password", $"{b64Old}:{b64New}", Text);
+        (_, HttpStatus status) = auth.patch($"{Path}/users/me/password", $"{b64Old}:{b64New}", Text);
 
-        (_, HttpStatus status) = Gateway.send(request);
         if (status == OK) {
             Gateway.resetClient(uriString=Gateway.serverUri(), authString=$"admin:{newPassword}");
         } else {

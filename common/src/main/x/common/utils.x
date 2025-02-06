@@ -12,6 +12,11 @@ import ecstasy.reflect.TypeTemplate;
 
 import ecstasy.text.Log;
 
+import conv.formats.Base64Format;
+
+import crypto.Decryptor;
+import crypto.KeyStore;
+
 import model.DbAppInfo;
 import model.WebAppInfo;
 
@@ -65,17 +70,8 @@ package utils {
             injector = new HostInjector(appHost);
         }
 
-        Module[] sharedModules = [];
-        if (appHost.appInfo.is(WebAppInfo)?.useAuth) {
-            // for UserEndpoint (which is an injected Authenticator) to work as a web service, it
-            // needs to be a part of the TypeSystem
-            assert Module authModule := platformAuth.isModuleImport();
-            sharedModules = [authModule];
-        }
-
         try {
-            Container container = new Container(template, Lightweight, repository, injector,
-                                                sharedModules=sharedModules);
+            Container container = new Container(template, Lightweight, repository, injector);
             injector.hostedContainer = container;
             return True, container, dbHosts;
         } catch (Exception e) {
@@ -176,7 +172,6 @@ package utils {
         return size;
     }
 
-
     /**
      * Assemble a module repository for the specified account lib directory.
      */
@@ -207,5 +202,31 @@ package utils {
                                .map(ikey -> new Key(ikey.name, ikey.type.toString())).toArray();
     }
 
+    /**
+     * Create a decryptor using the well-known encryption key name in the specified keystore.
+     */
+     static Decryptor createDecryptor(KeyStore keystore) {
+        assert crypto.CryptoKey key := keystore.getKey(names.PasswordEncryptionKey) as
+                $"Key {names.PasswordEncryptionKey} is missing in the keystore";
+
+        @Inject crypto.Algorithms algorithms;
+        return algorithms.decryptorFor("AES", key) ?: assert;
+     }
+
+    /**
+     * Encrypt a string value into a Base64 encrypted value.
+     */
+    static String encrypt(Decryptor decryptor, String value) =
+        Base64Format.Instance.encode(decryptor.encrypt(value.utf8()));
+
+    /**
+     * Decrypt a Base64 encrypted string value.
+     */
+    static String decrypt(Decryptor decryptor, String value) =
+        decryptor.decrypt(Base64Format.Instance.decode(value)).unpackUtf8();
+
+    /**
+     * A "new line" character as a Byte[].
+     */
     static Byte[] NewLine = ['\n'.toByte()];
 }

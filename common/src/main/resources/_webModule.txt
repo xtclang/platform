@@ -1,6 +1,7 @@
 module %appName%_web%qualifier% {
     package web_   import web.xtclang.org;
     package xenia_ import xenia.xtclang.org;
+   %useAuth% package auth_  import auth.xqiz.it;
 
     package hosted_ import %appName%%qualifier%;
 
@@ -8,8 +9,14 @@ module %appName%_web%qualifier% {
             web_.http.HostInfo route,
             Map<Class<web_.WebService>, web_.WebService.Constructor> extras = []) {
 
+       %useAuth% Map<Class<web_.WebService>, web_.WebService.Constructor> extras_ = new ListMap();
+       %useAuth% for ((Class<web_.WebService> clz, web_.WebService.Constructor svc) : extras) {
+       %useAuth%     extras_.put(clz, svc);
+       %useAuth% }
+       %useAuth% extras_.put(auth_.OAuthCallback, () -> new auth_.OAuthCallback());
+       %useAuth% extras = extras_.freeze(inPlace=True);
         return new xenia_.HttpHandler(route, hostedWebApp_(), extras);
-    }
+        }
 
     web_.WebApp hostedWebApp_() {
         assert Module webApp := hosted_.isModuleImport(), webApp.is(web_.WebApp);

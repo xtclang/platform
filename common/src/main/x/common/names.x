@@ -4,9 +4,9 @@
 package names {
 
     /**
-     * The keystore name for the platform certificates and keys.
+     * The keystore name for any of the platform managed keystores.
      */
-    static String PlatformKeyStore = "keystore.p12";
+    static String KeyStoreName = "keystore.p12";
 
     /**
      * The name of the Tls key-pair in the platform keystore.
@@ -14,13 +14,13 @@ package names {
     static String PlatformTlsKey = "platform";
 
     /**
-     * The name of the cookie encryption key in the platform keystore.
+     * The name of the cookie encryption key in any of the platform managed keystores.
      */
     static String CookieEncryptionKey = "cookies";
 
     /**
-     * The name of the password encryption key in the platform keystore. This key is used to encode
-     * various passwords before storing them in the platform DB.
+     * The name of the password encryption key in any of the platform managed keystore. This key is
+     * used to encode various passwords before storing them in the corresponding DB.
      */
     static String PasswordEncryptionKey = "passwords";
 
@@ -28,5 +28,4 @@ package names {
      * The platform Realm name.
      */
     static String PlatformRealm = "platform";
-
 }

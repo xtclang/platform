@@ -2,6 +2,7 @@
  * The module for all platform APIs.
  */
 module common.xqiz.it {
+    package conv    import convert.xtclang.org;
     package crypto  import crypto.xtclang.org;
     package jsondb  import jsondb.xtclang.org;
     package oodb    import oodb.xtclang.org;
@@ -10,7 +11,7 @@ module common.xqiz.it {
     package webauth import webauth.xtclang.org;
     package xenia   import xenia.xtclang.org;
 
-    package platformAuth  import auth.xqiz.it;
+    package platformAuth import auth.xqiz.it;
 
     import ecstasy.text.SimpleLog;
 

@@ -65,7 +65,7 @@ service UserEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     HttpStatus changePassword(Session session, @BodyParam String passwords) {
         Principal principal = session.principal? : assert;
 
-        assert Int delim := passwords.indexOf(':');
+        assert Int delim := passwords.indexOf(':') as "Invalid password format";
 
         String b64Old = passwords[0 ..< delim];
         String b64New = passwords.substring(delim+1);

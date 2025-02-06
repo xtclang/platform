@@ -4,11 +4,12 @@ import ecstasy.reflect.ModuleTemplate;
 
 import ecstasy.text.Log;
 
+import model.WebAppInfo;
 
 /**
  * The ModuleGenerator for a hosted web module.
  */
-class ModuleGenerator(ModuleTemplate webModule) {
+class ModuleGenerator(ModuleTemplate webModule, WebAppInfo appInfo) {
     /**
      * The underlying WebModule template.
      */
@@ -58,7 +59,7 @@ class ModuleGenerator(ModuleTemplate webModule) {
 
         File sourceFile = buildDir.fileFor($"{appName}_web.x");
 
-        if (createModule(sourceFile, appName, qualifier, errors) &&
+        if (createModule(sourceFile, appName, qualifier, appInfo, errors) &&
             compileModule(repository, sourceFile, buildDir, errors)) {
             errors.add($|Info: Created a host module "{hostName}" for "{webModule.qualifiedName}"
                       );
@@ -70,18 +71,28 @@ class ModuleGenerator(ModuleTemplate webModule) {
     /**
      * Create module source file.
      */
-    Boolean createModule(File sourceFile, String appName, String qualifier, Log errors) {
+    Boolean createModule(File sourceFile, String appName, String qualifier, WebAppInfo info,
+                         Log errors) {
+        String useAuth      = info.useAuth ? "" : " //";
         String moduleSource = moduleSourceTemplate.replace("%appName%"  , appName)
-                                                  .replace("%qualifier%", qualifier);
-        sourceFile.create();
-        sourceFile.contents = moduleSource.utf8();
-        return True;
+                                                  .replace("%qualifier%", qualifier)
+                                                  .replace("%useAuth%"  , useAuth);
+        try {
+            sourceFile.create();
+            sourceFile.contents = moduleSource.utf8();
+            return True;
+        } catch (Exception e) {
+            errors.add($|Error: Failed to create the "{sourceFile}" source; {e.message}
+                      );
+            return False;
+        }
     }
 
     /**
      * Compile the specified source file.
      */
-    Boolean compileModule(ModuleRepository repository, File sourceFile, Directory buildDir, Log errors) {
+    Boolean compileModule(ModuleRepository repository, File sourceFile, Directory buildDir,
+                          Log errors) {
         @Inject ecstasy.lang.src.Compiler compiler;
 
         compiler.setLibraryRepository(repository);

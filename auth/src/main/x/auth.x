@@ -10,6 +10,7 @@
 @webcli.TerminalApp("User Authentication Management Tool", "auth> ", auth=Password)
 module auth.xqiz.it {
     package convert import convert.xtclang.org;
+    package json    import json.xtclang.org;
     package sec     import sec.xtclang.org;
     package web     import web.xtclang.org;
     package webauth import webauth.xtclang.org;

@@ -22,6 +22,7 @@ import common.utils.CircularBuffer;
 import crypto.Certificate;
 import crypto.CertificateManager;
 import crypto.CryptoPassword;
+import crypto.Decryptor;
 import crypto.KeyStore;
 
 import web.ResponseIn;
@@ -71,12 +72,6 @@ service HostManager
      * Deployed AppHosts keyed by the deployment name.
      */
     private Map<String, AppHost> deployedHosts = new HashMap();
-
-    /**
-     * The key store name to use.
-     */
-    static String KeyStoreName = "keystore.p12";
-
 
     // ----- Controller management -----------------------------------------------------------------
 
@@ -259,16 +254,29 @@ service HostManager
     conditional Certificate ensureCertificate(String accountName, WebAppInfo appInfo,
                                               CryptoPassword pwd, Log errors,
                                               Boolean force = False) {
+
+        static void ensureEncryptionKeys(KeyStore keystore, CertificateManager manager,
+                                         File store, CryptoPassword pwd) {
+            for (String name : [names.CookieEncryptionKey, names.PasswordEncryptionKey]) {
+                if (!keystore.getKey(name)) {
+                    manager.createSymmetricKey(store, pwd, name);
+                }
+            }
+        }
+
         (Directory homeDir, Boolean newHome) =
                 ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
 
         String  hostName = appInfo.hostName;
-        File    store    = homeDir.fileFor(KeyStoreName);
+        File    store    = homeDir.fileFor(names.KeyStoreName);
         Boolean newStore = !store.exists;
 
         try {
             if (!newStore && !force) {
                 @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+                @Inject(opts=appInfo.provider) CertificateManager manager;
+
+                ensureEncryptionKeys(keystore, manager, store, pwd);
 
                 CheckValid:
                 if (Certificate cert := keystore.getCertificate(hostName)) {
@@ -282,20 +290,17 @@ service HostManager
                 }
             }
 
-            // create or renew the certificate
             @Inject(opts=appInfo.provider) CertificateManager manager;
-            if (newStore) {
-                // create a new store with a cookie encryption key
-                manager.createSymmetricKey(store, pwd, names.CookieEncryptionKey);
-            }
 
-            // use the host name as a name for the certificate
+            // create or renew the certificate using the host name as its name (alias)
             String dName = CertificateManager.distinguishedName(hostName,
                                 org=accountName, orgUnit=appInfo.deployment);
             manager.createCertificate(store, pwd, hostName, dName);
 
             @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
             assert Certificate cert := keystore.getCertificate(hostName), cert.valid;
+
+            ensureEncryptionKeys(keystore, manager, store, pwd);
 
             log(homeDir, $|{newStore ? "Created" : "Renewed"} a certificate for "{hostName}"
                           );
@@ -321,7 +326,7 @@ service HostManager
     @Override
     void addStubRoute(String accountName, WebAppInfo appInfo, CryptoPassword? pwd = Null) {
         Directory homeDir  = ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
-        File      store    = homeDir.fileFor(KeyStoreName);
+        File      store    = homeDir.fileFor(names.KeyStoreName);
         String    hostName = appInfo.hostName;
 
         import challenge.AcmeChallenge;
@@ -368,7 +373,7 @@ service HostManager
 
         String    deployment = webAppInfo.deployment;
         Directory homeDir    = ensureDeploymentHomeDirectory(accountName, deployment);
-        File      store      = homeDir.fileFor(KeyStoreName);
+        File      store      = homeDir.fileFor(names.KeyStoreName);
 
         KeyStore keystore;
         try {
@@ -384,11 +389,11 @@ service HostManager
         String   hostName = webAppInfo.hostName;
         HostInfo route    = new HostInfo(hostName);
 
-        // by convention, the "root" directory for ACME challenges is a ".challenge" sub-directory
-        // of the directory containing the keystore itself, which in our case is `homeDir`
         import challenge.AcmeChallenge;
         HttpHandler.CatalogExtras extras =
             [
+            // by internal convention, the "root" directory for ACME challenges is a ".challenge"
+            // sub-directory of the directory containing the keystore, which in our case is `homeDir`
             AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure())
             ];
 
@@ -418,10 +423,12 @@ service HostManager
             sharedDbHosts.freeze(inPlace=True);
         }
 
-        function void() addStubRoute = &addStubRoute(accountName, webAppInfo, storePwd);
+        Decryptor       secretsDecryptor = utils.createDecryptor(keystore);
+        function void() addStubRoute     = &addStubRoute(accountName, webAppInfo, storePwd);
 
         WebHost webHost = new WebHost(route, accountName, repository, webAppInfo, homeDir, buildDir,
-                                      sharedDbHosts, challengeApp, extras, addStubRoute);
+                                      sharedDbHosts, challengeApp, extras,
+                                      secretsDecryptor, addStubRoute);
         deployedHosts.put(deployment, webHost);
         httpServer.addRoute(hostName, webHost, keystore,
                 tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
@@ -460,7 +467,7 @@ service HostManager
     void removeWebDeployment(String accountName, WebAppInfo webAppInfo, CryptoPassword storePwd) {
         // remove the deployment data
         Directory homeDir  = ensureDeploymentHomeDirectory(accountName, webAppInfo.deployment);
-        File      store    = homeDir.ensure().fileFor(KeyStoreName);
+        File      store    = homeDir.ensure().fileFor(names.KeyStoreName);
         String    hostName = webAppInfo.hostName;
 
         try {

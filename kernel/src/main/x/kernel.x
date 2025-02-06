@@ -39,9 +39,7 @@ module kernel.xqiz.it {
 
     import platformDB.Connection;
 
-    import crypto.Algorithms;
     import crypto.CertificateManager;
-    import crypto.CryptoKey;
     import crypto.CryptoPassword;
     import crypto.Decryptor;
     import crypto.KeyStore;
@@ -112,7 +110,7 @@ module kernel.xqiz.it {
             assert String hostName := dName.splitMap().get("CN"), hostName.count('.') >= 2
                     as "Invalid \"dName\" configuration value";
 
-            File storeFile = platformDir.fileFor(names.PlatformKeyStore);
+            File storeFile = platformDir.fileFor(names.KeyStoreName);
             if (storeFile.exists) {
                 // check if both cookie and password encryption keys exist
                 @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
@@ -141,11 +139,8 @@ module kernel.xqiz.it {
                 }
 
             @Inject(opts=new KeyStore.Info(storeFile.contents, password)) KeyStore keystore;
-            assert CryptoKey key := keystore.getKey(names.PasswordEncryptionKey) as
-                                    $"Key {names.PasswordEncryptionKey} is missing in the keystore";
 
-            @Inject Algorithms algorithms;
-            assert Decryptor decryptor := algorithms.decryptorFor("AES", key);
+            Decryptor decryptor = utils.createDecryptor(keystore);
 
             // initialize the account manager; it's inside the kernel for now, but we need to
             // consider creating a separate container for it

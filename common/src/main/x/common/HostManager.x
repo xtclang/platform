@@ -20,7 +20,6 @@ interface HostManager {
      */
     Int activeAppThreshold;
 
-
     // ----- WebHost management --------------------------------------------------------------------
 
     /**
@@ -38,17 +37,15 @@ interface HostManager {
      * Ensure a "lib" directory for the specified account (e.g. "~/xqiz.it/accounts/self/lib").
      * This is the repository for Ecstasy modules that belong to the account.
      */
-    Directory ensureAccountLibDirectory(String accountName) {
-        return ensureAccountHomeDirectory(accountName).dirFor("lib").ensure();
-    }
+    Directory ensureAccountLibDirectory(String accountName) =
+            ensureAccountHomeDirectory(accountName).dirFor("lib").ensure();
 
     /**
      * Ensure a "build" directory for the specified account (e.g. "~/xqiz.it/accounts/self/build").
      * This is the internal storage for files and modules that are auto-generated for the account.
      */
-    Directory ensureAccountBuildDirectory(String accountName) {
-        return ensureAccountHomeDirectory(accountName).dirFor("build").ensure();
-    }
+    Directory ensureAccountBuildDirectory(String accountName) =
+            ensureAccountHomeDirectory(accountName).dirFor("build").ensure();
 
     /**
      * Ensure a "home" directory for the specified account and deployment
@@ -76,7 +73,6 @@ interface HostManager {
      * Remove the specified [AppHost].
      */
     void removeHost(AppHost host);
-
 
     // ----- WebApp management ---------------------------------------------------------------------
 
@@ -133,13 +129,12 @@ interface HostManager {
      * @return (conditional) the WebHost for the newly loaded Container
      */
     conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo,
-                                      CryptoPassword storePwdwd, Log errors);
+                                      CryptoPassword storePwd, Log errors);
 
     /**
      * Remove the specified deployment.
      */
     void removeWebDeployment(String accountName, WebAppInfo webAppInfo, CryptoPassword storePwd);
-
 
     // ----- DB App management ---------------------------------------------------------------------
 
@@ -171,7 +166,6 @@ interface HostManager {
      * Remove the specified deployment.
      */
     void removeDbDeployment(String accountName, DbAppInfo dbAppInfo);
-
 
     // ----- lifecycle -----------------------------------------------------------------------------
 

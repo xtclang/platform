@@ -20,33 +20,22 @@ import web.security.TokenAuthenticator;
 import webauth.Configuration;
 import webauth.DBRealm;
 
-import model.AppInfo;
-import model.Injections;
 import model.WebAppInfo;
 
 import platformAuth.UserEndpoint;
 
 /**
  * HostInjector that is aware of the databases to be injected.
+ *
+ * @param appHost  the [AppHost] for the hosted container
+ * @param dbHosts  the array of [DbHost]s for databases the Injector should be able to provide
+ *                 connections to
  */
-service DbInjector
-        extends HostInjector {
+service DbInjector(AppHost appHost, DbHost[] dbHosts)
+        extends HostInjector(appHost) {
 
-    /**
-     * Construct a DbInjector.
-     *
-     * @param appInfo     [AppInfo] for the hosted module
-     * @param dbHosts     the array of [DbHost]s for databases the Injector should be able to provide
-     *                    connections to
-     * @param deployDir   the "home" directory for the deployment
-     *                    (e.g. "~/xqiz.it/accounts/self/deploy/shopping")
-     * @param injections  the custom injections
-     */
-    construct(AppInfo appInfo, DbHost[] dbHosts, Directory deployDir, Injections injections) {
+    assert() {
         assert !dbHosts.empty;
-        this.dbHosts = dbHosts;
-
-        construct HostInjector(appInfo, deployDir, False, injections);
     }
 
     typedef function Connection(DBUser) as ConnectionFactory;
@@ -64,10 +53,7 @@ service DbInjector
     /**
      * The DBUser to use for creating connections.
      */
-    @Lazy DBUser user.calc() = new User(1, appInfo.deployment);
-
-    @Override
-    AppInfo appInfo.get() = super().as(AppInfo);
+    @Lazy DBUser user.calc() = new User(1, appHost.appInfo?.deployment : assert);
 
     @Override
     Supplier getResource(Type type, String name) {
@@ -101,7 +87,7 @@ service DbInjector
         switch (type, name) {
         case (Authenticator?, "authenticator"):
             return (InjectedRef.Options opts) -> {
-                if (WebAppInfo appInfo := this.appInfo.is(WebAppInfo), appInfo.useAuth) {
+                if (WebAppInfo appInfo := appHost.appInfo.is(WebAppInfo), appInfo.useAuth) {
 
                     Configuration initConfig = new Configuration(
                         initUserPass = ["admin"="password"],

@@ -435,37 +435,35 @@ service AppEndpoint
             return appInfo;
         }
 
-        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
-        Map<String, ModuleInfo> modules = accountInfo.modules;
-
-        assert ModuleInfo webModuleInfo := modules.get(appInfo.moduleName);
-
-        if (DbHost dbHost := hostManager.getDbHost(dbDeployment)) {
-            String dbModuleName = dbHost.moduleName;
-            if (!webModuleInfo.dependsOn(dbModuleName)) {
-                return new SimpleResponse(Conflict,
-                    $|Deployment: "{deployment}" does not have a dependency on the database \
-                    |"{dbModuleName}"
-                    );
-            }
-
-            if (hostManager.getWebHost(deployment)) {
-                return new SimpleResponse(Conflict,
-                    $|Deployment: "{deployment}" is currently active and needs to be stopped
-                    );
-            }
-
-            String[] sharedDBs = appInfo.sharedDBs;
-            if (!sharedDBs.contains(dbDeployment)) {
-                sharedDBs += dbDeployment;
-            }
-            appInfo = appInfo.with(sharedDBs=sharedDBs);
-            accountManager.addOrUpdateApp(accountName, appInfo);
-            return appInfo.redact();
-        } else {
-            return new SimpleResponse(Conflict,
-                $"Unknown dependent module deployment: {dbDeployment.quoted()}");
+        (DbAppInfo|SimpleResponse) dbInfo = getDbInfo(dbDeployment);
+        if (dbInfo.is(SimpleResponse)) {
+            return dbInfo;
         }
+
+        assert AccountInfo accountInfo   := accountManager.getAccount(accountName);
+        assert ModuleInfo  webModuleInfo := accountInfo.modules.get(appInfo.moduleName);
+
+        String dbModuleName = dbInfo.moduleName;
+        if (!webModuleInfo.dependsOn(dbModuleName)) {
+            return new SimpleResponse(Conflict,
+                $|Deployment: "{deployment}" does not have a dependency on the database \
+                 |"{dbModuleName}"
+                );
+        }
+
+        if (hostManager.getWebHost(deployment)) {
+            return new SimpleResponse(Conflict,
+                $|Deployment: "{deployment}" is currently active and needs to be stopped
+                );
+        }
+
+        String[] sharedDBs = appInfo.sharedDBs;
+        if (!sharedDBs.contains(dbDeployment)) {
+            sharedDBs += dbDeployment;
+        }
+        appInfo = appInfo.with(sharedDBs=sharedDBs);
+        accountManager.addOrUpdateApp(accountName, appInfo);
+        return appInfo.redact();
     }
 
     /**

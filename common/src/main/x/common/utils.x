@@ -12,9 +12,7 @@ import ecstasy.reflect.TypeTemplate;
 
 import ecstasy.text.Log;
 
-import model.AppInfo;
 import model.DbAppInfo;
-import model.Injections;
 import model.WebAppInfo;
 
 /**
@@ -37,12 +35,6 @@ package utils {
     static conditional (Container, AppHost[]) createContainer(
             ModuleRepository repository, ModuleTemplate template, AppHost appHost, Log errors) {
 
-        AppInfo?   appInfo    = appHost.appInfo;
-        Directory  deployDir  = appHost.homeDir;
-        Directory  buildDir   = appHost.buildDir;
-        Boolean    platform   = appHost.is(KernelHost);
-        Injections injections = appInfo?.injections : [];
-
         DbHost[]     dbHosts;
         HostInjector injector;
 
@@ -51,6 +43,10 @@ package utils {
             dbHosts = new DbHost[];
 
             assert appHost.is(WebHost);
+
+            Directory deployDir = appHost.homeDir;
+            Directory buildDir  = appHost.buildDir;
+
             for (String dbModuleName : dbNames.values) {
                 DbHost dbHost;
                 if (!(dbHost := appHost.findSharedDbHost(dbModuleName))) {
@@ -63,15 +59,14 @@ package utils {
             }
             dbHosts.makeImmutable();
 
-            assert appInfo != Null; // platform modules don't inject the DB
-            injector = new DbInjector(appInfo, dbHosts, deployDir, injections);
+            injector = new DbInjector(appHost, dbHosts);
         } else {
             dbHosts  = [];
-            injector = new HostInjector(appInfo, deployDir, platform, injections);
+            injector = new HostInjector(appHost);
         }
 
         Module[] sharedModules = [];
-        if (appInfo.is(WebAppInfo)?.useAuth) {
+        if (appHost.appInfo.is(WebAppInfo)?.useAuth) {
             // for UserEndpoint (which is an injected Authenticator) to work as a web service, it
             // needs to be a part of the TypeSystem
             assert Module authModule := platformAuth.isModuleImport();

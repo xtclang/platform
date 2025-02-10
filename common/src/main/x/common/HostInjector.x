@@ -22,8 +22,12 @@ import model.WebAppInfo;
 /**
  * The ResourceProvider used for hosted containers.
  */
-service HostInjector(AppInfo? appInfo, Directory appHomeDir, Boolean platform, Injections injections)
+service HostInjector(AppHost appHost)
         implements ResourceProvider {
+    /**
+     * The AppHost that represents the hosted container.
+     */
+    protected AppHost appHost;
 
     /**
      * The hosted container.
@@ -34,15 +38,20 @@ service HostInjector(AppInfo? appInfo, Directory appHomeDir, Boolean platform, I
     @Unassigned Container hostedContainer;
 
     /**
+     * Indicator of a kernel module.
+     */
+    Boolean platform.get() = appHost.is(KernelHost);
+
+    /**
      * The [FileStore] allocated for the hosted container.
      */
-    @Lazy FileStore store.calc() = new ecstasy.fs.DirectoryFileStore(appHomeDir);
+    @Lazy FileStore store.calc() = new ecstasy.fs.DirectoryFileStore(appHost.homeDir);
 
     /**
      * The [Console] for the hosted container.
      */
     @Lazy ConsoleImpl consoleImpl.calc() {
-        File consoleFile = appHomeDir.fileFor("console.log");
+        File consoleFile = appHost.homeDir.fileFor("console.log");
         if (consoleFile.exists) {
             // remove the old content
             consoleFile.truncate(0);
@@ -179,8 +188,7 @@ service HostInjector(AppInfo? appInfo, Directory appHomeDir, Boolean platform, I
 
         case (Broker?, "sessionBroker"):
             return (InjectedRef.Options opts) -> {
-                AppInfo? appInfo = this.appInfo;
-                WebApp   webApp;
+                WebApp webApp;
                 if (platform) {
                     // platformUI (WebApp) uses CookieBroker
                     if (webApp := hostedContainer.innerTypeSystem.primaryModule.is(WebApp)) {
@@ -188,7 +196,7 @@ service HostInjector(AppInfo? appInfo, Directory appHomeDir, Boolean platform, I
                         return Null;
                     }
                 } else {
-                    if (appInfo.is(WebAppInfo) && appInfo.useCookies) {
+                    if (appHost.appInfo.is(WebAppInfo)?.useCookies) {
                         // main module is a wrapper (see _webModule.txt resource)
                         webApp = hostedContainer.invoke("hostedWebApp_")[0].as(WebApp);
                     } else {
@@ -208,7 +216,8 @@ service HostInjector(AppInfo? appInfo, Directory appHomeDir, Boolean platform, I
             }
 
             // see utils.collectDestringableInjections()
-            if (String value := injections.get(new InjectionKey(name, type.toString()))) {
+            if (AppInfo appInfo ?= appHost.appInfo,
+                String  value   := appInfo.injections.get(new InjectionKey(name, type.toString()))) {
                 assert type.is(Type<Destringable>) as $"Type is not Destringable: \"{type}\"";
                 return new type.DataType(value);
             }

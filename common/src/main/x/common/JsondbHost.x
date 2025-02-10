@@ -58,7 +58,7 @@ service JsondbHost(ModuleRepository repository, String moduleName, DbAppInfo? ap
                 return False;
             }
 
-            HostInjector injector  = new HostInjector(appInfo, homeDir, False, injections);
+            HostInjector injector  = new HostInjector(this);
             Container    container = new Container(template, Lightweight, repository, injector);
 
             injector.hostedContainer = container;

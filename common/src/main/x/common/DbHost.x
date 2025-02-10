@@ -16,17 +16,12 @@ import oodb.RootSchema;
 @Abstract
 service DbHost(ModuleRepository repository, String moduleName, DbAppInfo? appInfo,
              Directory homeDir, Directory buildDir)
-        extends AppHost(moduleName, appInfo, homeDir) {
+        extends AppHost(moduleName, appInfo, homeDir, buildDir) {
 
     /**
      * The module repository to use.
      */
     protected ModuleRepository repository;
-
-    /**
-     * The build directory.
-     */
-    protected Directory buildDir;
 
     /**
      * True iff the DbHost is a standalone host shared by multiple web applications.

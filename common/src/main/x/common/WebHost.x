@@ -28,7 +28,7 @@ import common.model.WebAppInfo;
 service WebHost(HostInfo route, String account, ModuleRepository repository, WebAppInfo appInfo,
                 CryptoPassword pwd, Map<String, DbHost> sharedDbHosts, WebApp challengeApp,
                 CatalogExtras extras, Directory homeDir, Directory buildDir)
-        extends AppHost(appInfo.moduleName, appInfo, homeDir)
+        extends AppHost(appInfo.moduleName, appInfo, homeDir, buildDir)
         implements Handler {
 
     @Override
@@ -70,11 +70,6 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
      * @see [HttpHandler]
      */
     protected CatalogExtras extras;
-
-    /**
-     * The build directory.
-     */
-    protected Directory buildDir;
 
     /**
      * The AppHosts for the containers this module depends on.
@@ -127,7 +122,6 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
      */
     static Int MaxDeferredRequests = 50;
 
-
     // ----- AppHost methods -----------------------------------------------------------------------
 
     /*
@@ -164,8 +158,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
                 ensureWebModule(repository, buildDir, errors)) {
 
             if ((Container container, dependencies) :=
-                    utils.createContainer(repository, webTemplate, appInfo, homeDir, buildDir,
-                                          False, appInfo.injections, sharedDbHosts.get, errors)) {
+                    utils.createContainer(repository, webTemplate, this, errors)) {
                 try {
                     Tuple       result  = container.invoke("createHandler_", Tuple:(route, extras));
                     HttpHandler handler = result[0].as(HttpHandler);
@@ -275,8 +268,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
         }
     }
 
-
-    // ----- Handler -------------------------------------------------------------------------------
+    // ----- Handler interface ---------------------------------------------------------------------
 
     /**
      * This method is duck-typed into the Handler to support cookie encryption.
@@ -320,6 +312,13 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
         request.observe((_) -> {--pendingRequests;});
         handler.handle^(request);
     }
+
+    // ----- Helper methods ------------------------------------------------------------------------
+
+    /**
+     * Find a shared DbHost for the specified name
+     */
+    conditional DbHost findSharedDbHost(String dbModuleName) = sharedDbHosts.get(dbModuleName);
 
     // ----- Closeable -----------------------------------------------------------------------------
 

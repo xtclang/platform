@@ -8,7 +8,7 @@ import model.AppInfo;
  * A host for an application module.
  */
 @Abstract
-class AppHost(String moduleName, AppInfo? appInfo, Directory homeDir)
+class AppHost(String moduleName, AppInfo? appInfo, Directory homeDir, Directory buildDir)
         implements Closeable {
     /**
      * The Container that hosts the module; always 'Null' for child hosts.
@@ -29,6 +29,11 @@ class AppHost(String moduleName, AppInfo? appInfo, Directory homeDir)
      * The home directory.
      */
     public/protected Directory homeDir;
+
+    /**
+     * The build directory for auto-generated artifacts.
+     */
+    public/protected Directory buildDir;
 
     /**
      * Indicates whether or not this host is ready to handle corresponding requests or needs to be

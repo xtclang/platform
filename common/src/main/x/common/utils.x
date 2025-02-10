@@ -26,14 +26,7 @@ package utils {
      *
      * @param repository  the [ModuleRepository] to load the module(s) from
      * @param template    the [ModuleTemplate] for the "main" module
-     * @param appInfo     optional [AppInfo] for the hosted module (`Null` for platform containers)
-     * @param deployDir   the "home" directory for the deployment
-     *                    (e.g. "~/xqiz.it/accounts/self/deploy/banking)"
-     * @param buildDir    the directory for auto-generated modules
-     *                    (e.g. "~/xqiz.it/accounts/self/build")
-     * @param platform    True iff the loading module is one of the "core" platform modules
-     * @param injections  the custom injections
-     * @param findDbHost  a function that may supply a shared DbHost for a given database module
+     * @param appHost     the AppHost for the newly created container
      * @param errors      the logger to report errors to
      *
      * @return True iff the container has been loaded successfully
@@ -42,9 +35,14 @@ package utils {
      *         loaded along the "main" container
      */
     static conditional (Container, AppHost[]) createContainer(
-                    ModuleRepository repository, ModuleTemplate template, AppInfo? appInfo,
-                    Directory deployDir, Directory buildDir, Boolean platform, Injections injections,
-                    function conditional DbHost(String) findDbHost, Log errors) {
+            ModuleRepository repository, ModuleTemplate template, AppHost appHost, Log errors) {
+
+        AppInfo?   appInfo    = appHost.appInfo;
+        Directory  deployDir  = appHost.homeDir;
+        Directory  buildDir   = appHost.buildDir;
+        Boolean    platform   = appHost.is(KernelHost);
+        Injections injections = appInfo?.injections : [];
+
         DbHost[]     dbHosts;
         HostInjector injector;
 
@@ -52,9 +50,10 @@ package utils {
         if (dbNames.size > 0) {
             dbHosts = new DbHost[];
 
+            assert appHost.is(WebHost);
             for (String dbModuleName : dbNames.values) {
                 DbHost dbHost;
-                if (!(dbHost := findDbHost(dbModuleName))) {
+                if (!(dbHost := appHost.findSharedDbHost(dbModuleName))) {
                     if (!(dbHost := createDbHost(repository, dbModuleName, Null, "jsondb",
                             deployDir, buildDir, errors))) {
                     return False;

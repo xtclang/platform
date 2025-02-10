@@ -31,6 +31,7 @@ module kernel.xqiz.it {
 
     import common.ErrorLog;
     import common.HostManager;
+    import common.KernelHost;
     import common.ProxyManager;
 
     import common.names;
@@ -186,6 +187,8 @@ module kernel.xqiz.it {
 
             @Inject(resourceName="server") HttpServer httpServer;
 
+            KernelHost pseudoHost = new KernelHost(hostDir, buildDir);
+
             // load the proxy manager (pretend it may be missing)
             ProxyManager proxyManager;
             if (proxies.empty) {
@@ -193,9 +196,9 @@ module kernel.xqiz.it {
             } else {
                 if (ModuleTemplate proxyModule := repository.getModule("proxy_manager.xqiz.it")) {
                     proxyModule = proxyModule.parent.resolve(repository).mainModule;
+
                     if (Container  container :=
-                            utils.createContainer(repository, proxyModule, Null, hostDir, buildDir,
-                                True, [], (_) -> False, errors)) {
+                            utils.createContainer(repository, proxyModule, pseudoHost, errors)) {
                         // TODO: we should either soft-code the receiver's protocol and port or
                         //       have the configuration supply the receivers' URI, from which we would
                         //       compute the proxy addresses
@@ -221,8 +224,7 @@ module kernel.xqiz.it {
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
             if (Container  container :=
-                    utils.createContainer(repository, hostModule, Null, hostDir, buildDir, True, [],
-                        (_) -> False, errors)) {
+                    utils.createContainer(repository, hostModule, pseudoHost, errors)) {
                 hostManager = container.invoke("configure",
                                 Tuple:(httpServer, accountsDir, proxyManager))[0].as(HostManager);
             } else {
@@ -234,8 +236,7 @@ module kernel.xqiz.it {
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
-                    utils.createContainer(repository, uiModule, Null, hostDir, buildDir, True, [],
-                        (_) -> False, errors)) {
+                    utils.createContainer(repository, uiModule, pseudoHost, errors)) {
                 import HttpServer.ProxyCheck;
 
                 HostInfo   binding   = new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort);

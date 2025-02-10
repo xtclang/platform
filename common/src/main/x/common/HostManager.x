@@ -126,19 +126,19 @@ interface HostManager {
      *
      * @param accountName  the account name
      * @param webAppInfo   the web application info
-     * @param pwd          the password to use for the keystore
+     * @param storePwd     the password to use for the keystore
      * @param errors       the error log
      *
      * @return True iff the WebHost was successfully created
      * @return (conditional) the WebHost for the newly loaded Container
      */
-    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd,
-                                      Log errors);
+    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo,
+                                      CryptoPassword storePwdwd, Log errors);
 
     /**
      * Remove the specified deployment.
      */
-    void removeWebDeployment(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd);
+    void removeWebDeployment(String accountName, WebAppInfo webAppInfo, CryptoPassword storePwd);
 
 
     // ----- DB App management ---------------------------------------------------------------------

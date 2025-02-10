@@ -21,13 +21,14 @@ import xenia.HttpServer.RequestInfo;
 
 import common.model.WebAppInfo;
 
-
 /**
  * AppHost for a Web module.
  */
-service WebHost(HostInfo route, String account, ModuleRepository repository, WebAppInfo appInfo,
-                CryptoPassword pwd, Map<String, DbHost> sharedDbHosts, WebApp challengeApp,
-                CatalogExtras extras, Directory homeDir, Directory buildDir)
+service WebHost(HostInfo route, String account, ModuleRepository repository,
+                WebAppInfo appInfo, Directory homeDir, Directory buildDir,
+                Map<String, DbHost> sharedDbHosts, WebApp challengeApp, CatalogExtras extras,
+                function void() addStubRoute
+                )
         extends AppHost(appInfo.moduleName, appInfo, homeDir, buildDir)
         implements Handler {
 
@@ -36,6 +37,21 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
 
     @Override
     Boolean active.get() = handler != Null;
+
+    /**
+     * The HostInfo that routes to this handler.
+     */
+    protected HostInfo route;
+
+    /**
+     * The account name this deployment belongs to.
+     */
+    public/protected String account;
+
+    /**
+     * The module repository to use.
+     */
+    protected ModuleRepository repository;
 
     /**
      * A Map of shared DBHosts keyed by their deployment names.
@@ -49,21 +65,6 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
     protected WebApp challengeApp;
 
     /**
-     * The account name this deployment belongs to.
-     */
-    public/protected String account;
-
-    /**
-     * The module repository to use.
-     */
-    protected ModuleRepository repository;
-
-    /**
-     * The password to use for the keystore.
-     */
-    public/protected CryptoPassword pwd;
-
-    /**
      * A map of WebService classes for processing requests for the paths not handled by the web app
      * itself.
      *
@@ -72,14 +73,14 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
     protected CatalogExtras extras;
 
     /**
-     * The AppHosts for the containers this module depends on.
+     * The function that is responsible for adding a stub route for this deployment.
      */
-    AppHost[] dependencies = [];
+    public/protected function void() addStubRoute;
 
     /**
-     * The HostInfo that routes to this handler.
+     * The AppHosts for the containers this module depends on.
      */
-    protected HostInfo route;
+    protected AppHost[] dependencies = [];
 
     /**
      * The underlying HttpHandler.
@@ -95,7 +96,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
     /**
      * The decryptor to be used by the underlying handler.
      */
-    protected Decryptor? decryptor;
+    protected Decryptor? cookieDecryptor;
 
     /**
      * Total request counter (serves as an activity indicator).
@@ -162,7 +163,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
                 try {
                     Tuple       result  = container.invoke("createHandler_", Tuple:(route, extras));
                     HttpHandler handler = result[0].as(HttpHandler);
-                    handler.configure(decryptor? : assert as "Decryptor is missing");
+                    handler.configure(cookieDecryptor? : assert as "Cookie decryptor is missing");
 
                     this.container = container;
                     this.handler   = handler;
@@ -274,7 +275,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository, Web
      * This method is duck-typed into the Handler to support cookie encryption.
      */
     void configure(Decryptor decryptor) {
-        this.decryptor = decryptor;
+        this.cookieDecryptor = decryptor;
     }
 
     @Override

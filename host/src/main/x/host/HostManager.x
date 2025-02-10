@@ -212,7 +212,6 @@ service HostManager
         }
     }
 
-
     // ----- common.HostManager API ----------------------------------------------------------------
 
     @Override
@@ -245,7 +244,7 @@ service HostManager
             httpServer.removeRoute(host.appInfo.hostName);
 
             // leave the webapp stub active
-            addStubRoute(host.account, host.appInfo, host.pwd);
+            host.addStubRoute();
         }
 
         String deployment = host.appInfo?.deployment : assert;
@@ -253,7 +252,6 @@ service HostManager
         activityHistogram.remove(deployment);
         checkLoad^();
     }
-
 
     // ----- WebApp management ---------------------------------------------------------------------
 
@@ -351,15 +349,15 @@ service HostManager
     }
 
     @Override
-    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd,
-                                      Log errors) {
+    conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo,
+                                      CryptoPassword storePwd, Log errors) {
         if (deployedHosts.contains(webAppInfo.deployment)) {
             errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
                       );
             return False;
         }
 
-        if (!ensureCertificate(accountName, webAppInfo, pwd, errors)) {
+        if (!ensureCertificate(accountName, webAppInfo, storePwd, errors)) {
             return False;
         }
 
@@ -374,7 +372,7 @@ service HostManager
 
         KeyStore keystore;
         try {
-            @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore ks;
+            @Inject("keystore", opts=new KeyStore.Info(store.contents, storePwd)) KeyStore ks;
             keystore = ks;
         } catch (Exception e) {
             errors.add($|Error: {store.exists ? "Corrupted" : "Missing"} keystore: "{store}"; \
@@ -420,9 +418,10 @@ service HostManager
             sharedDbHosts.freeze(inPlace=True);
         }
 
-        common.HostManager mgr = &this.maskAs(common.HostManager);
-        WebHost webHost = new WebHost(route, accountName, repository, webAppInfo, pwd,
-                                      sharedDbHosts, challengeApp, extras, homeDir, buildDir);
+        function void() addStubRoute = &addStubRoute(accountName, webAppInfo, storePwd);
+
+        WebHost webHost = new WebHost(route, accountName, repository, webAppInfo, homeDir, buildDir,
+                                      sharedDbHosts, challengeApp, extras, addStubRoute);
         deployedHosts.put(deployment, webHost);
         httpServer.addRoute(hostName, webHost, keystore,
                 tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
@@ -458,7 +457,7 @@ service HostManager
     }
 
     @Override
-    void removeWebDeployment(String accountName, WebAppInfo webAppInfo, CryptoPassword pwd) {
+    void removeWebDeployment(String accountName, WebAppInfo webAppInfo, CryptoPassword storePwd) {
         // remove the deployment data
         Directory homeDir  = ensureDeploymentHomeDirectory(accountName, webAppInfo.deployment);
         File      store    = homeDir.ensure().fileFor(KeyStoreName);
@@ -468,7 +467,7 @@ service HostManager
             // revoke the certificate (in case of a future hostName reuse)
             if (store.exists) {
                 @Inject(opts=webAppInfo.provider) CertificateManager manager;
-                manager.revokeCertificate(store, pwd, hostName);
+                manager.revokeCertificate(store, storePwd, hostName);
                 store.delete();
             }
         } catch (Exception ignore) {}
@@ -479,7 +478,6 @@ service HostManager
 
         proxyManager.removeProxyConfig^(hostName, keepLogs ? &log(homeDir) : (_) -> {});
     }
-
 
     // ----- DbApp management ----------------------------------------------------------------------
 
@@ -509,7 +507,6 @@ service HostManager
         removeFiles(homeDir, keepLogs = True); // TODO soft code?
     }
 
-
     // ----- lifecycle -----------------------------------------------------------------------------
 
     @Override
@@ -535,7 +532,6 @@ service HostManager
     void log(Directory homeDir, String message) {
         homeDir.fileFor("console.log").ensure().append($"\n{clock.now}: {message}".utf8());
     }
-
 
     // ----- helpers -------------------------------------------------------------------------------
 

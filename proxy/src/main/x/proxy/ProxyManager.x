@@ -35,20 +35,19 @@ service ProxyManager(Uri[] receivers)
     @Override
     void updateProxyConfig(KeyStore keystore, CryptoPassword pwd,
                            String keyName, String hostName, Reporting report) {
-
         @Inject CertificateManager manager;
 
-        for (Uri receiver : receivers) {
-            Byte[] bytes  = manager.extractKey(keystore, pwd, keyName);
-            String pemKey = $|-----BEGIN PRIVATE KEY-----
-                             |{Base64Format.Instance.encode(bytes, pad=True, lineLength=64)}
-                             |-----END PRIVATE KEY-----
-                             |
-                             ;
+        Byte[] bytes  = manager.extractKey(keystore, pwd, keyName);
+        String pemKey = $|-----BEGIN PRIVATE KEY-----
+                         |{Base64Format.Instance.encode(bytes, pad=True, lineLength=64)}
+                         |-----END PRIVATE KEY-----
+                         |
+                         ;
 
+        for (Uri receiver : receivers) {
             Boolean success;
             String  reason;
-            try (val t = new Timeout(receiverTimeout)) {
+            try (val _ = new Timeout(receiverTimeout)) {
                 ResponseIn response = client.put(
                         receiver.with(path=$"/nginx/{hostName}/key"), pemKey, Text);
 
@@ -84,7 +83,7 @@ service ProxyManager(Uri[] receivers)
     void removeProxyConfig(String hostName, Reporting report) {
         for (Uri receiver : receivers) {
             Boolean success;
-            try (val t = new Timeout(receiverTimeout)) {
+            try (val _ = new Timeout(receiverTimeout)) {
                 ResponseIn response = client.delete(receiver.with(path=$"/nginx/{hostName}"));
                 success = response.status == OK;
             } catch (Exception e) {

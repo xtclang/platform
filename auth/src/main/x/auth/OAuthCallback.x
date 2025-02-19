@@ -49,7 +49,6 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
 
         while (True) {
             if (session.principal != Null) {
-assert:debug;
                 // the session is already authenticated; redirect to the app page
                 redirectUrl = request.url.with(path=redirect).toString();
                 session.redirect = Null;

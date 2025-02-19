@@ -57,8 +57,9 @@ module kernel.xqiz.it {
 
     import xenia.HttpServer;
 
+    @Inject Console console;
+
     void run(String[] args=[]) {
-        @Inject Console          console;
         @Inject Directory        homeDir;
         @Inject ModuleRepository repository;
 
@@ -101,12 +102,12 @@ module kernel.xqiz.it {
 
         ErrorLog errors = new ErrorLog();
         try {
-            String      dName     = config.getOrDefault("dName", "").as(String);
-            String      provider  = config.getOrDefault("cert-provider", "self").as(String);
-            UInt16      httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
-            UInt16      httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
-            IPAddress[] proxies   = config.getOrDefault("proxies", []).as(Doc[])
-                                          .map(addr -> new IPAddress(addr.as(String))).toArray();
+            String   dName     = config.getOrDefault("dName", "").as(String);
+            String   provider  = config.getOrDefault("cert-provider", "self").as(String);
+            UInt16   httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
+            UInt16   httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
+            String[] proxies   = config.getOrDefault("proxies", []).as(Doc[])
+                                       .map(addr -> addr.as(String)).toArray();
 
             assert String hostName := dName.splitMap().get("CN"), hostName.count('.') >= 2
                     as "Invalid \"dName\" configuration value";
@@ -189,24 +190,19 @@ module kernel.xqiz.it {
 
             KernelHost pseudoHost = new KernelHost(hostDir, buildDir);
 
-            // load the proxy manager (pretend it may be missing)
+            // load the proxy manager (assume it may be missing)
             ProxyManager proxyManager;
+            IPAddress[]  proxyIPs = [];
             if (proxies.empty) {
                 proxyManager = NoProxies;
             } else {
                 if (ModuleTemplate proxyModule := repository.getModule("proxy_manager.xqiz.it")) {
                     proxyModule = proxyModule.parent.resolve(repository).mainModule;
 
-                    if (Container  container :=
+                    (Uri[] receivers, proxyIPs) = parseProxies(proxies);
+                    if (Container container :=
                             utils.createContainer(repository, proxyModule, pseudoHost, errors)) {
-                        // TODO: we should either soft-code the receiver's protocol and port or
-                        //       have the configuration supply the receivers' URI, from which we would
-                        //       compute the proxy addresses
-                        Uri[] receivers = new Uri[proxies.size]
-                                (i -> new Uri(scheme="https", ip=proxies[i], port=8091)).
-                                        freeze(inPlace=True);
-                        proxyManager = container.invoke("configure",
-                                        Tuple:(receivers))[0].as(ProxyManager);
+                        proxyManager = container.invoke("configure", Tuple:(receivers))[0].as(ProxyManager);
                     } else {
                         return;
                     }
@@ -240,9 +236,9 @@ module kernel.xqiz.it {
                 import HttpServer.ProxyCheck;
 
                 HostInfo   binding   = new HostInfo(IPAddress.IPv4Any, httpPort, httpsPort);
-                ProxyCheck isTrusted = proxies.empty
+                ProxyCheck isTrusted = proxyIPs.empty
                         ? HttpServer.NoTrustedProxies
-                        : (ip -> proxies.contains(ip));
+                        : (ip -> proxyIPs.contains(ip));
 
                 httpServer.bind(binding, isTrusted);
 
@@ -265,5 +261,38 @@ module kernel.xqiz.it {
         } finally {
             errors.reportAll(msg -> console.print(msg));
         }
+    }
+
+    private (Uri[] uris, IPAddress[] addrs) parseProxies(String[] proxies) {
+        @Inject("secureNetwork") net.Network network;
+
+        Int         count = proxies.size;
+        Uri[]       uris  = new Array<Uri>(count);
+        IPAddress[] addrs = new Array<IPAddress>(count);
+
+        for (String proxy : proxies) {
+            assert Int portOffset := proxy.lastIndexOf(':') as
+                    $"Proxy port must be specified: {proxy.quoted()}";
+            String addr = proxy[0 ..< portOffset];
+            UInt16 port = new UInt16(proxy.substring(portOffset + 1));
+
+            if (Byte[] bytes := IPAddress.parse(addr)) {
+                IPAddress ipAddr = new IPAddress(bytes);
+                addrs += ipAddr;
+
+                if (String host := network.nameService.reverseLookup(ipAddr)) {
+                    uris += new Uri(scheme="https", host=host, port=port);
+                } else {
+                    uris += new Uri(scheme="https", host=addr, port=port);
+                    console.print($"Failed to lookup the proxy name: {proxy.quoted()}");
+                }
+            } else {
+                assert IPAddress[] ips := network.nameService.resolve(addr), !ips.empty as
+                    $"Unresolvable proxy name: {proxy.quoted()}";
+                addrs += ips; // if more than one (quite rare), add them all
+                uris += new Uri(scheme="https", host=addr, port=port);
+            }
+        }
+        return uris.freeze(inPlace=True), addrs.freeze(inPlace=True);
     }
 }

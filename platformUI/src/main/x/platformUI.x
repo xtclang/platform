@@ -84,6 +84,9 @@ module platformUI.xqiz.it {
             ];
 
         if (checkCertificate(keystore, hostName, provider)) {
+            // they could have configured new proxies; need to update them just in case
+            proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName, console.&print);
+
             // schedule the next check in a week
             clock.schedule(Duration.ofDays(7), () ->
                     ensureCertificate(keystore, pwd, hostName, dName, provider, homeDir, proxyManager));

@@ -69,7 +69,7 @@ module platformUI.xqiz.it {
             throw new IllegalState($"Invalid host address: {hostName.quoted()}");
         }
 
-        File storeFile = homeDir.fileFor(names.PlatformKeyStore);
+        File storeFile = homeDir.fileFor(names.KeyStoreName);
         @Inject(opts=new KeyStore.Info(storeFile.contents, pwd)) KeyStore keystore;
 
         HostInfo route = new HostInfo(hostName);
@@ -131,9 +131,9 @@ module platformUI.xqiz.it {
             // create WebHosts for all `autoStart` web applications
             for (AppInfo appInfo : accountInfo.apps.values) {
                 if (appInfo.is(WebAppInfo)) {
-                    CryptoPassword appPwd = accountManager.decrypt(appInfo.password);
+                    CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
                     if (appInfo.autoStart) {
-                        if (hostManager.createWebHost(accountName, appInfo, appPwd, errors)) {
+                        if (hostManager.createWebHost(accountName, appInfo, storePwd, errors)) {
                             reportInitialized(appInfo, "Web");
                             continue;
                         }
@@ -141,7 +141,7 @@ module platformUI.xqiz.it {
                         reportFailedInitialization(appInfo, "Web", errors);
                     }
                     // set up the stub in either case
-                    hostManager.addStubRoute(accountName, appInfo, appPwd);
+                    hostManager.addStubRoute(accountName, appInfo, storePwd);
                 }
             }
         }
@@ -218,7 +218,7 @@ module platformUI.xqiz.it {
     @Concurrent
     void createCertificate(KeyStore keystore, CryptoPassword pwd, String hostName, String dName,
                            String provider, Directory homeDir, ProxyManager proxyManager) {
-        File storeFile = homeDir.fileFor(names.PlatformKeyStore);
+        File storeFile = homeDir.fileFor(names.KeyStoreName);
         assert storeFile.exists;
 
         Boolean exists = keystore.getCertificate(names.PlatformTlsKey);

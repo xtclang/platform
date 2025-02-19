@@ -9,14 +9,13 @@ import web.security.DigestCredential;
 import DigestCredential.Hash;
 import DigestCredential.sha512_256;
 
-
-/*
+/**
  * Dedicated service for user management.
  */
 @WebService("/user")
 service UserEndpoint
         extends CoreService {
-    /*
+    /**
      * Return the SimpleResponse with the current user id or `NoContent`.
      */
     @Get("id")
@@ -25,7 +24,7 @@ service UserEndpoint
              : new SimpleResponse(NoContent);
     }
 
-    /*
+    /**
      * Log in the specified user.
      */
     @Post("login{/userName}")
@@ -48,7 +47,7 @@ service UserEndpoint
         return new SimpleResponse(Unauthorized);
     }
 
-    /*
+    /**
      * Get the current account name.
      */
     @Get("account")
@@ -56,7 +55,7 @@ service UserEndpoint
     @SessionRequired
     String account() = accountName;
 
-    /*
+    /**
      * Log out the current user.
      */
     @Post("logout")

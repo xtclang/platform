@@ -1,3 +1,5 @@
+import ecstasy.maps.CollectImmutableMap;
+
 package model {
     typedef Int as AccountId;
     typedef Int as UserId;
@@ -81,18 +83,27 @@ package model {
         String  name,      // qualified
         Boolean available);
 
+    /**
+     * Injection key is used to store custom (Destringable) injection values.
+     */
     const InjectionKey(String name, String type);
 
+    /**
+     * Identity Provider info contains encoded clientId and clientSecret
+     */
+    const IdpInfo(String clientId, String clientSecret);
+
     typedef Map<InjectionKey, String> as Injections;
+    typedef Map<String, IdpInfo> as IdpInfos;
 
     const AppInfo(
-            String     deployment,          // the same module could be deployed multiple times
-            String     moduleName,          // qualified module name
-            Boolean    autoStart  = False,  // if True, the app should be automatically started
-            Boolean    active     = False,  // if True, the app is currently active; this flag is
-                                            // transient and is here only to simplify communications
-                                            // withe the UI
-            Injections injections = [],     // values for Destringable injection types
+            String  deployment,          // the same module could be deployed multiple times
+            String  moduleName,          // qualified module name
+            Boolean autoStart  = False,  // if True, the app should be automatically started
+            Boolean active     = False,  // if True, the app is currently active; this flag is
+                                         // transient and is here only to simplify communications
+                                         // withe the UI
+            Injections injections = [],  // values for Destringable injection types
             ) {
 
         @Abstract
@@ -134,47 +145,52 @@ package model {
     }
 
     const WebAppInfo(
-            String     deployment,          // @see AppInfo
-            String     moduleName,          // @see AppInfo
-            String     hostName,            // the full host name (e.g. "shop.acme.com.xqiz.it")
-            String     password,            // an encrypted password to the keystore for this deployment
-            String     provider   = "self", // the name of the certificate provider
-            Boolean    autoStart  = False,  // @see AppInfo
-            Boolean    active     = False,  // @see AppInfo
-            Injections injections = [],     // @see AppInfo
-            String[]   sharedDBs  = [],     // names of shared DB deployments
-            Boolean    useCookies = True,   // use CookieBroker as a session broker
-            Boolean    useAuth    = True,   // use DBRealm for authentication
+            String     deployment,           // @see AppInfo
+            String     moduleName,           // @see AppInfo
+            String     hostName,             // the full host name (e.g. "shop.acme.com.xqiz.it")
+            String     password,             // an encrypted password to the keystore for this deployment
+            String     provider    = "self", // the name of the certificate provider
+            Boolean    autoStart   = False,  // @see AppInfo
+            Boolean    active      = False,  // @see AppInfo
+            Injections injections  = [],     // @see AppInfo
+            String[]   sharedDBs   = [],     // names of shared DB deployments
+            Boolean    useCookies  = True,   // use CookieBroker as a session broker
+            Boolean    useAuth     = False,  // use DBRealm for authentication
+            IdpInfos   idProviders = [],     // IdentityProvider (via OAuth) info by provider
             )
             extends AppInfo(deployment, moduleName, autoStart, active, injections) {
 
         @Override
         WebAppInfo with(
-            Boolean?    autoStart  = Null,
-            Boolean?    active     = Null,
-            Injections? injections = Null,
-            String?     hostName   = Null,
-            String?     password   = Null,
-            String?     provider   = Null,
-            String[]?   sharedDBs  = Null,
-            Boolean?    useCookies = Null,
-            Boolean?    useAuth    = Null,
+            Boolean?    autoStart   = Null,
+            Boolean?    active      = Null,
+            Injections? injections  = Null,
+            String?     hostName    = Null,
+            String?     password    = Null,
+            String?     provider    = Null,
+            String[]?   sharedDBs   = Null,
+            Boolean?    useCookies  = Null,
+            Boolean?    useAuth     = Null,
+            IdpInfos?   idProviders = Null,
             ) {
             return new WebAppInfo(deployment, moduleName,
-                hostName   ?: this.hostName,
-                password   ?: this.password,
-                provider   ?: this.provider,
-                autoStart  ?: this.autoStart,
-                active     ?: this.active,
-                injections ?: this.injections,
-                sharedDBs  ?: this.sharedDBs,
-                useCookies ?: this.useCookies,
-                useAuth    ?: this.useAuth,
+                hostName    ?: this.hostName,
+                password    ?: this.password,
+                provider    ?: this.provider,
+                autoStart   ?: this.autoStart,
+                active      ?: this.active,
+                injections  ?: this.injections,
+                sharedDBs   ?: this.sharedDBs,
+                useCookies  ?: this.useCookies,
+                useAuth     ?: this.useAuth,
+                idProviders ?: this.idProviders,
                 );
         }
 
         @Override
-        WebAppInfo redact() = this.with(password="");
+        WebAppInfo redact() = this.with(password="")
+                                  .with(idProviders=idProviders.map(e ->
+                                      new IdpInfo("", ""), new CollectImmutableMap<String, IdpInfo>()));
     }
 
     const DbAppInfo(

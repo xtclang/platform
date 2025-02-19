@@ -8,15 +8,18 @@ import common.WebHost;
 import common.model.AccountInfo;
 import common.model.AppInfo;
 import common.model.DbAppInfo;
+import common.model.IdpInfo;
 import common.model.InjectionKey;
 import common.model.Injections;
 import common.model.ModuleInfo;
 import common.model.WebAppInfo;
 
+import common.names;
 import common.utils;
 
 import crypto.Certificate;
 import crypto.CryptoPassword;
+import crypto.Decryptor;
 
 import json.JsonObject;
 
@@ -95,6 +98,46 @@ service AppEndpoint
         if (update) {
             accountManager.addOrUpdateApp(accountName, appInfo);
         }
+        return appInfo.redact();
+    }
+
+    /**
+     * Set up an OAuth provider and the corresponding secrets.
+     *
+     * The client must append "Base64(clientId):Base64(clientSecret)" as a message body.
+     */
+    @Post("deployments{/deployment}/providers{/provider}")
+    @LoginRequired
+    (AppInfo | SimpleResponse) ensureAuthProvider(String deployment, String provider,
+                                                  @BodyParam String secrets) {
+
+        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+        assert Int delim := secrets.indexOf(':') as "Invalid secrets format";
+
+        String clientId     = secrets[0 ..< delim];
+        String clientSecret = secrets.substring(delim+1);
+
+        // decode from Base64 representation
+        import conv.formats.Base64Format;
+        clientId     = Base64Format.Instance.decode(clientId).unpackUtf8();
+        clientSecret = Base64Format.Instance.decode(clientSecret).unpackUtf8();
+
+        Directory      homeDir    = hostManager.ensureDeploymentHomeDirectory(accountName, deployment);
+        File           store      = homeDir.fileFor(names.KeyStoreName);
+        CryptoPassword storePwd   = accountManager.decrypt(appInfo.password);
+        @Inject("keystore", opts=new KeyStore.Info(store.contents, storePwd)) KeyStore keystore;
+
+        Decryptor decryptor = utils.createDecryptor(keystore);
+
+        // encode for storage using the application's secrets decryptor
+        IdpInfo info = new IdpInfo(utils.encrypt(decryptor, clientId),
+                                   utils.encrypt(decryptor, clientSecret));
+        appInfo = appInfo.with(idProviders=appInfo.idProviders.put(provider, info));
+
+        accountManager.addOrUpdateApp(accountName, appInfo);
         return appInfo.redact();
     }
 
@@ -273,11 +316,11 @@ service AppEndpoint
 
             CreateWebHost:
             if (!(host := hostManager.getWebHost(deployment))) {
-                CryptoPassword pwd = accountManager.decrypt(appInfo.password);
+                CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
 
                 // at this point the application is registered, therefore there is an active stub route
-                if (hostManager.ensureCertificate(accountName, appInfo, pwd, errors),
-                    host := hostManager.createWebHost(accountName, appInfo, pwd, errors)) {
+                if (hostManager.ensureCertificate(accountName, appInfo, storePwd, errors),
+                    host := hostManager.createWebHost(accountName, appInfo, storePwd, errors)) {
                         break CreateWebHost;
                     }
                 return new SimpleResponse(Conflict, errors.collectErrors());
@@ -347,7 +390,6 @@ service AppEndpoint
         return "[empty]";
     }
 
-
     // ---- Web app end-points ---------------------------------------------------------------------
 
     /**
@@ -411,11 +453,11 @@ service AppEndpoint
             appInfo        = appInfo.with(provider=provider);
         }
 
-        CryptoPassword pwd   = accountManager.decrypt(appInfo.password);
-        ErrorLog      errors = new ErrorLog();
+        CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
+        ErrorLog       errors   = new ErrorLog();
 
-        if (Certificate cert := hostManager.ensureCertificate(accountName, appInfo, pwd, errors,
-                                    force=changeProvider)) {
+        if (Certificate cert := hostManager.ensureCertificate(accountName, appInfo, storePwd,
+                                    errors, force=changeProvider)) {
             if (changeProvider) {
                 accountManager.addOrUpdateApp(accountName, appInfo);
             }
@@ -494,7 +536,6 @@ service AppEndpoint
         }
     }
 
-
     // ---- Db app end-points ----------------------------------------------------------------------
 
     /**
@@ -512,7 +553,6 @@ service AppEndpoint
         accountManager.addOrUpdateApp(accountName, appInfo);
         return appInfo.redact();
     }
-
 
     // ----- helper methods ------------------------------------------------------------------------
 

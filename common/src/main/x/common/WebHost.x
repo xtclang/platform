@@ -27,7 +27,7 @@ import common.model.WebAppInfo;
 service WebHost(HostInfo route, String account, ModuleRepository repository,
                 WebAppInfo appInfo, Directory homeDir, Directory buildDir,
                 Map<String, DbHost> sharedDbHosts, WebApp challengeApp, CatalogExtras extras,
-                function void() addStubRoute
+                Decryptor secretsDecryptor, function void() addStubRoute
                 )
         extends AppHost(appInfo.moduleName, appInfo, homeDir, buildDir)
         implements Handler {
@@ -71,6 +71,11 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
      * @see [HttpHandler]
      */
     protected CatalogExtras extras;
+
+    /**
+     * The decryptor to use for decrypting application secrets.
+     */
+    public/protected Decryptor secretsDecryptor;
 
     /**
      * The function that is responsible for adding a stub route for this deployment.
@@ -155,7 +160,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
             return False;
         }
 
-        if (ModuleTemplate webTemplate := new tools.ModuleGenerator(mainModule).
+        if (ModuleTemplate webTemplate := new tools.ModuleGenerator(mainModule, appInfo).
                 ensureWebModule(repository, buildDir, errors)) {
 
             if ((Container container, dependencies) :=

@@ -9,12 +9,15 @@ import ecstasy.mgmt.ResourceProvider;
 import crypto.Algorithms;
 import crypto.KeyStore;
 
+import web.Client;
+import web.HttpClient;
 import web.WebApp;
 import web.WebService;
 
 import web.sessions.Broker;
 
 import model.AppInfo;
+import model.IdpInfo;
 import model.InjectionKey;
 import model.Injections;
 import model.WebAppInfo;
@@ -208,6 +211,33 @@ service HostInjector(AppHost appHost)
                 return &broker.maskAs(Broker+WebService.ExtrasAware);
             };
 
+        case (Client, "client"):
+            private @Lazy Client client.calc() {
+                Client client = new HttpClient();
+                if (!platform) {
+                    // TODO GG: create a RestrictedClient (maybe based on the appInfo), only allowing
+                    //          access to well known OAuth authorization servers (e.g. github)
+                }
+                return client;
+            }
+            return &client.maskAs(Client);
+
+        case (String, "clientId"):
+        case (String, "clientSecret"):
+            if (platform) {
+                // TODO GG: extract platform secrets from the KernelHost
+                return (InjectedRef.Options opts) -> assert;
+            }
+            return (InjectedRef.Options opts) -> {
+                assert String  provider := opts.is(String),
+                       WebHost webHost  := appHost.is(WebHost);
+                if (IdpInfo info := webHost.appInfo.idProviders.get(provider)) {
+                    String value = name == "clientId" ? info.clientId : info.clientSecret;
+                    return utils.decrypt(webHost.secretsDecryptor, value);
+                }
+                throw new Exception($"An OAuth {provider.quoted()} provider must be configured");
+            };
+
         default:
             if (platform) {
                 // give the platform modules whatever they ask for
@@ -226,7 +256,7 @@ service HostInjector(AppHost appHost)
                 return Null;
             }
 
-            return (InjectedRef.Options address) ->
+            return (InjectedRef.Options opts) ->
                 throw new Exception($|Invalid resource: name="{name}", type="{type}"
                                    );
         }

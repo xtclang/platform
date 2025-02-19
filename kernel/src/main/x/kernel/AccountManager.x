@@ -14,8 +14,6 @@ import common.model.UserInfo;
 
 import common.utils;
 
-import convert.formats.Base64Format;
-
 import oodb.DBMap;
 import oodb.DBUser;
 
@@ -139,17 +137,14 @@ service AccountManager
         dbConnection.users.create(userId, userName, email);
 
     @Override
-    Boolean updateUser(UserInfo user) =
-        dbConnection.users.update(user);
+    Boolean updateUser(UserInfo user) = dbConnection.users.update(user);
 
     @Override
-    String encrypt(String password) =
-        Base64Format.Instance.encode(decryptor.encrypt(password.utf8()));
+    String encrypt(String password) = utils.encrypt(decryptor, password);
 
     @Override
     CryptoPassword decrypt(String text) {
-        String password = decryptor.decrypt(Base64Format.Instance.decode(text)).unpackUtf8();
-        CryptoPassword pwd = new NamedPassword("", password);
+        CryptoPassword pwd = new NamedPassword("", utils.decrypt(decryptor, text));
         return &pwd.maskAs(CryptoPassword);
     }
 

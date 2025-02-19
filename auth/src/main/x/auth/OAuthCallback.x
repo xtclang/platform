@@ -50,7 +50,7 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
         while (True) {
             if (session.principal != Null) {
                 // the session is already authenticated; redirect to the app page
-                redirectUrl = request.url.with(path=redirect).toString();
+                redirectUrl = request.url.with(path=redirect, query="").toString();
                 session.redirect = Null;
                 break;
             }
@@ -70,7 +70,7 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
                     @Inject Console console;
                     console.print($|Error: Authorization request with "{provider}" has timed out
                                  );
-                    redirectUrl = request.url.with(path="/").toString();
+                    redirectUrl = request.url.with(path="/", query="").toString();
                     break;
                 }
 
@@ -84,8 +84,8 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
                         Principal principal = new Principal(0, userName);
                         session.authenticate(principal, [], trustLevel=Highest);
 
-                        // redirect to the app page
-                        redirectUrl = request.url.with(path=redirect).toString();
+                        // redirect to the app page (drop the session code)
+                        redirectUrl = request.url.with(path=redirect, query="").toString();
                     } else {
                         session.accessToken = Null;
                         session.redirect    = Null;
@@ -94,7 +94,7 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
                         console.print($|Error: Authorization request with "{provider}" has failed: \
                                        |"login" info is missing in the response
                                      );
-                        redirectUrl = request.url.with(path="/").toString();
+                        redirectUrl = request.url.with(path="/", query="").toString();
                     }
                     break;
                 } else {
@@ -126,7 +126,7 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
                     @Inject Console console;
                     console.print($|Error: Authentication request with "{provider}" has timed out
                                  );
-                    redirectUrl = request.url.with(path="/").toString();
+                    redirectUrl = request.url.with(path="/", query="").toString();
                     break;
                 }
 
@@ -150,7 +150,7 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
                 session.accessToken = Null;
                 session.redirect    = Null;
 
-                redirectUrl = request.url.with(path="/").toString();
+                redirectUrl = request.url.with(path="/", query="").toString();
                 break;
             }
 

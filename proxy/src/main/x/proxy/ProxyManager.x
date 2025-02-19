@@ -30,7 +30,7 @@ service ProxyManager(Uri[] receivers)
     /**
      * The timeout duration for receivers' updates.
      */
-    static Duration receiverTimeout = Duration.ofSeconds(5);
+    static Duration receiverTimeout = Duration.ofSeconds(10);
 
     @Override
     void updateProxyConfig(KeyStore keystore, CryptoPassword pwd,

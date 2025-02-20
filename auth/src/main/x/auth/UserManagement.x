@@ -17,7 +17,7 @@ class UserManagement {
     String getUser() = auth.get($"{Path}/users/me");
 
     @Command("password", "Change password for current user")
-    void changePassword(String oldPassword = "", String newPassword = "") {
+    void changePassword(@NoEcho String oldPassword = "", @NoEcho String newPassword = "") {
         if (oldPassword.empty || newPassword.empty) {
             do {
                 oldPassword = console.readLine("Old password:", suppressEcho=True);
@@ -76,7 +76,7 @@ class UserManagement {
     // ----- user management operations ------------------------------------------------------------
 
     @Command("create-user", "Create user")
-    String createUser(String name, String password) =
+    String createUser(String name, @NoEcho String password) =
             auth.post($"{Path}/users/{name}", password, Text);
 
     @Command("show-user", "Get user by id")
@@ -86,7 +86,7 @@ class UserManagement {
     String findUser(String name) = auth.get($"{Path}/users?{name=}");
 
     @Command("reset-password", "Reset the password")
-    String resetPassword(Int userId, String password) =
+    String resetPassword(Int userId, @NoEcho String password) =
             auth.patch($"{Path}/users/{userId}/password", password, Text);
 
     @Command("set-user-permissions", "Set user permissions")

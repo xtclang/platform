@@ -53,11 +53,12 @@ class AppManagement {
         platformCLI.put($"/apps/deployments/{deploymentName}?useAuth={on ? "true" : "false"}");
 
     @Command("set-oauth-provider", "Set the 'oauth' provider info")
-    String setUseSetAuth(String deploymentName, String provider, String id, String secret) {
+    String setUseSetAuth(String deploymentName, String provider,
+                         @NoEcho String clientId, @NoEcho String clientSecret) {
         import convert.formats.Base64Format;
 
-        String b64Id     = Base64Format.Instance.encode(id.utf8());
-        String b64Secret = Base64Format.Instance.encode(secret.utf8());
+        String b64Id     = Base64Format.Instance.encode(clientId.utf8());
+        String b64Secret = Base64Format.Instance.encode(clientSecret.utf8());
 
         return platformCLI.post($"/apps/deployments/{deploymentName}/providers/{provider}",
                 $"{b64Id}:{b64Secret}", Text);

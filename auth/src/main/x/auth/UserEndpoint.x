@@ -9,7 +9,6 @@ import sec.Permission;
 import sec.Principal;
 import sec.Subject;
 
-import web.*;
 import web.security.Authenticator;
 import web.security.DigestCredential;
 

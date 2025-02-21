@@ -573,9 +573,9 @@ service AppEndpoint
      * Get a WebAppInfo for the specified deployment.
      */
     (WebAppInfo | SimpleResponse) getWebInfo(String deployment) {
-        (AppInfo | SimpleResponse) appInfo = getAppInfo(deployment);
+        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
 
-        return appInfo.is(WebAppInfo | SimpleResponse)
+        return appInfo.is(WebAppInfo|SimpleResponse)
                 ? appInfo
                 : new SimpleResponse(NotFound, $"Deployment '{deployment}' is not a WebApp");
     }
@@ -584,9 +584,9 @@ service AppEndpoint
      * Get a DbAppInfo for the specified deployment.
      */
     (DbAppInfo | SimpleResponse) getDbInfo(String deployment) {
-        (AppInfo | SimpleResponse) appInfo = getAppInfo(deployment);
+        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
 
-        return appInfo.is(DbAppInfo | SimpleResponse)
+        return appInfo.is(DbAppInfo|SimpleResponse)
                 ? appInfo
                 : new SimpleResponse(NotFound, $"Deployment '{deployment}' is not a DbApp");
     }

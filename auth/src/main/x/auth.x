@@ -15,4 +15,16 @@ module auth.xqiz.it {
     package web     import web.xtclang.org;
     package webauth import webauth.xtclang.org;
     package webcli  import webcli.xtclang.org;
+
+    import web.*;
+    import web.responses.SimpleResponse;
+
+    /**
+     * Create a "redirect" response.
+     */
+    static ResponseOut redirectTo(String|Uri url, HttpStatus redirectCode = PermanentRedirect) {
+        ResponseOut response = new SimpleResponse(redirectCode);
+        response.header[Header.Location] = url.is(String) ? url : url.toString();
+        return response;
+    }
 }

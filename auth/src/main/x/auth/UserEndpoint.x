@@ -55,6 +55,12 @@ service UserEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     @Get("/users/me")
     Principal getUser() = redact(session?.principal?) : assert;
 
+    /**
+     * Log out the current user.
+     */
+    @Delete("/users/me")
+    void signOut() = session?.deauthenticate();
+
     /*
      * Change the password for the current user.
      *

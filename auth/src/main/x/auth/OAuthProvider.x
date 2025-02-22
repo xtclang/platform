@@ -27,8 +27,38 @@ import webauth.DBRealm;
     /**
      * The Url that is used to start the OAuth 2.0 protocol, asking the authorization server for
      * an authorization grant. This step is usually implemented via a redirect.
+     *
+     * @see https://www.rfc-editor.org/rfc/rfc6749#section-3.1
      */
     @RO String authorizationUrl;
+
+    /**
+     * The desired grant type.
+     *
+     * @see https://www.rfc-editor.org/rfc/rfc6749#section-3.1.1
+     */
+     @RO String responseType.get() = "code";
+
+    /**
+     * A space-delimited list of scopes that identify the resources that the provider could access
+     * on the user's behalf. These values inform the consent screen that authorization server
+     * displays to the user.
+     *
+     * @see https://www.rfc-editor.org/rfc/rfc6749#section-3.3
+     */
+     @RO String authorizationScope;
+
+    /**
+     * A unique string value that the provider uses to maintain state between the authorization
+     * request and the authorization server's response.
+     *
+     * Strictly speaking this property is unnecessary since the xenia web dispatcher automatically
+     * provides the defence against cross-site request forgery attacks, but this creates an
+     * additional security barrier.
+     *
+     * @see https://www.rfc-editor.org/rfc/rfc6749#section-4.2.1
+     */
+    String? requestState;
 
     /**
      * The Url that is used to ask the authorization server for an exchange of the authorization
@@ -42,23 +72,6 @@ import webauth.DBRealm;
     @RO String userIdUrl;
 
     /**
-     * A unique string value that the provider uses to maintain state between the authorization
-     * request and the authorization server's response.
-     *
-     * Strictly speaking this property is unnecessary since the xenia web dispatcher automatically
-     * provides the defence against cross-site request forgery attacks, but this creates an
-     * additional security barrier.
-     */
-    String? requestState;
-
-    /**
-     * A space-delimited list of scopes that identify the resources that the provider could access
-     * on the user's behalf. These values inform the consent screen that authorization server
-     * displays to the user.
-     */
-     @RO String authorizationScope;
-
-    /**
      * The timeout value that limits the period of time to receive a response from the authorization
      * server.
      */
@@ -70,9 +83,14 @@ import webauth.DBRealm;
     String? accessToken;
 
     /**
-     * The application redirect path.
+     * The application redirect path to be used upon successful authorization.
      */
     String? redirectPath;
+
+    /**
+     * The callback URL to use in the OAuth protocol exchange.
+     */
+    String? callbackUrl;
 
     /**
      * The authentication attempt count.
@@ -104,17 +122,18 @@ import webauth.DBRealm;
         // store off the application redirect path and create a request state
         @Inject Random random;
         this.redirectPath = redirectPath;
-        this.requestState = random.int128().toString();
-
-        String callbackUrl = request.url.with(path=callbackPath, query=Delete).toString();
+        this.requestState = random.uint128().toString();
+        this.callbackUrl  = request.url.with(path=callbackPath, query=Delete).toString();
 
         String redirectUrl =
                 $|{authorizationUrl}\
                  |?client_id={clientId}\
-                 |&redirect_uri={callbackUrl}\
+                 |&response_type={responseType}\
                  |&scope={authorizationScope}\
-                 |&state={requestState}
+                 |&state={requestState}\
+                 |&redirect_uri={callbackUrl}
                  ;
+
         return redirectTo(redirectUrl, TemporaryRedirect);
     }
 
@@ -136,7 +155,8 @@ import webauth.DBRealm;
         String requestBody = $|client_id={clientId}\
                               |&client_secret={clientSecret}\
                               |&code={grantCode}\
-                              |&grant_type=authorization_code
+                              |&grant_type=authorization_code\
+                              |&redirect_uri={callbackUrl}
                               ;
         RequestOut accessRequest = new SimpleRequest(httpClient, POST, new Uri(accessUrl),
                 requestBody, mediaType=FormURL, accepts=new AcceptList(Json));
@@ -259,14 +279,14 @@ import webauth.DBRealm;
         extends OAuthProvider("google") {
 
         @Override String authorizationUrl = "https://accounts.google.com/o/oauth2/v2/auth";
-        @Override String accessUrl        = "https://oauth2.googleapis.com";
+        @Override String accessUrl        = "https://oauth2.googleapis.com/token";
         @Override String userIdUrl        = "https://www.googleapis.com/oauth2/v2/userinfo";
 
         /**
          * @see https://developers.google.com/identity/protocols/oauth2/scopes#people
          */
         @Override String authorizationScope.get() =
-            \|https://www.googleapis.com/auth/userinfo.profile,\
+            \|https://www.googleapis.com/auth/userinfo.profile \
              |https://www.googleapis.com/auth/userinfo.email
             ;
 

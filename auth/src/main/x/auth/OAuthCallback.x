@@ -65,6 +65,7 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
             return providers.computeIfAbsent(provider, () ->
                 switch (provider) {
                 case "amazon": new OAuthProvider.Amazon();
+                case "apple" : new OAuthProvider.Apple();
                 case "github": new OAuthProvider.Github();
                 case "google": new OAuthProvider.Google();
                 default:       new OAuthProvider.Unknown(provider);

@@ -278,6 +278,35 @@ import webauth.DBRealm;
     }
 
     /**
+     * REVIEW: do we need to implement refresh token protocol?
+     *
+     * @see https://developer.apple.com/documentation/signinwithapplerestapi
+     * https://developer.apple.com/documentation/rosterapi/validating-with-the-roster-api-test-scope
+     */
+    static service Apple
+        extends OAuthProvider("apple") {
+
+        @Override String authorizationUrl = "https://appleid.apple.com/auth/oauth2/v2/authorize";
+        @Override String accessUrl        = "https://appleid.apple.com/auth/oauth2/v2/token";
+        @Override String userIdUrl        = "https://api-school.apple.com/rosterapi/v1/users?limit=2";
+
+        /**
+         * @see https://developer.amazon.com/docs/login-with-amazon/requesting-scopes-as-essential-voluntary.html
+         */
+        @Override String authorizationScope.get() = "edu.users.read";
+
+        @Override
+        conditional (String, String) extractUserInfo(JsonObject userInfo) {
+            if (String firstName  := userInfo.getOrDefault("givenName", Null).is(String),
+                String lastName   := userInfo.getOrDefault("familyName", Null).is(String),
+                String email := userInfo.getOrDefault("email", Null).is(String)) {
+                return True, $"{firstName} {lastName}", email;
+            }
+            return False;
+        }
+    }
+
+    /**
      * @see https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
      */
     static service Github

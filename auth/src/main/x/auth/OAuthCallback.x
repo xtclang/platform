@@ -35,7 +35,7 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
         // the access token has expired; get a new one
         // TODO: consider implementing a refresh protocol that some providers support
         String callback = $"/.well-known/oauth/callback/{provider}";
-        return providerImpl.initiateAuth(request, redirect, callback);
+        return providerImpl.requestAuthorization(request, redirect, callback);
     }
 
     @Get("/callback{/provider}{?code,state}")
@@ -64,9 +64,10 @@ service OAuthCallback { // (WebApp app, DBRealm realm)
             }
             return providers.computeIfAbsent(provider, () ->
                 switch (provider) {
+                case "amazon": new OAuthProvider.Amazon();
                 case "github": new OAuthProvider.Github();
                 case "google": new OAuthProvider.Google();
-                default:       throw new IllegalArgument($"Unknown provider: {provider}");
+                default:       new OAuthProvider.Unknown(provider);
                 });
         }
 

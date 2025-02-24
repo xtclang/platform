@@ -103,7 +103,7 @@ import webauth.DBRealm;
      * Initiate the authentication flow by asking the authorization provider for an authorization
      * grant.
      */
-    ResponseOut initiateAuth(RequestIn request, String redirectPath, String callbackPath) {
+    ResponseOut requestAuthorization(RequestIn request, String redirectPath, String callbackPath) {
         if (++attempts > 8) {
             console.print($"Error: Authentication request rejected: too many attempts");
             return new SimpleResponse(TooManyRequests);
@@ -236,8 +236,17 @@ import webauth.DBRealm;
         }
     }
 
-    @Abstract
-    conditional (String name, String email) extractUserInfo(JsonObject userInfo);
+    /**
+     * Extract the user name and email from the "user profile" Json object.
+     */
+    conditional (String name, String email) extractUserInfo(JsonObject userInfo) {
+        if (String name  := userInfo.getOrDefault("name",  Null).is(String),
+            String email := userInfo.getOrDefault("email", Null).is(String)) {
+            return True, name, email;
+        }
+        return False;
+    }
+
 
     /**
      * Abort the authentication process by redirecting the client (user agent) to the "root" URL.
@@ -250,6 +259,27 @@ import webauth.DBRealm;
 
     // ----- concrete implementations --------------------------------------------------------------
 
+    /**
+     * REVIEW: do we need to implement refresh token protocol?
+     *
+     * @see https://developer.amazon.com/docs/login-with-amazon/web-docs.html
+     */
+    static service Amazon
+        extends OAuthProvider("amazon") {
+
+        @Override String authorizationUrl = "https://www.amazon.com/ap/oa";
+        @Override String accessUrl        = "https://api.amazon.com/auth/o2/token";
+        @Override String userIdUrl        = "https://api.amazon.com/user/profile";
+
+        /**
+         * @see https://developer.amazon.com/docs/login-with-amazon/requesting-scopes-as-essential-voluntary.html
+         */
+        @Override String authorizationScope.get() = "profile";
+    }
+
+    /**
+     * @see https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
+     */
     static service Github
         extends OAuthProvider("github") {
 
@@ -274,6 +304,8 @@ import webauth.DBRealm;
 
     /**
      * REVIEW: do we need to implement refresh token protocol?
+     *
+     * @see https://developers.google.com/identity/protocols/oauth2/web-server?hl=en
      */
     static service Google
         extends OAuthProvider("google") {
@@ -289,14 +321,15 @@ import webauth.DBRealm;
             \|https://www.googleapis.com/auth/userinfo.profile \
              |https://www.googleapis.com/auth/userinfo.email
             ;
+    }
+
+    static service Unknown(String provider)
+            extends OAuthProvider(provider) {
 
         @Override
-        conditional (String, String) extractUserInfo(JsonObject userInfo) {
-            if (String name  := userInfo.getOrDefault("name",  Null).is(String),
-                String email := userInfo.getOrDefault("email", Null).is(String)) {
-                return True, name, email;
-            }
-            return False;
+        conditional ResponseOut retrieveUser(RequestIn request) {
+            console.print("$|Error: Unknown provider: {provider}");
+            return True, abortAuthentication(request);
         }
     }
 }

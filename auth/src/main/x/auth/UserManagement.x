@@ -73,6 +73,9 @@ class UserManagement {
     String deleteMyEntitlement(Int entitlementId) =
             auth.delete($"{Path}/users/me/entitlements/{entitlementId}");
 
+    @Command("logout", "Logout current user")
+    void logout() = auth.post($"{Path}/users/me/logout");
+
     // ----- user management operations ------------------------------------------------------------
 
     @Command("create-user", "Create user")

@@ -28,10 +28,10 @@ application deployers have to follow the outlined steps:
 
     During the registration you would configure the attributes in a natural way, with only one
     requirement: the "callback" (or "return") URL would have to be set to:
-        https://[deploymentURL}/.well-known/oauth/{provider}
+        https://[deploymentURL}/.well-known/oauth/callback/{provider}
 
     For example, the "c1" deployment above using "google" OAuth would require this callback URL:
-        https://c1.user.xqiz.it/.well-known/oauth/google
+        https://c1.user.xqiz.it/.well-known/oauth/callback/google
 
 3. Retrieve a "Client ID" and "Client Secret" from the OAuth provider and configure the OAuth
    provider for the XTC platform using the CLI command:

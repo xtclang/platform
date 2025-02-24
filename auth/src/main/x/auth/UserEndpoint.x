@@ -58,8 +58,8 @@ service UserEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     /**
      * Log out the current user.
      */
-    @Delete("/users/me")
-    void signOut() = session?.deauthenticate();
+    @Post("/users/me/logout")
+    void logout() = session?.deauthenticate();
 
     /*
      * Change the password for the current user.

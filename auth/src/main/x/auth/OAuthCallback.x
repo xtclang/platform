@@ -1,19 +1,26 @@
+import webauth.DBRealm;
+
 /**
  * The `OAuthCallback` is a [WebService] that serves as the
  * (client redirection endpoint)[https://www.rfc-editor.org/rfc/rfc6749#section-3.1.2].
  *
  * TODO: instead of redirecting to "/' upon failure, consider passing an "error" redirect as well
  *       and having a "last error" endpoint to supply thqt information
- * TODO: implements Authenticator
  */
 @WebService("/.well-known/oauth")
 @HttpsRequired
-service OAuthCallback { // (WebApp app, DBRealm realm)
+service OAuthCallback(DBRealm realm)
+        implements Duplicable {
+
+    @Override
+    construct(OAuthCallback that) {
+        this.realm = that.realm;
+    }
 
     // ----- "OAuth protocol" operations -----------------------------------------------------------
 
     /**
-     * Login using OAuth with the specified provider (e.g. github)
+     * Login using OAuth with the specified provider (e.g. "github" or "google")
      */
     @Get("/login{/provider}{/redirect}")
     @Produces(Text)

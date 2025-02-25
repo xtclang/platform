@@ -22,17 +22,19 @@ import DigestCredential.sha512_256;
  * The `UserEndpoint` is a [WebService] wrapper around an [Authenticator] that uses a [DBRealm].
  *
  * It provides out-the-box REST API to manage the underlying [auth database](AuthSchema).
+ *
+ * @param realm          the [DBRealm] containing the user info
+ * @param authenticator  the underlying [Authenticator] (can be the `NeverAuthenticator`)
  */
 @WebService("/.well-known/auth/mgmt")
 @LoginRequired
 @SessionRequired
-service UserEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
+service UserEndpoint(DBRealm realm, Authenticator authenticator)
         implements Authenticator, WebService.ExtrasAware
         delegates Authenticator - Duplicable(authenticator) {
 
     @Override
     construct(UserEndpoint that) {
-        this.app           = that.app;
         this.realm         = that.realm;
         this.authenticator = that.authenticator;
     }
@@ -45,7 +47,7 @@ service UserEndpoint(WebApp app, DBRealm realm, Authenticator authenticator)
     // ----- ExtrasAware interface -----------------------------------------------------------------
 
     @Override
-    (Duplicable+WebService)[] extras.get() = [this];
+    (Duplicable+WebService)[] extras.get() = [duplicate(), new OAuthCallback(realm)];
 
     // ----- "self management" operations ----------------------------------------------------------
 

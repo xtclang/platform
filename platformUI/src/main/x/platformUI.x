@@ -79,7 +79,7 @@ module platformUI.xqiz.it {
         import web.security.NeverAuthenticator;
         HttpHandler.CatalogExtras extras =
             [
-            UserEndpoint  = () -> new UserEndpoint(this, realm, new NeverAuthenticator(this)),
+            UserEndpoint  = () -> new UserEndpoint(realm, new NeverAuthenticator(this)),
             AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure()),
             ];
 

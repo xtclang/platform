@@ -139,7 +139,7 @@ service DbInjector(AppHost appHost, DbHost[] dbHosts)
                     DBRealm realm  = new DBRealm(appInfo.deployment,
                                                  rootSchema=db, initConfig=initConfig);
                     // allow both digest (principal) and token based (entitlements) authentication
-                    Authenticator authenticator = new UserEndpoint(webApp, realm,
+                    Authenticator authenticator = new UserEndpoint(realm,
                         new ChainAuthenticator(realm, [
                             new DigestAuthenticator(realm),
                             new TokenAuthenticator(realm),

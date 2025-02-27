@@ -39,7 +39,7 @@ service UserEndpoint
             for (Credential credential : principal.credentials) {
                 if (credential.is(DigestCredential) &&
                         credential.matches(userName, hash)) {
-                    session.authenticate(principal);
+                    session.authenticate(principal, credential);
                     return getUserId();
                 }
             }

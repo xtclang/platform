@@ -89,7 +89,7 @@ service UserEndpoint(DBRealm realm, Authenticator authenticator)
                 credentials = credentials.replace(FindOld.count,
                                     credential.with(realmName=realm.name, password=passwordNew));
                 principal   = realm.updatePrincipal(principal.with(credentials=credentials));
-                session.authenticate(principal);
+                session.authenticate(principal, credential);
                 return OK;
             }
         }
@@ -173,7 +173,7 @@ service UserEndpoint(DBRealm realm, Authenticator authenticator)
     HttpStatus deleteProfileEntitlement(Int entitlementId) {
         Int userId = session?.principal?.principalId : assert;
 
-        try (val tx = db.connection.createTransaction()) {
+        try (val _ = db.connection.createTransaction()) {
             if (Entitlement entitlement := realm.readEntitlement(entitlementId),
                             entitlement.principalId == userId,
                             realm.deleteEntitlement(entitlementId)) {

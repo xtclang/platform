@@ -1,3 +1,4 @@
+import sec.Credential;
 import sec.Entitlement;
 import sec.Principal;
 
@@ -18,25 +19,27 @@ mixin SessionData
     String accountName;
 
     @Override
-    void sessionAuthenticated(Principal? principal, Entitlement[] entitlements) {
-        if (principal != Null) {
-            String                  user     = principal.name;
-            Collection<AccountInfo> accounts = accountManager.getAccounts(user);
+    void sessionAuthenticated(Principal? principal, Credential? credential,
+                              Entitlement[] entitlements) {
+        assert principal != Null;
 
-            // TODO choose an account this user was last associated with
-            if (AccountInfo account := accounts.any()) {
-                accountName = account.name;
+        String                  user     = principal.name;
+        Collection<AccountInfo> accounts = accountManager.getAccounts(user);
 
-                assert accountManager.getUser(user);
-            }
+        // TODO choose an account this user was last associated with
+        if (AccountInfo account := accounts.any()) {
+            accountName = account.name;
+
+            assert accountManager.getUser(user);
         }
-        super(principal, entitlements);
+        super(principal, credential, entitlements);
     }
 
     @Override
-    void sessionDeauthenticated(Principal? principal, Entitlement[] entitlements) {
+    void sessionDeauthenticated(Principal? principal, Credential? credential,
+                                Entitlement[] entitlements) {
         accountName = "";
 
-        super(principal, entitlements);
+        super(principal, credential, entitlements);
     }
 }

@@ -1,11 +1,13 @@
 import json.JsonObject;
 
+import sec.Credential;
 import sec.Principal;
 
 import web.requests.SimpleRequest;
 
 import webauth.AuthSchema;
 import webauth.DBRealm;
+import webauth.OAuthCredential;
 
 /**
  * OAuthProvider is an implementation of the basic OAuth 2.0 protocol.
@@ -17,7 +19,7 @@ import webauth.DBRealm;
  *
  * @see [The OAuth 2.0 Authorization Framework](https://www.rfc-editor.org/rfc/rfc6749)
  */
-@Abstract service OAuthProvider(String provider) {
+@Abstract service OAuthProvider(String provider, DBRealm realm) {
 
     /**
      * The HTTP client that is used to sent REST requests to the authorization server.
@@ -97,6 +99,9 @@ import webauth.DBRealm;
      */
     Int attempts;
 
+    /**
+     * The web app console (backed by the console.log in the deployment root directory)
+     */
     @Inject Console console;
 
     /**
@@ -105,7 +110,7 @@ import webauth.DBRealm;
      */
     ResponseOut requestAuthorization(RequestIn request, String redirectPath, String callbackPath) {
         if (++attempts > 8) {
-            console.print($"Error: Authentication request rejected: too many attempts");
+            console.print("Error: Authentication request rejected: too many attempts");
             return new SimpleResponse(TooManyRequests);
         }
 
@@ -118,6 +123,8 @@ import webauth.DBRealm;
                      |provider
                      );
         }
+
+        console.print($"Info: Requesting authorization from {provider}");
 
         // store off the application redirect path and create a request state
         @Inject Random random;
@@ -145,7 +152,7 @@ import webauth.DBRealm;
      */
     conditional ResponseOut getAccessToken(RequestIn request, String grantCode, String requestState) {
         if (requestState != this.requestState) {
-            console.print($"Error: Cross-site forgery detected");
+            console.print("Error: Cross-site forgery detected");
             return True, abortAuthentication(request);
         }
         @Inject(opts=provider) String clientId;
@@ -162,22 +169,17 @@ import webauth.DBRealm;
                 requestBody, mediaType=FormURL, accepts=new AcceptList(Json));
 
         ResponseIn accessResponse;
-        try (val _ = new Timeout(requestTimeout)) {
+        using (new Timeout(requestTimeout)) {
             accessResponse = httpClient.send(accessRequest);
-        } catch (Exception e) {
-            console.print($|Error: Authentication request with "{provider}" has timed out
-                         );
-            return True, abortAuthentication(request);
         }
 
         if (JsonObject messageIn := accessResponse.to(JsonObject)) {
-            if (String token := messageIn.getOrDefault("access_token", Null).is(String)) {
-                accessToken = messageIn.get("access_token")?.is(String)? : assert;
+            if (accessToken := messageIn.getOrDefault("access_token", Null).is(String)) {
                 attempts = 0;
                 return False;
             } else {
-                console.print($|Error: Authorization request with "{provider}" has failed: \
-                               |"login" info is missing in the response
+                console.print($|Error: Authorization request with {provider} has failed; the \
+                               |"access_token" is missing in the response
                              );
             }
         } else {
@@ -207,20 +209,37 @@ import webauth.DBRealm;
         userRequest.header[Header.Authorization] = $"Bearer {accessToken}";
 
         ResponseIn userResponse;
-        try (val _ = new Timeout(requestTimeout)) {
+        using (new Timeout(requestTimeout)) {
             userResponse = httpClient.send(userRequest);
-        } catch (Exception e) {
-            console.print($|Error: Authorization request with "{provider}" has timed out
-                         );
-            return True, abortAuthentication(request);
         }
 
         if (JsonObject messageIn := userResponse.to(JsonObject)) {
             if ((String userName, String email) := extractUserInfo(messageIn)) {
 
-                // TODO: temporary; create OAuthCredential; consult with the Realm
-                Principal principal = new Principal(0, userName);
-                request.session?.authenticate(principal, [], trustLevel=Highest) : assert;
+                Credential credential = new OAuthCredential(provider, userName, email);
+                Principal  principal;
+                using (realm.db.connection.createTransaction()) {
+                    if (principal := realm.findPrincipal(credential)) {
+                        if (Credential match := principal.credentials.any(cred ->
+                                cred.is(OAuthCredential) && cred.provider == provider)) {
+                            switch (Credential.Status status = match.calcStatus()) {
+                            case Revoked, Suspended, Expired:
+                                console.print($"Error: Credential for {email} at {provider} is {status}");
+                                return True, abortAuthentication(request);
+                            }
+                        } else {
+                            // even though we found the Principal for the locator (e.g. email),
+                            // it used a different provider; add this one to the Principal
+                            principal = principal.with(credentials=principal.credentials+credential);
+                            realm.updatePrincipal(principal);
+                        }
+                    } else {
+                        // create a new Principal with OAuthCredential
+                        principal = new Principal(0, email, credentials=[credential]);
+                        principal = realm.createPrincipal(principal);
+                    }
+                }
+                request.session?.authenticate(principal, credential, [], trustLevel=Highest) : assert;
 
                 return True, redirectTo(request.url.with(path=redirectPath, query=Delete));
             } else {
@@ -264,8 +283,8 @@ import webauth.DBRealm;
      *
      * @see https://developer.amazon.com/docs/login-with-amazon/web-docs.html
      */
-    static service Amazon
-        extends OAuthProvider("amazon") {
+    static service Amazon(DBRealm realm)
+        extends OAuthProvider("amazon", realm) {
 
         @Override String authorizationUrl = "https://www.amazon.com/ap/oa";
         @Override String accessUrl        = "https://api.amazon.com/auth/o2/token";
@@ -283,15 +302,15 @@ import webauth.DBRealm;
      * @see https://developer.apple.com/documentation/signinwithapplerestapi
      * https://developer.apple.com/documentation/rosterapi/validating-with-the-roster-api-test-scope
      */
-    static service Apple
-        extends OAuthProvider("apple") {
+    static service Apple(DBRealm realm)
+        extends OAuthProvider("apple", realm) {
 
         @Override String authorizationUrl = "https://appleid.apple.com/auth/oauth2/v2/authorize";
         @Override String accessUrl        = "https://appleid.apple.com/auth/oauth2/v2/token";
         @Override String userIdUrl        = "https://api-school.apple.com/rosterapi/v1/users?limit=2";
 
         /**
-         * @see https://developer.amazon.com/docs/login-with-amazon/requesting-scopes-as-essential-voluntary.html
+         * @see https://developer.apple.com/documentation/accountorganizationaldatasharing/request-an-authorization
          */
         @Override String authorizationScope.get() = "edu.users.read";
 
@@ -309,8 +328,8 @@ import webauth.DBRealm;
     /**
      * @see https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
      */
-    static service Github
-        extends OAuthProvider("github") {
+    static service Github(DBRealm realm)
+        extends OAuthProvider("github", realm) {
 
         @Override String authorizationUrl = "https://github.com/login/oauth/authorize";
         @Override String accessUrl        = "https://github.com/login/oauth/access_token";
@@ -336,8 +355,8 @@ import webauth.DBRealm;
      *
      * @see https://developers.google.com/identity/protocols/oauth2/web-server?hl=en
      */
-    static service Google
-        extends OAuthProvider("google") {
+    static service Google(DBRealm realm)
+        extends OAuthProvider("google", realm) {
 
         @Override String authorizationUrl = "https://accounts.google.com/o/oauth2/v2/auth";
         @Override String accessUrl        = "https://oauth2.googleapis.com/token";
@@ -352,12 +371,12 @@ import webauth.DBRealm;
             ;
     }
 
-    static service Unknown(String provider)
-            extends OAuthProvider(provider) {
+    static service Unknown(String provider, DBRealm realm)
+            extends OAuthProvider(provider, realm) {
 
         @Override
         conditional ResponseOut retrieveUser(RequestIn request) {
-            console.print("$|Error: Unknown provider: {provider}");
+            console.print($"Error: Unknown provider: {provider}");
             return True, abortAuthentication(request);
         }
     }

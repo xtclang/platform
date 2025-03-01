@@ -134,17 +134,11 @@ service DbInjector(AppHost appHost, DbHost[] dbHosts)
                         }
                     }
 
-                    // main module is a wrapper (see _webModule.txt resource)
-                    WebApp  webApp = hostedContainer.invoke("hostedWebApp_")[0].as(WebApp);
-                    DBRealm realm  = new DBRealm(appInfo.deployment,
-                                                 rootSchema=db, initConfig=initConfig);
-                    // allow both digest (principal) and token based (entitlements) authentication
-                    Authenticator authenticator = new UserEndpoint(realm,
-                        new ChainAuthenticator(realm, [
-                            new DigestAuthenticator(realm),
-                            new TokenAuthenticator(realm),
-                        ]));
-                    return &authenticator.maskAs(Authenticator+WebService.ExtrasAware);
+                    // main module is a wrapper (see _webModule.txt resource); let it create the
+                    // Authenticator that belongs to its own type-system
+                    Tuple result = hostedContainer.invoke("createAuthenticator_",
+                                    Tuple:(appInfo.deployment, db, initConfig));
+                    return result[0].as(Authenticator);
                 }
                 return Null;
             };

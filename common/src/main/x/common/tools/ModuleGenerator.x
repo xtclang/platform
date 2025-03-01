@@ -18,7 +18,8 @@ class ModuleGenerator(ModuleTemplate webModule, WebAppInfo appInfo) {
     /**
      * Generic templates.
      */
-    protected String moduleSourceTemplate = $/_webModule.txt;
+    protected String moduleSourceTemplate        = $/_webModule.txt;
+    protected String createAuthenticatorTemplate = $/_createAuthenticator.txt;
 
     /**
      * Generate (if necessary) all the necessary classes to use a web module.
@@ -73,10 +74,12 @@ class ModuleGenerator(ModuleTemplate webModule, WebAppInfo appInfo) {
      */
     Boolean createModule(File sourceFile, String appName, String qualifier, WebAppInfo info,
                          Log errors) {
-        String useAuth      = info.useAuth ? "" : " //";
-        String moduleSource = moduleSourceTemplate.replace("%appName%"  , appName)
-                                                  .replace("%qualifier%", qualifier)
-                                                  .replace("%useAuth%"  , useAuth);
+        String moduleSource = moduleSourceTemplate
+                .replace("%appName%"  , appName)
+                .replace("%qualifier%", qualifier)
+                .replace("%createAuthenticator%", info.useAuth ? createAuthenticatorTemplate : "")
+                ;
+
         try {
             sourceFile.create();
             sourceFile.contents = moduleSource.utf8();

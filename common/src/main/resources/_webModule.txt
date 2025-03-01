@@ -1,7 +1,6 @@
 module %appName%_web%qualifier% {
     package web_   import web.xtclang.org;
     package xenia_ import xenia.xtclang.org;
-   %useAuth% package auth_  import auth.xqiz.it;
 
     package hosted_ import %appName%%qualifier%;
 
@@ -16,4 +15,6 @@ module %appName%_web%qualifier% {
         assert Module webApp := hosted_.isModuleImport(), webApp.is(web_.WebApp);
         return webApp;
     }
+
+%createAuthenticator%
 }

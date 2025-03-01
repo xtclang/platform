@@ -1,0 +1,20 @@
+    package auth_    import auth.xqiz.it;
+    package oodb_    import oodb.xtclang.org;
+    package webauth_ import webauth.xtclang.org;
+
+    web_.security.Authenticator createAuthenticator_(
+            String deployment, oodb_.RootSchema db, webauth_.Configuration initConfig) {
+        import web_.security.ChainAuthenticator;
+        import web_.security.DigestAuthenticator;
+        import web_.security.TokenAuthenticator;
+        import webauth_.DBRealm;
+
+        DBRealm realm = new DBRealm(deployment, rootSchema=db, initConfig=initConfig);
+
+        // allow both Digest, OAuth 2.0 (principal) and token based (entitlements) authentication
+        return new auth_.UserEndpoint(realm,
+            new ChainAuthenticator(realm, [
+                new DigestAuthenticator(realm),
+                new TokenAuthenticator(realm),
+            ]));
+    }

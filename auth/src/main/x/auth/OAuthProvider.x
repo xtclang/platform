@@ -201,6 +201,30 @@ import webauth.OAuthCredential;
      * @return (conditional) the response to send back to the client (user agent)
      */
     conditional ResponseOut retrieveUser(RequestIn request) {
+        if ((Principal? principal, Credential? credential) := requestUserInfo(request)) {
+            if (principal == Null || credential == Null) {
+                // there is no user info in the request
+                return True, abortAuthentication(request);
+            }
+            request.session?.authenticate(principal, credential, [], trustLevel=Highest) : assert;
+
+            return True, redirectTo(request.url.with(path=redirectPath, query=Delete));
+        } else {
+            // there is no access token, or it has expired; try to get a new access token
+            return False;
+        }
+    }
+
+    /**
+     * Request the identity info from the authentication server.
+     *
+     * @return True iff the there was a valid (not expired) access token to use for a request to the
+     *              provider
+     * @return (conditional) the `principal` and `credential` extracted from the provider response;
+     *          `principal` could be `Null` if the necessary information was missing in the response,
+     *          `credential` could be `Null` if the corresponding `Credential` has expired
+     */
+    conditional (Principal? principal, Credential? credential) requestUserInfo(RequestIn request) {
         if (accessToken == Null) {
             return False;
         }
@@ -225,7 +249,7 @@ import webauth.OAuthCredential;
                             switch (Credential.Status status = match.calcStatus()) {
                             case Revoked, Suspended, Expired:
                                 console.print($"Error: Credential for {email} at {provider} is {status}");
-                                return True, abortAuthentication(request);
+                                return True, principal, Null;
                             }
                         } else {
                             // even though we found the Principal for the locator (e.g. email),
@@ -239,12 +263,11 @@ import webauth.OAuthCredential;
                         principal = realm.createPrincipal(principal);
                     }
                 }
-                request.session?.authenticate(principal, credential, [], trustLevel=Highest) : assert;
-
-                return True, redirectTo(request.url.with(path=redirectPath, query=Delete));
+                return True, principal, credential;
             } else {
                 // there is no user info in the request
-                return True, abortAuthentication(request);
+                console.print($"Error: User info is missing: {messageIn}");
+                return True, Null, Null;
             }
         } else {
             // the request failed; try to get a new access token
@@ -265,7 +288,6 @@ import webauth.OAuthCredential;
         }
         return False;
     }
-
 
     /**
      * Abort the authentication process by redirecting the client (user agent) to the "root" URL.

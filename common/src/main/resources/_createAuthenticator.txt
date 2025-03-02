@@ -11,8 +11,8 @@
 
         DBRealm realm = new DBRealm(deployment, rootSchema=db, initConfig=initConfig);
 
-        // allow both Digest, OAuth 2.0 (principal) and token based (entitlements) authentication
-        return new auth_.UserEndpoint(realm,
+        // add authentication for OAuth 2.0, Digest (principal) and token based (entitlements)
+        return new auth_.OAuthEndpoint(realm,
             new ChainAuthenticator(realm, [
                 new DigestAuthenticator(realm),
                 new TokenAuthenticator(realm),

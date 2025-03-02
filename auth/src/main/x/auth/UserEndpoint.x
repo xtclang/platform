@@ -9,7 +9,6 @@ import sec.Permission;
 import sec.Principal;
 import sec.Subject;
 
-import web.security.Authenticator;
 import web.security.DigestCredential;
 
 import webauth.AuthSchema;
@@ -19,35 +18,26 @@ import DigestCredential.Hash;
 import DigestCredential.sha512_256;
 
 /**
- * The `UserEndpoint` is a [WebService] wrapper around an [Authenticator] that uses a [DBRealm].
+ * The `UserEndpoint` is a [WebService] that uses a [DBRealm] and provides out-the-box REST API to
+ * manage the underlying [auth database](AuthSchema).
  *
- * It provides out-the-box REST API to manage the underlying [auth database](AuthSchema).
- *
- * @param realm          the [DBRealm] containing the user info
- * @param authenticator  the underlying [Authenticator] (can be the `NeverAuthenticator`)
+ * @param realm  the `DBRealm` containing the user info
  */
 @WebService("/.well-known/auth/mgmt")
 @LoginRequired
 @SessionRequired
-service UserEndpoint(DBRealm realm, Authenticator authenticator)
-        implements Authenticator, WebService.ExtrasAware
-        delegates Authenticator - Duplicable(authenticator) {
+service UserEndpoint(DBRealm realm)
+        implements Duplicable {
 
     @Override
     construct(UserEndpoint that) {
-        this.realm         = that.realm;
-        this.authenticator = that.authenticator;
+        this.realm = that.realm;
     }
 
     /**
      * The AuthSchema db.
      */
     AuthSchema db.get() = realm.db;
-
-    // ----- ExtrasAware interface -----------------------------------------------------------------
-
-    @Override
-    (Duplicable+WebService)[] extras.get() = [duplicate(), new OAuthCallback(realm)];
 
     // ----- "self management" operations ----------------------------------------------------------
 

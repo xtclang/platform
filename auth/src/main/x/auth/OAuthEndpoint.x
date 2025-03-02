@@ -1,22 +1,70 @@
+import sec.Credential;
 import sec.Principal;
 
+import web.security.Authenticator;
+
 import webauth.DBRealm;
+import webauth.OAuthCredential;
 
 /**
- * The `OAuthCallback` is a [WebService] that serves as the
- * (client redirection endpoint)[https://www.rfc-editor.org/rfc/rfc6749#section-3.1.2].
+ * The `OAuthEndpoint` is a [WebService] that serves as the
+ * (client redirection endpoint)[https://www.rfc-editor.org/rfc/rfc6749#section-3.1.2] as well
+ * as an [Authenticator] for [OAuthCredential]s.
  *
  * TODO: instead of redirecting to "/' upon failure, consider passing an "error" redirect as well
- *       and having a "last error" endpoint to supply thqt information
+ *       and having a "last error" endpoint to supply that information
  */
 @WebService("/.well-known/oauth")
 @HttpsRequired
-service OAuthCallback(DBRealm realm)
-        implements Duplicable {
+service OAuthEndpoint(DBRealm realm, Authenticator authenticator)
+        implements Authenticator, WebService.ExtrasAware
+        delegates Authenticator - Duplicable(authenticator) {
+
+    /**
+     * The web app console (backed by the console.log in the deployment root directory)
+     */
+    @Inject Console console;
 
     @Override
-    construct(OAuthCallback that) {
-        this.realm = that.realm;
+    construct(OAuthEndpoint that) {
+        this.realm         = that.realm;
+        this.authenticator = that.authenticator;
+    }
+
+    // ----- ExtrasAware interface -----------------------------------------------------------------
+
+    @Override
+    (Duplicable+WebService)[] extras.get() = [this, new UserEndpoint(realm)];
+
+    // ----- Authenticator interface ---------------------------------------------------------------
+
+    @Override
+    Attempt[] authenticate(RequestIn request) {
+        if (SessionData     session   := request.session.is(SessionData),
+            OAuthCredential oauthCred := session.credential.is(OAuthCredential)) {
+
+            String        provider     = oauthCred.provider;
+            OAuthProvider providerImpl = session.getProvider(provider, realm);
+            try {
+                if ((Principal? principal, Credential? credential) :=
+                            providerImpl.requestUserInfo(request),
+                        principal != Null && credential != Null) {
+                    return [new Attempt(principal, Success, Null, credential)];
+                }
+
+                // TODO: use refresh protocol
+            } catch (TimedOut e) {
+                console.print($"Error: Authentication request to {provider} has timed out");
+                return [new Attempt(Null, KnownNoData)];
+            }
+
+            String      callback = $"/.well-known/oauth/callback/{provider}";
+            String      redirect = request.url.path ?: "/";
+            ResponseOut response = providerImpl.requestAuthorization(request, redirect, callback);
+
+            return [new Attempt(Null, InProgress, response)];
+        }
+        return super(request);
     }
 
     // ----- "OAuth protocol" operations -----------------------------------------------------------
@@ -34,7 +82,7 @@ service OAuthCallback(DBRealm realm)
         if (Principal principal ?= session.principal,
                       principal.calcStatus(realm) == Active) {
             // the session is already authenticated; redirect to the app page
-            return redirectTo(request.url.with(path=redirect, query=Delete));
+            return redirectTo(request.url.with(path=redirect));
         }
 
         OAuthProvider providerImpl = session.getProvider(provider, realm);
@@ -65,7 +113,6 @@ service OAuthCallback(DBRealm realm)
 
     @OnError
     ResponseOut handleErrors(RequestIn request, Exception|String|HttpStatus cause) {
-        @Inject Console console;
         console.print($"Error: Authorization request has failed: {cause}");
         return redirectTo(request.url.with(path="/", query=Delete));
     }

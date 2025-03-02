@@ -64,7 +64,7 @@ service OAuthEndpoint(DBRealm realm, Authenticator authenticator)
 
             return [new Attempt(Null, InProgress, response)];
         }
-        return super(request);
+        return authenticator.authenticate(request); // TODo GG: super(request) should work
     }
 
     // ----- "OAuth protocol" operations -----------------------------------------------------------

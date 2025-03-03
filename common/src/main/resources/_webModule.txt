@@ -9,7 +9,7 @@ module %appName%_web%qualifier% {
             Map<Class<web_.WebService>, web_.WebService.Constructor> extras = []) {
 
         return new xenia_.HttpHandler(route, hostedWebApp_(), extras);
-        }
+    }
 
     web_.WebApp hostedWebApp_() {
         assert Module webApp := hosted_.isModuleImport(), webApp.is(web_.WebApp);

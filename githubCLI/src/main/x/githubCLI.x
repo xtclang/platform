@@ -5,7 +5,7 @@
  *       the Platform back end, driven by the Platform CLI or UI.
  */
 module githubCLI.xqiz.it
-        incorporates TerminalApp("Platform Github command line tool", "GH CLI>") {
+        incorporates TerminalApp.Mixin("Platform Github command line tool", "GH CLI>") {
     package cli  import cli.xtclang.org;
     package conv import convert.xtclang.org;
     package json import json.xtclang.org;

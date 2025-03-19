@@ -13,10 +13,10 @@ module challenge.xqiz.it {
      */
     @WebService("/.well-known/acme-challenge")
     service AcmeChallenge
-            incorporates StaticContent {
+            incorporates StaticContent.Mixin {
 
         construct(Directory acmeChallengeDir) {
-            construct StaticContent(path, acmeChallengeDir, mediaType=Text);
+            construct StaticContent.Mixin(acmeChallengeDir, mediaType=Text);
         }
 
         // ----- Handler -------------------------------------------------------------------------------

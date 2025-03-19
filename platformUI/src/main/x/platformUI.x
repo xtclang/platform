@@ -235,8 +235,8 @@ module platformUI.xqiz.it {
      */
     @WebService("/")
     @HttpsRequired
-    service Content()
-            incorporates StaticContent(path, Directory:/spa) {
+    service Content
+            incorporates StaticContent.Mixin(Directory:/spa) {
         import web.Get;
         import web.ResponseOut;
 

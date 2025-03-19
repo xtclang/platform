@@ -5,9 +5,9 @@ import sec.Principal;
 import web.Session;
 
 /**
- * Session mixin that is automatically incorporated into a Session implementation.
+ * Session annotation that is automatically incorporated into a Session implementation.
  */
-mixin SessionData
+annotation SessionData
         into Session {
     construct() {
         accountManager = ControllerConfig.accountManager;

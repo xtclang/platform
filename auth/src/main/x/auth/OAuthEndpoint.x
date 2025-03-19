@@ -117,7 +117,7 @@ service OAuthEndpoint(DBRealm realm, Authenticator authenticator)
         return redirectTo(request.url.with(path="/", query=Delete));
     }
 
-    mixin SessionData
+    annotation SessionData
             into Session {
         /**
          * Get an [OAuthProvider] implementation for the specified provider name.

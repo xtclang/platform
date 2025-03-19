@@ -5,7 +5,7 @@
  *       override the "run" method.
  */
 module platformCLI.xqiz.it
-        incorporates TerminalApp("Platform Command Line Tool", "Platform CLI>") {
+        incorporates TerminalApp.Mixin("Platform Command Line Tool", "Platform CLI>") {
 
     package convert import convert.xtclang.org;
     package web     import web.xtclang.org;

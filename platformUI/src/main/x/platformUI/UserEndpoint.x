@@ -13,6 +13,7 @@ import DigestCredential.sha512_256;
  * Dedicated service for user management.
  */
 @WebService("/user")
+@HttpsRequired
 service UserEndpoint
         extends CoreService {
     /**
@@ -28,8 +29,10 @@ service UserEndpoint
      * Log in the specified user.
      */
     @Post("login{/userName}")
-    @HttpsRequired
-    SimpleResponse login(SessionData session, String userName, @BodyParam String password = "") {
+    @SessionRequired
+    SimpleResponse login(String userName, @BodyParam String password = "") {
+        assert SessionData session := this.session.is(SessionData);
+
         Realm realm = ControllerConfig.realm;
 
         if (Principal principal := realm.findPrincipal(DigestCredential.Scheme, userName.quoted()),
@@ -59,8 +62,10 @@ service UserEndpoint
      * Log out the current user.
      */
     @Post("logout")
-    @HttpsRequired
-    HttpStatus signOut(SessionData session) {
+    @SessionRequired
+    HttpStatus signOut() {
+        assert SessionData session := this.session.is(SessionData);
+
         session.deauthenticate();
         return HttpStatus.NoContent;
     }

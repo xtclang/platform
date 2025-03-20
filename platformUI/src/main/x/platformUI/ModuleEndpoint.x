@@ -216,9 +216,9 @@ service ModuleEndpoint
         }
 
         // resolve the module
-        Boolean    isResolved  = False;
-        ModuleType moduleType  = Generic;
-        String[]   issues      = [];
+        Boolean    isResolved = False;
+        ModuleType moduleType = Generic;
+        String[]   issues     = [];
         try {
             ModuleTemplate template = accountRepo.getResolvedModule(moduleName);
             isResolved  = True;

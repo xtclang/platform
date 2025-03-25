@@ -15,7 +15,7 @@ export const useModuleStore = defineStore("module", {
     moduleNames   : (state) => Object.keys(state.modulesJSON),
     webModuleNames: (state) => {
       return Object.values(state.modulesJSON)
-        .filter(m => m.moduleType=="Web")
+        .filter(m => m.kind=="Web")
         .map(m => m.name)
     },
   },
@@ -37,9 +37,9 @@ export const useModuleStore = defineStore("module", {
             "displayText": hasMissing ? "Missing dependencies" : "All dependencies available",
           },
           issues: {
-            "icon": hasIssues ? "warning" : module.isResolved ? "verified" : "inventory",
-            "displayClass": hasIssues ? "text-negative" : (module.isResolved ? "text-positive" : "text-warning"),
-            "displayText": hasIssues ? "Issues found" : (module.isResolved ? "Resolved" : "Not resolved yet"),
+            "icon": hasIssues ? "warning" : module.resolved ? "verified" : "inventory",
+            "displayClass": hasIssues ? "text-negative" : (module.resolved ? "text-positive" : "text-warning"),
+            "displayText": hasIssues ? "Issues found" : (module.resolved ? "Resolved" : "Not resolved yet"),
             "expandable": hasIssues
           },
         }
@@ -52,8 +52,8 @@ export const useModuleStore = defineStore("module", {
         this.modulesJSON = {
           "bank.examples.org": {
             name: "bank.examples.org",
-            isResolved: false,
-            moduleType: "Db",
+            resolved: false,
+            kind: "Db",
             issues: [],
             dependencies: [
               {name: "oodb.xtclang.org", available: true},
@@ -61,8 +61,8 @@ export const useModuleStore = defineStore("module", {
           },
           "bankStressTest.examples.org": {
             name: "bankStressTest.examples.org",
-            isResolved: true,
-            moduleType: "Web",
+            resolved: true,
+            kind: "Web",
             issues: [],
             dependencies: [
               {name: "web.xtclang.org", available: true},

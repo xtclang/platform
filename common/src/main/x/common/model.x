@@ -63,13 +63,15 @@ package model {
             new UserInfo(id, name ?: this.name, email ?: this.email);
     }
 
-    enum ModuleType default(Generic) {Generic, Web, Db}
+    enum ModuleKind default(Generic) {Generic, Web, Db}
     const ModuleInfo(
             String           name,       // qualified
-            Boolean          isResolved,
-            ModuleType       moduleType,
+            Boolean          resolved,
+            Time             uploaded,
+            ModuleKind       kind,
             String[]         issues,
-            RequiredModule[] dependencies
+            RequiredModule[] dependencies,
+            InjectionKey[]   injections,
             ) {
         /**
          * @return True iff this module depends on the specified module

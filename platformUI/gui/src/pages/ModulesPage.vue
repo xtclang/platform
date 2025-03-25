@@ -37,19 +37,19 @@
             :key="module.name"
           >
             <q-item-section avatar top>
-              <q-icon v-if     ="module.moduleType=='Web'" name="wysiwyg"
+              <q-icon v-if     ="module.kind=='Web'" name="wysiwyg"
                 color="brown-12" size="34px"/>
-              <q-icon v-else-if="module.moduleType=='Db'"  name="fa-solid fa-database"
+              <q-icon v-else-if="module.kind=='Db'"  name="fa-solid fa-database"
                 color="brown-12" size="34px"/>
               <q-icon v-else                               name="extension"
                 color="brown-12" size="34px"/>
             </q-item-section>
 
             <q-item-section top class="col-3 gt-sm">
-              <q-item-label caption v-if="module.moduleType=='Web'">
+              <q-item-label caption v-if="module.kind=='Web'">
                 <q-badge color="secondary">WebApp</q-badge>
               </q-item-label>
-              <q-item-label caption v-else-if="module.moduleType=='Db'">
+              <q-item-label caption v-else-if="module.kind=='Db'">
                 <q-badge color="secondary">Database</q-badge>
               </q-item-label>
               <q-item-label class="q-mt-sm"> {{ simpleName(module.name) }} </q-item-label>
@@ -133,7 +133,7 @@
                 <q-btn
                   class="gt-xs module-action"
                   size="12px" flat dense round icon="app_registration"
-                  :disable="module.moduleType!='Web' || module.issues.length > 0"
+                  :disable="module.kind!='Web' || module.issues.length > 0"
                   @click="webAppDialog = { show: true, moduleName: module.name }"
                 >
                   <q-tooltip class="bg-amber-1 text-secondary text-bold">

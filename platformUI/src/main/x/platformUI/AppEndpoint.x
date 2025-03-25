@@ -607,7 +607,8 @@ service AppEndpoint
                 $"Invalid deployment name {deployment.quoted()}: {error}");
         }
 
-        if (!accountInfo.modules.contains(moduleName)) {
+        ModuleInfo moduleInfo;
+        if (!(moduleInfo := accountInfo.modules.get(moduleName))) {
             return new SimpleResponse(NotFound, $"Module is missing: '{moduleName}'");
         }
 
@@ -620,19 +621,17 @@ service AppEndpoint
         Injections       injections;
 
         // the deployment cannot be active until all injections are specified
-        if (InjectionKey[] injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName)) {
-            if (injectionKeys.empty) {
-                injections = [];
-            } else {
-                injections = new ListMap();
-                for (InjectionKey key : injectionKeys) {
-                    injections.put(key, "");
-                }
-            }
-            return injections;
+        InjectionKey[] injectionKeys = moduleInfo.injections;
+        if (injectionKeys.empty) {
+            injections = [];
         } else {
-            return new SimpleResponse(Conflict, $"Failed to load module: {moduleName.quoted()}");
+            injections = new ListMap();
+            for (InjectionKey key : injectionKeys) {
+                injections.put(key, "");
+            }
+            injections.makeImmutable();
         }
+        return injections;
     }
 
     /**

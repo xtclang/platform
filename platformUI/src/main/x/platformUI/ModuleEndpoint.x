@@ -16,8 +16,9 @@ import common.WebHost;
 import common.model.AccountInfo;
 import common.model.AppInfo;
 import common.model.DbAppInfo;
+import common.model.InjectionKey;
 import common.model.ModuleInfo;
-import common.model.ModuleType;
+import common.model.ModuleKind;
 import common.model.WebAppInfo;
 import common.model.RequiredModule;
 
@@ -189,7 +190,7 @@ service ModuleEndpoint
 
                     accountManager.addOrUpdateModule(accountName, newInfo);
 
-                    if (newInfo.isResolved) {
+                    if (newInfo.resolved) {
                         affectedNames += affectedName;
                     }
                 }
@@ -216,23 +217,29 @@ service ModuleEndpoint
         }
 
         // resolve the module
-        Boolean    isResolved = False;
-        ModuleType moduleType = Generic;
-        String[]   issues     = [];
+        Boolean    resolved = False;
+        ModuleKind kind     = Generic;
+        String[]   issues   = [];
+        InjectionKey[] injectionKeys = [];
         try {
             ModuleTemplate template = accountRepo.getResolvedModule(moduleName);
-            isResolved  = True;
+            resolved = True;
+
+            assert injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName);
 
             if (utils.isWebModule(template)) {
-                moduleType = Web;
+                kind = Web;
             } else if (utils.isDbModule(template)) {
-                moduleType = Db;
+                kind = Db;
             }
         } catch (Exception e) {
             issues += e.text?;
         }
 
-        return new ModuleInfo(moduleName, isResolved, moduleType, issues, dependencies);
+
+        @Inject Clock clock;
+        return new ModuleInfo(moduleName, resolved, clock.now, kind, issues, dependencies,
+                              injectionKeys);
     }
 
     /**

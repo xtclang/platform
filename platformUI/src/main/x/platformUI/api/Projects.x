@@ -2,7 +2,9 @@ import json.*;
 import web.*;
 import web.responses.SimpleResponse;
 
+import common.model.AccountInfo;
 import common.model.AppInfo;
+import common.model.ModuleInfo;
 import common.model.InjectionKey;
 import common.model.WebAppInfo;
 
@@ -12,19 +14,14 @@ import common.model.WebAppInfo;
 @WebService("/api/v1/projects")
 @LoginRequired
 @SessionRequired
-service Projects {
-
-    AppEndpoint delegate.get() {
-        private @Lazy AppEndpoint delegate_.calc() = new AppEndpoint();
-
-        AppEndpoint delegate = delegate_;
-        delegate.request = this.request;
-        return delegate;
-    }
+service Projects
+        extends CoreService {
 
     @Get("/")
     JsonArray getProjects() {
-        Map<String, AppInfo> deployments = delegate.checkStatus();
+        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+
+        Map<String, AppInfo> deployments = accountInfo.apps;
 
         JsonArrayBuilder response = json.arrayBuilder();
         for (AppInfo info : deployments.values) {
@@ -48,9 +45,38 @@ service Projects {
     }
 
     @Get("{/id}")
-    JsonObject|SimpleResponse getProject(String id) {
-        AppInfo|SimpleResponse info = delegate.checkStatus(id);
-        return info.is(SimpleResponse) ? info : toJsonObject(info);
+    JsonObject|HttpStatus getProject(String id) {
+        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+
+        if (AppInfo info := accountInfo.apps.get(id)) {
+            return toJsonObject(info);
+        } else {
+            return NotFound;
+        }
+    }
+
+    /**
+     * Find all projects that have the specified module as it's primary module or depend on it.
+     */
+    @Get("{?usesModule}")
+    JsonArray findProjectsByModule(@QueryParam("usesModule") String moduleName) {
+        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+
+        Map<String, ModuleInfo> modules     = accountInfo.modules;
+        Map<String, AppInfo>    deployments = accountInfo.apps;
+
+        JsonArrayBuilder response = json.arrayBuilder();
+        for (AppInfo appInfo : deployments.values) {
+            if (appInfo.moduleName == moduleName) {
+                response.add(toJsonObject(appInfo));
+            } else {
+                assert ModuleInfo moduleInfo := modules.get(appInfo.moduleName);
+                if (moduleInfo.dependencies.any(rm -> rm.name == moduleName)) {
+                    response.add(toJsonObject(appInfo));
+                }
+            }
+        }
+        return response.build();
     }
 
     static JsonObject toJsonObject(AppInfo info) = [

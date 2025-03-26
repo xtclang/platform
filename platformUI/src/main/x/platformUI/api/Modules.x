@@ -1,5 +1,7 @@
 import json.*;
+
 import web.*;
+import web.responses.SimpleResponse;
 
 import common.model.InjectionKey;
 import common.model.ModuleInfo;
@@ -11,7 +13,8 @@ import common.model.RequiredModule;
 @WebService("/api/v1/modules")
 @LoginRequired
 @SessionRequired
-service Modules {
+service Modules
+        extends CoreService {
 
     ModuleEndpoint delegate.get() {
         private @Lazy ModuleEndpoint delegate_.calc() = new ModuleEndpoint();
@@ -23,7 +26,9 @@ service Modules {
 
     @Get("/")
     JsonArray getModules() {
-        Map<String, ModuleInfo> modules = delegate.getAvailable();
+        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+
+        Map<String, ModuleInfo> modules = accountInfo.modules;
 
         JsonArrayBuilder response = json.arrayBuilder();
         for (ModuleInfo info : modules.values) {
@@ -34,11 +39,22 @@ service Modules {
 
     @Get("{/id}")
     JsonObject|HttpStatus getModule(String id) {
-        if (ModuleInfo info := delegate.getAvailable().get(id)) {
+        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+
+        if (ModuleInfo info := accountInfo.modules.get(id)) {
             return toJsonObject(info);
         } else {
             return NotFound;
         }
+    }
+
+    @Post("/")
+    JsonArray|SimpleResponse upload() {
+        JsonArrayBuilder response = json.arrayBuilder();
+
+        // TODO: extract the common part between this and delegate.upload()
+
+        return response.build();
     }
 
     // ----- helpers -------------------------------------------------------------------------------

@@ -59,55 +59,28 @@ service ModuleEndpoint
      */
     @Post("upload")
     String[] uploadModule(@QueryParam("redeploy") Boolean allowRedeployment) {
-        assert RequestIn request ?= this.request;
-        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+        Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
+        ModuleRepository accountRepo = utils.getModuleRepository(libDir);
 
-        String[] messages = [];
-        if (web.Body body ?= request.body) {
-            Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
-            ModuleRepository accountRepo = utils.getModuleRepository(libDir);
+        UploadInfo[] uploads = extractModule(libDir, accountRepo);
 
-            @Inject Container.Linker linker;
+        String[]    messages        = [];
+        Set<String> affectedModules = new HashSet();
+        for (UploadInfo upload : uploads) {
 
-            Set<String> affectedModules = new HashSet();
-            for (FormDataFile fileData : http.extractFileData(body)) {
-                File file = libDir.fileFor(fileData.fileName);
-                file.contents = fileData.contents;
-
-                try {
-                    ModuleTemplate template   = linker.loadFileTemplate(file).mainModule;
-                    String         moduleName = template.qualifiedName;
-                    String         fileName   =  moduleName + ".xtc";
-
-                    // save the file
-                    /* TODO move the file saving operation to the AccountManager manager
-                            so it can maintain the consistency between the DB and disk */
-                    if (fileName != file.name) {
-                        if (File fileOld := libDir.findFile(fileName)) {
-                            fileOld.delete();
-                        }
-                        if (file.renameTo(fileName)) {
-                            messages += $|Stored "{fileData.fileName}" module as: "{moduleName}"
-                                         ;
-                        } else {
-                            messages += $|Invalid or duplicate module name: "{moduleName}"
-                                         ;
-                        }
-                    }
-
-                    ModuleInfo info = buildModuleInfo(accountRepo, moduleName);
-
-                    accountManager.addOrUpdateModule(accountName, info);
-
-                    affectedModules += moduleName;
-                    affectedModules += updateDependencies(accountRepo, moduleName);
-                } catch (Exception e) {
-                    file.delete();
-                    messages += $"Invalid module file {fileData.fileName.quoted()}: {e.message}";
-                }
+            if (String failure ?= upload.failure) {
+                messages += failure;
+                continue;
             }
+            assert String moduleName ?= upload.moduleName;
+            affectedModules += moduleName;
+            affectedModules += updateDependencies(accountRepo, moduleName);
+            messages        += $|Stored "{upload.fileName}" module as: "{moduleName}"
+                                ;
 
             if (allowRedeployment && affectedModules.size > 0) {
+                assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+
                 String[] deployments = new String[];
                 for ((String deployment, AppInfo appInfo) : accountInfo.apps) {
                     if (AppHost host := hostManager.getHost(deployment),
@@ -115,9 +88,11 @@ service ModuleEndpoint
                     deployments += deployment;
                     }
                 }
-                messages += $|Redeploying {deployments.toString(sep=", ", pre="", post="")}
-                            ;
-                redeploy^(accountRepo, deployments);
+                if (!deployments.empty) {
+                    messages += $|Redeploying {deployments.toString(sep=", ", pre="", post="")}
+                                ;
+                    redeploy^(accountRepo, deployments);
+                }
             }
         }
        return messages;
@@ -135,7 +110,7 @@ service ModuleEndpoint
     @Delete("/delete{/moduleName}")
     SimpleResponse deleteModule(String moduleName) {
         if (AccountInfo accountInfo := accountManager.getAccount(accountName),
-            accountInfo.modules.contains(moduleName)) {
+                        accountInfo.modules.contains(moduleName)) {
 
             Set<String> dependentDeployments = accountInfo.collectDeployments(moduleName);
             if (!dependentDeployments.empty) {
@@ -147,15 +122,14 @@ service ModuleEndpoint
 
             Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
             ModuleRepository accountRepo = utils.getModuleRepository(libDir);
-            if (File|Directory f := libDir.find(moduleName + ".xtc")) {
-                if (f.is(File)) {
-                    f.delete();
-                    // there could be un-deployed modules that depend on this one;
-                    // mark them as "unresolved"
-                    updateDependencies(accountRepo, moduleName);
-                }
-            return new SimpleResponse(OK);
+            if (File file := libDir.findFile(moduleName + ".xtc")) {
+                file.delete();
+                // there could be un-deployed modules that depend on this one;
+                // mark them as "unresolved"
+                updateDependencies(accountRepo, moduleName);
             }
+
+            return new SimpleResponse(OK);
         }
         return new SimpleResponse(NotFound);
     }
@@ -168,10 +142,17 @@ service ModuleEndpoint
         ModuleRepository accountRepo = utils.getModuleRepository(
                 hostManager.ensureAccountLibDirectory(accountName));
         try {
-            accountManager.addOrUpdateModule(accountName, buildModuleInfo(accountRepo, moduleName));
-            return new SimpleResponse(OK);
+
+            assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+            if (ModuleInfo moduleInfo := accountInfo.modules.get(moduleName)) {
+                accountManager.addOrUpdateModule(accountName,
+                    buildModuleInfo(accountRepo, moduleName, moduleInfo.uploaded));
+                return new SimpleResponse(OK);
+            } else {
+                return new SimpleResponse(NotFound);
+            }
         } catch (Exception e) {
-            return new SimpleResponse(InternalServerError, e.message);
+            return new SimpleResponse(Conflict, e.message);
         }
     }
 
@@ -184,25 +165,83 @@ service ModuleEndpoint
         String[] affectedNames = [];
         if (AccountInfo accountInfo := accountManager.getAccount(accountName)) {
             for (ModuleInfo moduleInfo : accountInfo.modules.values) {
-                if (moduleInfo.dependsOn(moduleName)) {
-                    String     affectedName = moduleInfo.name;
-                    ModuleInfo newInfo      = buildModuleInfo(accountRepo, affectedName);
+                if (!moduleInfo.dependsOn(moduleName)) {
+                    continue;
+                }
 
-                    accountManager.addOrUpdateModule(accountName, newInfo);
+                String     affectedName = moduleInfo.name;
+                ModuleInfo newInfo      = buildModuleInfo(accountRepo, affectedName, moduleInfo.uploaded);
 
-                    if (newInfo.resolved) {
-                        affectedNames += affectedName;
-                    }
+                accountManager.addOrUpdateModule(accountName, newInfo);
+
+                if (newInfo.resolved) {
+                    affectedNames += affectedName;
                 }
             }
         }
         return affectedNames;
     }
 
+    // ----- helpers -------------------------------------------------------------------------------
+
+    const UploadInfo(String  fileName,          // the name of the uploaded file (used for UI only)
+                     String? moduleName = Null, // the module name; Null if the file is corrupted
+                     String? failure    = Null, // not Null if any failures occurred
+                    );
+    /**
+     * Extract and save the uploaded module to the repository. Save a previous version (if exists)
+     * with a "_bak" extension for processing by the DB migration logic.
+     */
+    UploadInfo[] extractModule(Directory libDir, ModuleRepository accountRepo) {
+        @Inject Clock clock;
+
+        assert RequestIn request ?= this.request;
+        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+
+        UploadInfo[] uploads = [];
+
+        if (web.Body body ?= request.body) {
+            @Inject Container.Linker linker;
+
+            for (FormDataFile fileData : http.extractFileData(body)) {
+                String fileName = fileData.fileName;
+                File   fileTemp = utils.createTempFile(libDir);
+
+                fileTemp.contents = fileData.contents;
+
+                ModuleTemplate template;
+                try {
+                    template = linker.loadFileTemplate(fileTemp).mainModule;
+                } catch (Exception e) {
+                    fileTemp.delete();
+                    uploads += new UploadInfo(fileName,
+                            failure=$"Invalid module file {fileName.quoted()}: {e.message}");
+                    continue;
+                }
+
+                String moduleName = template.qualifiedName;
+                String storeName = $"{moduleName}.xtc";
+
+                // TODO: this is very temporary; we should keep old the versions until they are
+                //       no longer used and provide a way to evolve DBs
+                if (File fileOld := libDir.findFile(storeName)) {
+                    fileOld.delete();
+                }
+                assert fileTemp.renameTo(storeName);
+
+                accountManager.addOrUpdateModule(accountName,
+                        buildModuleInfo(accountRepo, moduleName, clock.now));
+                uploads += new UploadInfo(fileName, moduleName);
+            }
+        }
+        return uploads.freeze(inPlace=True);
+    }
+
     /**
      * Generate ModuleInfo for the specified module.
      */
-    private ModuleInfo buildModuleInfo(ModuleRepository accountRepo, String moduleName) {
+    private ModuleInfo buildModuleInfo(ModuleRepository accountRepo, String moduleName,
+                                       Time uploaded) {
          // collect the dependencies (the module names the specified module depends on)
         RequiredModule[] dependencies = [];
         if (ModuleTemplate moduleTemplate := accountRepo.getModule(moduleName)) {
@@ -217,9 +256,9 @@ service ModuleEndpoint
         }
 
         // resolve the module
-        Boolean    resolved = False;
-        ModuleKind kind     = Generic;
-        String[]   issues   = [];
+        Boolean        resolved      = False;
+        ModuleKind     kind          = Generic;
+        String[]       issues        = [];
         InjectionKey[] injectionKeys = [];
         try {
             ModuleTemplate template = accountRepo.getResolvedModule(moduleName);
@@ -236,9 +275,7 @@ service ModuleEndpoint
             issues += e.text?;
         }
 
-
-        @Inject Clock clock;
-        return new ModuleInfo(moduleName, resolved, clock.now, kind, issues, dependencies,
+        return new ModuleInfo(moduleName, resolved, uploaded, kind, issues, dependencies,
                               injectionKeys);
     }
 

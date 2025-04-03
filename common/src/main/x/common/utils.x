@@ -173,6 +173,23 @@ package utils {
     }
 
     /**
+     * Create a temp file in the specified directory.
+     *
+     * Note: the caller is responsible for deleting or renaming the returned file.
+     */
+    static File createTempFile(Directory dir, String prefix = "", String suffix = ".tmp") {
+        @Inject Random rnd;
+
+        while (True) {
+            File file = dir.fileFor($"{prefix}{rnd.uint64()}{suffix}");
+            if (!file.exists) {
+                file.contents = [0xC0, 0xDA];
+                return file;
+            }
+        }
+    }
+
+    /**
      * Assemble a module repository for the specified account lib directory.
      */
      static ModuleRepository getModuleRepository(Directory libDir) {

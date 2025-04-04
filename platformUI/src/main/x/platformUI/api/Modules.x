@@ -1,3 +1,5 @@
+import ecstasy.mgmt.ModuleRepository;
+
 import json.*;
 
 import web.*;
@@ -6,6 +8,10 @@ import web.responses.SimpleResponse;
 import common.model.InjectionKey;
 import common.model.ModuleInfo;
 import common.model.RequiredModule;
+
+import common.utils;
+
+import ModuleEndpoint.UploadInfo;
 
 /**
  * New API for module management.
@@ -49,10 +55,28 @@ service Modules
     }
 
     @Post("/")
-    JsonArray|SimpleResponse upload() {
-        JsonArrayBuilder response = json.arrayBuilder();
+    JsonArray upload() {
+        Directory        libDir      = hostManager.ensureAccountLibDirectory(accountName);
+        ModuleRepository accountRepo = utils.getModuleRepository(libDir);
 
-        // TODO: extract the common part between this and delegate.upload()
+        UploadInfo[] uploads = delegate.extractModule(libDir, accountRepo);
+
+        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
+
+        JsonArrayBuilder response = json.arrayBuilder();
+        for (UploadInfo upload : uploads) {
+            if (String failure ?= upload.failure) {
+                response.addObject([
+                    "error"    = True,
+                    "fileName" = upload.fileName,
+                    "message"  = failure,
+                ]);
+            } else {
+                assert String     moduleName ?= upload.moduleName,
+                       ModuleInfo moduleInfo := accountInfo.modules.get(moduleName);
+                response.addObject(toJsonObject(moduleInfo));
+            }
+        }
 
         return response.build();
     }

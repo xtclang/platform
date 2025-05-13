@@ -1,3 +1,5 @@
+- use email as a username for the platform authentication
+
 - add a well-knonw API for checking permission (e.g. "POST users/me/permission/check {"permission":value})
 
 - compute the initial application useAuth value based on the presence of the AuthScheme; or
@@ -6,9 +8,16 @@
 - DEFERRED: create an admin group 0; admin user belongs to admin group; group="user"
 
 - use "notifyOnClose" handler to report a connection failure due to unloaded db app
-- add constraints to Timer and Clock injected by the web/db apps
+
 - always start registration with "self" provider (to create a temporary key) before "renewing"
   with certbot; alternatively we can simply disallow passing a provider into "register" API
 
 - consider a possibility of multi-certificate "host", e.g. "host.cvs.com.xqiz.it" and
   "xtc-host.cvs.com" both pointing to the same Azure hosted "xtc-host.eastus.cloudapp.azure.com"
+
+- add constraints to the FileStore injected by the hosted apps
+    - total persistent size no more than X Gb
+    - total number of file nodes no more than X
+
+- add constraints to Timer and Clock injected by the hosted apps
+    - No "persistent" alarms for a free app

@@ -245,8 +245,9 @@ service ModuleEndpoint
          // collect the dependencies (the module names the specified module depends on)
         RequiredModule[] dependencies = [];
         if (ModuleTemplate moduleTemplate := accountRepo.getModule(moduleName)) {
-            for ((_, String requiredName) : moduleTemplate.moduleNamesByPath) {
+            for ((_, ModuleTemplate depends) : moduleTemplate.modulesByPath) {
                 // everything depends on Ecstasy module; don't show it
+                String requiredName = depends.qualifiedName;
                 if (requiredName != TypeSystem.MackKernel &&
                         dependencies.all(m -> m.name != requiredName)) {
                     dependencies +=

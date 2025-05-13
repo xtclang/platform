@@ -43,8 +43,9 @@ package utils {
         DbHost[]     dbHosts;
         HostInjector injector;
 
-        Map<String, String> dbNames = detectDatabases(template);
-        if (dbNames.size > 0) {
+        FileTemplate                file      = template.parent;
+        Map<String, ModuleTemplate> dbModules = template.modulesByPath.filter(e -> isDbModule(e.value));
+        if (dbModules.size > 0) {
             dbHosts = new DbHost[];
 
             assert appHost.is(WebHost);
@@ -52,7 +53,8 @@ package utils {
             Directory deployDir = appHost.homeDir;
             Directory buildDir  = appHost.buildDir;
 
-            for (String dbModuleName : dbNames.values) {
+            for (ModuleTemplate dbModule : dbModules.values) {
+                String dbModuleName = dbModule.qualifiedName;
                 DbHost dbHost;
                 if (!(dbHost := appHost.findSharedDbHost(dbModuleName))) {
                     if (!(dbHost := createDbHost(repository, dbModuleName, Null, "jsondb",
@@ -82,26 +84,6 @@ package utils {
             }
             return False;
         }
-    }
-
-    /**
-     * @return an array of the Database module names that the specified module depends on
-     */
-    static Map<String, String> detectDatabases(ModuleTemplate template) {
-        import ClassTemplate.Contribution;
-
-        FileTemplate        fileTemplate = template.parent;
-        Map<String, String> dbNames      = new HashMap();
-
-        for ((String name, String dependsOn) : template.moduleNamesByPath) {
-            if (dependsOn != TypeSystem.MackKernel) {
-                assert ModuleTemplate depModule := fileTemplate.getModule(dependsOn);
-                if (isDbModule(depModule)) {
-                    dbNames.put(name, dependsOn);
-                }
-            }
-        }
-        return dbNames;
     }
 
     /**
@@ -149,6 +131,8 @@ package utils {
      * @return True iff the specified ModuleTemplate represents a Database module
      */
     static Boolean isDbModule(ModuleTemplate template) {
+        assert template.resolved;
+
         TypeTemplate databaseTemplate = oodb.Database.as(Type).template;
         return template.type.isA(databaseTemplate);
     }

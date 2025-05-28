@@ -35,7 +35,7 @@ application deployers have to follow the outlined steps:
 
 3. Retrieve a "Client ID" and "Client Secret" from the OAuth provider and configure the OAuth
    provider for the XTC platform using the CLI command:
-        set-auth-provider {deploymentName} {provider} {clientId} {clientSecret}
+        set-oauth-provider {deploymentName} {provider} {clientId} {clientSecret}
 
 4. Add a link to your application landing page in the form of:
 

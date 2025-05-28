@@ -13,7 +13,7 @@ class ApiTest {
     @Command("api-get-module", "API V1: get module by name")
     String getModule(String moduleName) = platformCLI.get($"/api/v1/modules/{moduleName}");
 
-    @Command("api-upload-module", "Upload a module at the specified path")
+    @Command("api-upload-module", "API V1: Upload a module at the specified path")
     String upload(String path) {
         @Inject Directory curDir;
         @Inject Directory rootDir;

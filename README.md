@@ -120,7 +120,7 @@ The final image is about 724MB in size.
 #### username:password
 The PAAS requires a username and password to login.
 * The default username is **admin**
-* This password is passed in using **-e ADMIN_PASSWORD="a password"**.
+* This password is passed in using **-e ADMIN_PASSWORD="an_insecure_password"**.
 
 #### PAAS configuration
 The networking part of the PAAS is configured with a JSON formatted file named **cfg.json**.
@@ -130,7 +130,7 @@ If you want to make changes then copy the default one into ./docker/xqiz.it and 
 
 #### Run
 ```shell
-docker run -e ADMIN_PASSWORD="p455w0rd" \
+docker run -e ADMIN_PASSWORD="an_insecure_password" \
        -p 80:8080 -p 443:8090  \
        -v ./docker/xqiz.it:/root/xqiz.it \
        --name xtc_platform \

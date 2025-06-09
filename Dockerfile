@@ -120,7 +120,7 @@ ENV JAVA_HOME="${SDKMAN_DIR}/candidates/java/current"
 ENV XDK_HOME="${XVM_HOME}/xdk/build/install/xdk"
 
 # Copy the entrypoint script into the container and make it executable
-COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # 1. CRITICAL: This MUST be the first RUN instruction in this stage.
 # It installs 'mkdir' (from coreutils) and other essential tools.

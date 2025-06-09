@@ -1,5 +1,0 @@
-# the below files and folders will be created during PAAS startup.
-# put them on the gitignore list so the dev does not add/commit them accidentally
-cfg.json
-accounts/
-platform/

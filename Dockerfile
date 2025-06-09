@@ -1,13 +1,6 @@
 # syntax=docker/dockerfile:1
 # check=skip=SecretsUsedInArgOrEnv
 
-# 1. build with:
-#    docker build --no-cache -t platform .
-# 2. run it:
-#    docker run -p 80:8080 -p 443:8090 -e CERT_PASSWORD="p455w0rd" -v ./docker/xqiz.it:/root/xqiz.it --name platform platform
-# 3. use the browser for https://xtc-platform.localhost.xqiz.it
-# 4. use admin and your chosen password to log in
-
 # IMPORTANT: Separate base version and vendor for Java to avoid $3 unbound error
 FROM debian:latest AS builder
 
@@ -151,10 +144,7 @@ COPY --from=builder "${JAVA_HOME}" "${JAVA_HOME}"
 
 WORKDIR "${PLATFORM_HOME}"
 
-ENV CERT_PASSWORD="your_secret_password"
-ENV ROUTE="localhost"
-ENV BIND="0.0.0.0:8080/8090"
-ENV PROXIES=""
+ENV ADMIN_PASSWORD="your_secret_password"
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Set the default arguments for your application (xec).

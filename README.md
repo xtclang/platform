@@ -120,22 +120,44 @@ The final image is about 724MB in size.
 #### username:password
 The PAAS requires a username and password to login.
 * The default username is **admin**
-* This password is passed in using **-e ADMIN_PASSWORD="an_insecure_password"**.
+* This password is passed in using **-e PASSWORD=[password]**.
 
 #### PAAS configuration
 The networking part of the PAAS is configured with a JSON formatted file named **cfg.json**.
-The PAAS is looking for the config file in ./docker/xqiz.it
-The default config is in [cfg.json](./kernel/src/main/resources/cfg.json)
-If you want to make changes then copy the default one into ./docker/xqiz.it and amend it accordingly.
+The PAAS is looking for the config file inside the container at **~/xqiz.it/platform**. 
+If a **cfg.json** is already present then it will be loaded and processed.
+Otherwise it will be created from the default template which is here [cfg.json](./kernel/src/main/resources/cfg.json) .
 
-#### Run
+Docker allows mapping a host folder into the container. This allows accessing the files created by the PAAS.
+It is suggested to use the same location as if the PAAS is run locally on the machine. 
+Create the local folder which will be mapped by Docker. 
 ```shell
-docker run -e ADMIN_PASSWORD="an_insecure_password" \
-       -p 80:8080 -p 443:8090  \
-       -v ./docker/xqiz.it:/root/xqiz.it \
-       --name xtc_platform \
-       xtc_platform
+mkdir -p ~/xqiz.it
 ```
+If you want to make changes to **cfg.json** then start the PAAS once,
+locate the config file, amend it and restart the container to pick up the changes.
+
+#### Run it for the first time
+```shell
+docker run -e PASSWORD=[password] -p 80:8080 -p 443:8090 -v ~/xqiz.it:/root/xqiz.it --name xtc_platform xtc_platform
+```
+
+#### Restart
+```shell
+docker restart xtc_platform
+```
+
+#### Stop
+```shell
+docker stop xtc_platform
+```
+
+#### Teardown
+Removing the container and the image in case they are not needed anymore
+```shell
+docker rm xtc_platform && docker rmi xtc_platform
+```
+
 ### Accessing the PAAS
 Use the browser to access the PAAS e.g. https://xtc-platform.localhost.xqiz.it
 

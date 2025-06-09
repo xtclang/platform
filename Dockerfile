@@ -144,7 +144,7 @@ COPY --from=builder "${JAVA_HOME}" "${JAVA_HOME}"
 
 WORKDIR "${PLATFORM_HOME}"
 
-ENV ADMIN_PASSWORD=""
+ENV PASSWORD=""
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Set the default arguments for your application (xec).

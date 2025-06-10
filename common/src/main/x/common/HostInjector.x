@@ -19,7 +19,6 @@ import web.sessions.Broker;
 import model.AppInfo;
 import model.IdpInfo;
 import model.InjectionKey;
-import model.Injections;
 import model.WebAppInfo;
 
 /**
@@ -69,22 +68,37 @@ service HostInjector(AppHost appHost)
      */
     class ConsoleImpl(File consoleFile)
             implements Console {
+
+        @Inject Clock clock;
+        private Boolean addTimestamp = True;
+
         @Override
         void print(Object o = "", Boolean suppressNewline = False) {
-            write(o.is(String) ? o : o.toString(), suppressNewline);
+            String message;
+            switch (addTimestamp, suppressNewline) {
+            case (True, False):
+                message = $"{clock.now}: {o}\n";
+                break;
+
+            case (True, True):
+                message = $"{clock.now}: {o}";
+                addTimestamp = False;
+                break;
+
+            case (False, False):
+                message = $"{o}\n";
+                addTimestamp = True;
+                break;
+
+            case (False, True):
+                message = o.toString();
+                break;
+            }
+            consoleFile.append(message.utf8());
         }
 
         @Override
-        String readLine(String prompt = "", Boolean suppressEcho = False) {
-            throw new Unsupported();
-        }
-
-        void write(String s, Boolean suppressNewline) {
-            consoleFile.append(s.utf8());
-            if (!suppressNewline) {
-                consoleFile.append(utils.NewLine);
-            }
-        }
+        String readLine(String prompt = "", Boolean suppressEcho = False) = throw new Unsupported();
     }
 
     @Override

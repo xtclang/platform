@@ -17,6 +17,14 @@ import common.model.WebAppInfo;
 service Projects
         extends CoreService {
 
+    AppEndpoint delegate.get() {
+        private @Lazy AppEndpoint delegate_.calc() = new AppEndpoint();
+
+        AppEndpoint delegate = delegate_;
+        delegate.request = this.request;
+        return delegate;
+    }
+
     @Get("/")
     JsonArray getProjects() {
         assert AccountInfo accountInfo := accountManager.getAccount(accountName);
@@ -53,6 +61,11 @@ service Projects
         } else {
             return NotFound;
         }
+    }
+
+    @Delete("{/id}")
+    SimpleResponse deleteProject(String id) {
+        return delegate.unregisterApp(id);
     }
 
     /**

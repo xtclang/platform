@@ -81,6 +81,17 @@ service Modules
         return response.build();
     }
 
+    @Delete("{/id}")
+    JsonObject|SimpleResponse deleteModule(String id) {
+        SimpleResponse response = delegate.deleteModule(id);
+        if (response.status == Conflict) {
+            String message = response.bytes.unpackUtf8();
+            return ["errors"=message];
+        } else {
+            return response;
+        }
+    }
+
     // ----- helpers -------------------------------------------------------------------------------
 
     static JsonObject toJsonObject(ModuleInfo info) = [

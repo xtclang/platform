@@ -103,6 +103,63 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 
     If you do not stop the server cleanly, the next start-up will be much slower, since the databases on the server will need to be recovered.
 
+## PAAS in Docker #
+> NOTE: Running the PAAS in Docker does NOT require port-forwarding as described above.
+> In fact port-forwarding must be disabled/removed.
+
+### Build
+Simply run
+```shell
+docker build --no-cache -t xtc_platform .
+```
+The build pulls the latest xvm repo from github and uses this repo for the PAAS. The image is named **xtc_platform**.
+
+The final image is about 724MB in size.
+
+### Run
+#### username:password
+The PAAS requires a username and password to login.
+* The default username is **admin**
+* This password is passed in using **-e PASSWORD=[password]**.
+
+#### PAAS configuration
+The networking part of the PAAS is configured with a JSON formatted file named **cfg.json**.
+The PAAS is looking for the config file inside the container at **~/xqiz.it/platform**. 
+If a **cfg.json** is already present then it will be loaded and processed.
+Otherwise it will be created from the default template which is here [cfg.json](./kernel/src/main/resources/cfg.json) .
+
+Docker allows mapping a host folder into the container. This allows accessing the files created by the PAAS.
+It is suggested to use the same location as if the PAAS is run locally on the machine. 
+Create the local folder which will be mapped by Docker. 
+```shell
+mkdir -p ~/xqiz.it
+```
+If you want to make changes to **cfg.json** then start the PAAS once,
+locate the config file, amend it and restart the container to pick up the changes.
+
+#### Run it for the first time
+```shell
+docker run -e PASSWORD=[password] -p 80:8080 -p 443:8090 -v ~/xqiz.it:/root/xqiz.it --name xtc_platform xtc_platform
+```
+
+#### Restart
+```shell
+docker restart xtc_platform
+```
+
+#### Stop
+```shell
+docker stop xtc_platform
+```
+
+#### Teardown
+Removing the container and the image in case they are not needed anymore
+```shell
+docker rm xtc_platform && docker rmi xtc_platform
+```
+
+### Accessing the PAAS
+Use the browser to access the PAAS e.g. https://xtc-platform.localhost.xqiz.it
 
 ## License
 

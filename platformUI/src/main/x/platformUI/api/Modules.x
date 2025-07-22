@@ -30,6 +30,12 @@ service Modules
         return delegate;
     }
 
+    // TODO: very temporary; remove
+    @Options("{/path}")
+    @SessionOptional
+    @LoginOptional
+    HttpStatus preflight() = OK;
+
     @Get("/")
     JsonArray getModules() {
         assert AccountInfo accountInfo := accountManager.getAccount(accountName);
@@ -72,9 +78,10 @@ service Modules
                     "message"  = failure,
                 ]);
             } else {
+                // we don't keep the file name; just supply it in the response for the correlation
                 assert String     moduleName ?= upload.moduleName,
                        ModuleInfo moduleInfo := accountInfo.modules.get(moduleName);
-                response.addObject(toJsonObject(moduleInfo));
+                response.addObject(toJsonObject(moduleInfo, upload.fileName));
             }
         }
 
@@ -94,9 +101,10 @@ service Modules
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    static JsonObject toJsonObject(ModuleInfo info) = [
+    static JsonObject toJsonObject(ModuleInfo info, String fileName = "") = [
         "id"           = info.name,
         "name"         = info.name,
+        "fileName"     = fileName,
         "version"      = "1.0",
         "date"         = info.uploaded.toString(),
         "kind"         = info.kind.toString(),

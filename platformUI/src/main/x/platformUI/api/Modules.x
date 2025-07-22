@@ -31,7 +31,7 @@ service Modules
     }
 
     // TODO: very temporary; remove
-    @Options("{/path}")
+    @Options("{/path*}")
     @SessionOptional
     @LoginOptional
     HttpStatus preflight() = OK;

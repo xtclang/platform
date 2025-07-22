@@ -20,7 +20,7 @@ service User {
     }
 
     // TODO: very temporary; remove
-    @Options("{/path}")
+    @Options("{/path*}")
     @SessionOptional
     HttpStatus preflight() = OK;
 

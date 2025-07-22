@@ -27,7 +27,7 @@ service Projects
     }
 
     // TODO: very temporary; remove
-    @Options("{/path}")
+    @Options("{/path*}")
     @SessionOptional
     @LoginOptional
     HttpStatus preflight() = OK;
@@ -60,10 +60,9 @@ service Projects
     JsonObject registerApp(@BodyParam JsonObject projectInfo) {
         assert AccountInfo accountInfo := accountManager.getAccount(accountName);
 
-        String     deployment = projectInfo["name"].as(String);
-        String     moduleName = projectInfo["module"].as(String);
-        String?    provider   = projectInfo["certProvider"].as(String?);
-        JsonArray? injections = projectInfo["injections"].as(JsonArray?);
+        String  deployment = projectInfo["name"].as(String);
+        String  moduleName = projectInfo["module"].as(String);
+        String? provider   = projectInfo["certProvider"].as(String?);
 
         (Injections | SimpleResponse) result = delegate.prepareRegister(deployment, moduleName);
         if (result.is(SimpleResponse)) {
@@ -99,18 +98,15 @@ service Projects
             return toJsonObject(appInfo);
         }
 
-        String?    provider   = projectInfo["certProvider"].as(String?);
-        JsonArray? injections = projectInfo["injections"].as(JsonArray?);
+        String?     provider   = projectInfo["certProvider"].as(String?);
+        JsonObject? injections = projectInfo["injections"].as(JsonObject?);
 
-        if (injections != Null && !injections.empty) {
-            for (Doc pair : injections) {
-                assert pair.is(JsonObject) && pair.size == 1;
-                for ((Doc key, Doc value) : pair) {
-                    SimpleResponse response = delegate.setInjectionValue(
-                        id, key.as(String), value.as(String));
-                    if (response.status != OK) {
-                        return toJsonObject(response);
-                    }
+        if (injections != Null) {
+            for ((Doc key, Doc value) : injections) {
+                SimpleResponse response = delegate.setInjectionValue(
+                    id, key.as(String), value.as(String));
+                if (response.status != OK) {
+                    return toJsonObject(response);
                 }
             }
         }
@@ -154,32 +150,33 @@ service Projects
         return response.build();
     }
 
-    static JsonObject toJsonObject(AppInfo info) {
+    JsonObject toJsonObject(AppInfo info) {
         JsonObjectBuilder project = json.objectBuilder();
+        String deployment = info.deployment;
         project.addAll([
-            "id"        = info.deployment,
-            "name"      = info.deployment,
+            "id"        = deployment,
+            "name"      = deployment,
             "module"    = info.moduleName,
             "autoStart" = info.autoStart,
-            "active"    = info.active,
+            "active"    = delegate.isActive(deployment),
         ]);
 
         if (info.is(WebAppInfo)) {
             project.addAll([
-                "type"         = "web",
-                "domain"       = info.hostName,
+                "kind"         = "web",
+                "url"          = info.hostName,
                 "sharedDbs"    = info.sharedDBs,
                 "certProvider" = info.provider,
                 "useCookies"   = info.useCookies,
                 "useAuth"      = info.useAuth,
             ]);
         } else if (info.is(DbAppInfo)) {
-            project.add("type", "db");
+            project.add("kind", "db");
         }
 
-        JsonArrayBuilder injections = json.arrayBuilder();
+        JsonObjectBuilder injections = json.objectBuilder();
         for ((InjectionKey key, String value) : info.injections) {
-            injections.addObject([key.name=value]);
+            injections.add(key.name, value);
         }
         project.add("injections", injections);
 

@@ -1,3 +1,5 @@
+import json.*;
+
 class ApiTest {
 
     // ----- auth ----------------------------------------------------------------------------------
@@ -36,6 +38,44 @@ class ApiTest {
 
     @Command("api-get-project", "API V1: get project by name")
     String getProject(String projectName) = platformCLI.get($"/api/v1/projects/{projectName}");
+
+    @Command("api-add-project", "API V1: add project")
+    String addProject(String projectName, String moduleName, String? injections = Null) {
+        JsonObjectBuilder project = json.objectBuilder();
+        project.addAll([
+            "name"   = projectName,
+            "module" = moduleName,
+        ]);
+        if (injections != Null && !injections.empty) {
+            Map<String, String> values = injections.splitMap(); // e.g. "org=PetStore,state=MA"
+
+            JsonArrayBuilder injectionValues = json.arrayBuilder();
+            for ((String key, String value) : values) {
+                injectionValues.addObject([key=value]);
+            }
+            project.add("injections", injectionValues.build());
+        }
+        return platformCLI.post($"/api/v1/projects", project.build(), Json);
+    }
+
+    @Command("api-update-project", "API V1: update project")
+    String updateProject(String projectName, String? injections = Null, String? provider = Null) {
+        JsonObjectBuilder project = json.objectBuilder();
+
+        if (injections != Null && !injections.empty) {
+            Map<String, String> values = injections.splitMap(); // e.g. "org=PetStore,state=MA"
+
+            JsonArrayBuilder injectionValues = json.arrayBuilder();
+            for ((String key, String value) : values) {
+                injectionValues.addObject([key=value]);
+            }
+            project.add("injections", injectionValues.build());
+        }
+        if (provider != Null && !provider.empty) {
+            project.add("certProvider", provider);
+        }
+        return platformCLI.patch($"/api/v1/projects/{projectName}", project.build(), Json);
+    }
 
     @Command("api-projects-by-module", "API V1: projects that use the specified module")
     String findProjects(String moduleName) = platformCLI.get($"/api/v1/projects?usesModule={moduleName}");

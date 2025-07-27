@@ -150,6 +150,30 @@ service Projects
         return response.build();
     }
 
+    @Post("/{id}/start")
+    JsonObject start(String id) {
+        (AppInfo | SimpleResponse) result = delegate.startApp(id);
+        if (result.is(SimpleResponse)) {
+            return toJsonObject(result);
+        }
+        return [
+            "status"  = "success",
+            "message" = "Started successfully",
+            "project" = id,
+        ];
+    }
+
+    @Post("/{id}/stop")
+    JsonObject stop(String id) {
+        SimpleResponse result = delegate.stopApp(id);
+        return result.status == OK
+            ? ["status"  = "success",
+               "message" = "Stopped successfully",
+               "project" = id,
+              ]
+            : toJsonObject(result);
+    }
+
     JsonObject toJsonObject(AppInfo info) {
         JsonObjectBuilder project = json.objectBuilder();
         String deployment = info.deployment;

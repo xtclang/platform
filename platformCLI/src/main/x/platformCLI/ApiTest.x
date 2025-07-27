@@ -79,4 +79,10 @@ class ApiTest {
 
     @Command("api-projects-by-module", "API V1: projects that use the specified module")
     String findProjects(String moduleName) = platformCLI.get($"/api/v1/projects?usesModule={moduleName}");
+
+    @Command("api-start", "API V1: start the app")
+    String start(String projectName) = platformCLI.post($"/api/v1/projects/{projectName}/start");
+
+    @Command("api-stop", "API V1: stop the app")
+    String stop(String projectName)  = platformCLI.post($"/api/v1/projects/{projectName}/stop");
 }

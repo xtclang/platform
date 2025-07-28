@@ -152,26 +152,25 @@ service Projects
 
     @Post("/{id}/start")
     JsonObject start(String id) {
-        (AppInfo | SimpleResponse) result = delegate.startApp(id);
-        if (result.is(SimpleResponse)) {
-            return toJsonObject(result);
+        (AppInfo | SimpleResponse) appInfo = delegate.startApp(id);
+        if (appInfo.is(SimpleResponse)) {
+            return toJsonObject(appInfo);
         }
-        return [
-            "status"  = "success",
-            "message" = "Started successfully",
-            "project" = id,
-        ];
+        return toJsonObject(appInfo);
     }
 
     @Post("/{id}/stop")
     JsonObject stop(String id) {
         SimpleResponse result = delegate.stopApp(id);
-        return result.status == OK
-            ? ["status"  = "success",
-               "message" = "Stopped successfully",
-               "project" = id,
-              ]
-            : toJsonObject(result);
+        if (result.status == OK) {
+            AppInfo|SimpleResponse appInfo = delegate.getAppInfo(id);
+            if (appInfo.is(AppInfo)) {
+                return toJsonObject(appInfo);
+            } else {
+                result = appInfo;
+            }
+        }
+        return toJsonObject(result);
     }
 
     JsonObject toJsonObject(AppInfo info) {

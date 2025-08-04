@@ -73,7 +73,7 @@ service Projects
         AppInfo|SimpleResponse appInfo;
         if (moduleInfo.kind == Web) {
             if (provider == Null || provider.empty) {
-                provider = "self";
+                provider = "certbot";
             }
             appInfo = delegate.registerWebApp(deployment, moduleName, provider);
         } else if (moduleInfo.kind == Db) {

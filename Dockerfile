@@ -8,7 +8,7 @@ ARG JAVA_VERSION=21.0.5-tem
 ARG NVM_VERSION="v0.40.1"
 ARG YARN_VERSION="1.22.22"
 ARG NODE_VERSION="v20.18.1"
-ARG GRADLE_VERSION=8.12
+ARG GRADLE_VERSION=8.14
 
 # Install Git and build essentials (for make)
 RUN apt-get update && apt-get install -y \
@@ -58,17 +58,10 @@ ENV XVM_HOME=/root/xtclang/xvm
 
 RUN cd "${XVM_HOME}" && \
     # compile the XDK
-    ./gradlew installDist && \
-    # compile the launcher
-    launcher_src_dir=${XVM_HOME}/javatools_launcher/src/main/c  && \
-    cd ${launcher_src_dir}  && \
-    OS_NAME="linux" make && \
-    cd ../../../build/bin/  && \
-    # Copy the compiled launcher to the XDK's binary directory
-    cp linux_launcher "${XVM_HOME}/xdk/build/install/xdk/bin/xcc" && \
-    cp linux_launcher "${XVM_HOME}/xdk/build/install/xdk/bin/xec" && \
-    # Clean up the compiled executable to reduce image size (optional, but good practice)
-    echo XVM launchers compilation and setup complete.
+    ./gradlew xdk:installWithLaunchersDist && \
+    cd xdk/build/install && \
+    ln -s $(ls -td -- */ | head -n 1) xdk && \
+    echo XVM setup complete.
 
 ENV PATH="${XVM_HOME}/xdk/build/install/xdk/bin/:${PATH}"
 

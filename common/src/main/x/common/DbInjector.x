@@ -1,4 +1,4 @@
-import ecstasy.annotations.InjectedRef;
+import ecstasy.annotations.Inject;
 
 import ecstasy.text.Log;
 
@@ -74,7 +74,7 @@ service DbInjector(AppHost appHost, DbHost[] dbHosts)
                     Type hostSchemaType = dbHost.schemaType;
                     Type hostConnType   = hostSchemaType + Connection.as(Type).parameterize([hostSchemaType]);
                     if (hostConnType.isA(schemaType)) {
-                        return (InjectedRef.Options opts) -> maskConnection(createConnection, type);
+                        return (Inject.Options opts) -> maskConnection(createConnection, type);
                     }
                 } else {
                     errors.reportAll(consoleImpl.print);
@@ -86,7 +86,7 @@ service DbInjector(AppHost appHost, DbHost[] dbHosts)
 
         switch (type, name) {
         case (Authenticator?, "authenticator"):
-            return (InjectedRef.Options opts) -> {
+            return (Inject.Options opts) -> {
                 if (WebAppInfo appInfo := appHost.appInfo.is(WebAppInfo), appInfo.useAuth) {
 
                     Configuration initConfig = new Configuration(

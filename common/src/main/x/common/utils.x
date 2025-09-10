@@ -1,4 +1,4 @@
-import ecstasy.annotations.InjectedRef;
+import ecstasy.annotations.Inject;
 
 import ecstasy.mgmt.Container;
 import ecstasy.mgmt.DirRepository;

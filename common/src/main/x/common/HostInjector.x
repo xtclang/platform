@@ -1,6 +1,6 @@
 import ecstasy.lang.src.Compiler;
 
-import ecstasy.annotations.InjectedRef;
+import ecstasy.annotations.Inject;
 
 import ecstasy.mgmt.Container;
 import ecstasy.mgmt.ModuleRepository;
@@ -118,7 +118,7 @@ service HostInjector(AppHost appHost)
             return clock;
 
         case (Timer, "timer"):
-            return (InjectedRef.Options opts) -> {
+            return (Inject.Options opts) -> {
                 @Inject(opts=opts) Timer timer;
                 return timer;
             };
@@ -174,7 +174,7 @@ service HostInjector(AppHost appHost)
 
         case (Random, "random"):
         case (Random, "rnd"):
-            return (InjectedRef.Options opts) -> {
+            return (Inject.Options opts) -> {
                 @Inject(opts=opts) Random random;
                 return random;
             };
@@ -192,19 +192,19 @@ service HostInjector(AppHost appHost)
             return repository;
 
         case (Algorithms, "algorithms"):
-            return (InjectedRef.Options opts) -> {
+            return (Inject.Options opts) -> {
                 @Inject(opts=opts) Algorithms algorithms;
                 return algorithms;
             };
 
         case (KeyStore, "keystore"):
-            return (InjectedRef.Options opts) -> {
+            return (Inject.Options opts) -> {
                 @Inject(opts=opts) KeyStore keystore;
                 return keystore;
             };
 
         case (Broker?, "sessionBroker"):
-            return (InjectedRef.Options opts) -> {
+            return (Inject.Options opts) -> {
                 WebApp webApp;
                 if (platform) {
                     // platformUI (WebApp) uses CookieBroker
@@ -240,9 +240,9 @@ service HostInjector(AppHost appHost)
         case (String, "clientSecret"):
             if (platform) {
                 // TODO GG: extract platform secrets from the KernelHost
-                return (InjectedRef.Options opts) -> assert;
+                return (Inject.Options opts) -> assert;
             }
-            return (InjectedRef.Options opts) -> {
+            return (Inject.Options opts) -> {
                 assert String  provider := opts.is(String),
                        WebHost webHost  := appHost.is(WebHost);
                 if (IdpInfo info := webHost.appInfo.idProviders.get(provider)) {
@@ -256,7 +256,7 @@ service HostInjector(AppHost appHost)
             if (platform) {
                 // give the platform modules whatever they ask for
                 @Inject ecstasy.reflect.Injector injector;
-                return (InjectedRef.Options opts) -> injector.inject(type, name, opts);
+                return (Inject.Options opts) -> injector.inject(type, name, opts);
             }
 
             // see utils.collectDestringableInjections()
@@ -270,7 +270,7 @@ service HostInjector(AppHost appHost)
                 return Null;
             }
 
-            return (InjectedRef.Options opts) ->
+            return (Inject.Options opts) ->
                 throw new Exception($|Invalid resource: name="{name}", type="{type}"
                                    );
         }

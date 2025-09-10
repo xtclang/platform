@@ -23,6 +23,7 @@ tasks.register("build") {
                 commandLine("xcc", "--verbose",
                             "-o", libDir,
                             "-L", libDir,
+                            "-r", "${projectDir}/src/main/resources",
                             srcModule)
             }
         }

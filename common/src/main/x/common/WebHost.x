@@ -270,7 +270,8 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
         } else {
             errors.reportAll(log);
             deferredRequests.forEach(request ->
-                    request.respond(HttpStatus.InternalServerError.code, [], [], []));
+                    request.respond(HttpStatus.InternalServerError.code, [], [],
+                                    errors.collectErrors().utf8()));
         }
     }
 
@@ -307,7 +308,8 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
             Log errors = new ErrorLog();
             if (!(handler := activate(False, errors))) {
                 errors.reportAll(log);
-                request.respond(HttpStatus.InternalServerError.code, [], [], []);
+                request.respond(HttpStatus.InternalServerError.code, [], [],
+                                errors.collectErrors().utf8());
                 return;
             }
         }

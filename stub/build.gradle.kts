@@ -7,6 +7,9 @@ tasks.register("build") {
     val srcModule = "${projectDir}/src/main/x/stub.x"
 
     project.exec {
-        commandLine("xcc", "-o", libDir, srcModule)
+        commandLine("xcc",
+            "-o", libDir,
+            "-r", "${projectDir}/src/main/resources",
+            srcModule)
     }
 }

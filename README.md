@@ -58,7 +58,7 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 
 7. Make sure all necessary *node* modules are installed within that directory using the following command:
 
-        npm install
+        yarn install
 
 8. If you plan to use `quasar` dev environment, please install it globally by the following command:
 

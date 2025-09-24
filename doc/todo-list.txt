@@ -1,6 +1,8 @@
+- report an error if the project module is neither Web nor DB
+
 - use email as a username for the platform authentication
 
-- add a well-knonw API for checking permission (e.g. "POST users/me/permission/check {"permission":value})
+- add a well-known API for checking permission (e.g. "POST users/me/permission/check {"permission":value})
 
 - compute the initial application useAuth value based on the presence of the AuthScheme; or
   ignore the value during container creation if the AuthScheme is not present

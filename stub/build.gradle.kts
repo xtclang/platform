@@ -3,13 +3,15 @@
  */
 
 tasks.register("build") {
+    dependsOn("compileXcc")
+}
+
+tasks.register<Exec>("compileXcc") {
     val libDir    = "${rootProject.projectDir}/lib"
     val srcModule = "${projectDir}/src/main/x/stub.x"
 
-    project.exec {
-        commandLine("xcc",
-            "-o", libDir,
-            "-r", "${projectDir}/src/main/resources",
-            srcModule)
-    }
+    commandLine("xcc",
+        "-o", libDir,
+        "-r", "${projectDir}/src/main/resources",
+        srcModule)
 }

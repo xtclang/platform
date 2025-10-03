@@ -8,22 +8,17 @@ tasks.register("build") {
     group       = "Build"
     description = "Build this module"
 
+    dependsOn("compileXcc")
+}
+
+tasks.register<Exec>("compileXcc") {
     dependsOn(project(":common").tasks["build"])
+    dependsOn(project(":stub").tasks["build"])
 
-    doLast {
-        val src = fileTree("${projectDir}/src").files.stream().
-                mapToLong{f -> f.lastModified()}.max().orElse(0)
-        val dst = file("$libDir/host.xtc").lastModified()
+    val srcModule = "${projectDir}/src/main/x/host.x"
 
-        if (src > dst) {
-            val srcModule = "${projectDir}/src/main/x/host.x"
-
-            project.exec {
-                commandLine("xcc", "--verbose",
-                            "-o", libDir,
-                            "-L", libDir,
-                            srcModule)
-            }
-        }
-    }
+    commandLine("xcc", "--verbose",
+            "-o", libDir,
+            "-L", libDir,
+            srcModule)
 }

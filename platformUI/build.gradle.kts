@@ -18,23 +18,22 @@ tasks.register("build") {
     group       = "Build"
     description = "Build this module"
 
-    dependsOn(project(":common").tasks["build"])
-
     // there must be a way to tell quasar not to rebuild if nothing changed, but I cannot
     // figure it out and have to use a manual timestamp check
     dependsOn(checkGui)
+    dependsOn("compileXcc")
+}
 
-    doLast {
-        val srcModule = "${projectDir}/src/main/x/platformUI.x"
+tasks.register<Exec>("compileXcc") {
+    dependsOn(project(":common").tasks["build"])
 
-        project.exec {
-            commandLine("xcc", "--verbose",
-                        "-o", libDir,
-                        "-L", libDir,
-                        "-r", webContent,
-                        srcModule)
-        }
-    }
+    val srcModule = "${projectDir}/src/main/x/platformUI.x"
+
+    commandLine("xcc", "--verbose",
+                "-o", libDir,
+                "-L", libDir,
+                "-r", webContent,
+                srcModule)
 }
 
 val checkGui = tasks.register("checkGui") {
@@ -56,11 +55,7 @@ val checkGui = tasks.register("checkGui") {
     }
 }
 
-val buildGui = tasks.register("buildGui") {
-    doLast {
-        project.exec {
-            workingDir(guiDir)
-            commandLine("yarn", "--ignore-engines", "quasar", "build")
-        }
-    }
+val buildGui = tasks.register<Exec>("buildGui") {
+    workingDir(guiDir)
+    commandLine("yarn", "--ignore-engines", "quasar", "build")
 }

@@ -108,13 +108,27 @@ Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every 
 > In fact port-forwarding must be disabled/removed.
 
 ### Build
-Simply run
-```shell
-docker build --no-cache -t xtc_platform .
-```
-The build pulls the latest xvm repo from github and uses this repo for the PAAS. The image is named **xtc_platform**.
 
-The final image is about 724MB in size.
+The Dockerfile uses a multi-stage build with the official XDK base image from GitHub Container Registry.
+
+#### Using Docker:
+```shell
+docker buildx build -t xtc-platform:latest .
+```
+
+#### Using Podman:
+```shell
+podman build -t xtc-platform:latest .
+```
+
+The build uses the official `ghcr.io/xtclang/xvm:latest` base image and builds the platform in three stages:
+1. UI Builder - Compiles the Quasar web UI using Node.js 22
+2. Platform Builder - Compiles all platform modules using Gradle with the XDK
+3. Runtime - Creates the final minimal image with only the XDK and platform artifacts
+
+The final image is approximately **142MB** in size.
+
+**Note:** Cache mounts are used for npm and Gradle dependencies to speed up rebuilds. The first build downloads dependencies, but subsequent builds will be much faster.
 
 ### Run
 #### username:password
@@ -139,23 +153,43 @@ locate the config file, amend it and restart the container to pick up the change
 
 #### Run it for the first time
 ```shell
-docker run -e PASSWORD=[password] -p 80:8080 -p 443:8090 -v ~/xqiz.it:/root/xqiz.it --name xtc_platform xtc_platform
+docker run -e PASSWORD=[password] -p 80:8080 -p 443:8090 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
+```
+
+Or with Podman:
+```shell
+podman run -e PASSWORD=[password] -p 80:8080 -p 443:8090 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
 ```
 
 #### Restart
 ```shell
-docker restart xtc_platform
+docker restart xtc-platform
+```
+
+Or with Podman:
+```shell
+podman restart xtc-platform
 ```
 
 #### Stop
 ```shell
-docker stop xtc_platform
+docker stop xtc-platform
+```
+
+Or with Podman:
+```shell
+podman stop xtc-platform
 ```
 
 #### Teardown
 Removing the container and the image in case they are not needed anymore
 ```shell
-docker rm xtc_platform && docker rmi xtc_platform
+docker rm xtc-platform && docker rmi xtc-platform:latest
+```
+
+Or with Podman:
+```shell
+podman rm xtc-platform && podman rmi xtc-platform:latest
 ```
 
 ### Accessing the PAAS

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e # Exit immediately if a command exits with a non-zero status
 
 if [ -z "${PASSWORD}" ]; then
@@ -9,6 +9,9 @@ if [ -z "${PASSWORD}" ]; then
   echo "----------------------------------------------------------------------"
   exit 1 # Exit with a non-zero status code to indicate failure
 fi
+
+# Set JVM options for heap size (default 2GB if not specified)
+export JAVA_OPTS="${JAVA_OPTS:--Xmx2g -Xms512m}"
 
 # Construct the final command to execute your application
 # "$@" expands to all arguments passed to the entrypoint script (which come from CMD)

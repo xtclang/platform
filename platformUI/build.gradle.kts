@@ -2,60 +2,94 @@
  * Build the "platformUI" module.
  */
 
-val libDir = "${rootProject.projectDir}/lib"
+import com.github.gradle.node.yarn.task.YarnTask
 
-val guiDir     = "$projectDir/gui"
-val webContent = "$guiDir/dist"
-
-tasks.register("clean") {
-    group       = "Build"
-    description = "Delete previous build results"
-
-    delete(webContent)
+plugins {
+    alias(libs.plugins.xtc)
+    alias(libs.plugins.node)
 }
 
-tasks.register("build") {
-    group       = "Build"
-    description = "Build this module"
-
-    // there must be a way to tell quasar not to rebuild if nothing changed, but I cannot
-    // figure it out and have to use a manual timestamp check
-    dependsOn(checkGui)
-    dependsOn("compileXcc")
-}
-
-tasks.register<Exec>("compileXcc") {
-    dependsOn(project(":common").tasks["build"])
-
-    val srcModule = "${projectDir}/src/main/x/platformUI.x"
-
-    commandLine("xcc", "--verbose",
-                "-o", libDir,
-                "-L", libDir,
-                "-r", webContent,
-                srcModule)
-}
-
-val checkGui = tasks.register("checkGui") {
-    group       = "Build"
-    description = "Build the web app content"
-
-    val src1 = fileTree("$projectDir/gui/src").files.stream().
-            mapToLong{f -> f.lastModified()}.max().orElse(0)
-    val src2 = fileTree("$projectDir/gui/public").files.stream().
-            mapToLong{f -> f.lastModified()}.max().orElse(0)
-    val dest = fileTree(webContent).files.stream().
-            mapToLong{f -> f.lastModified()}.max().orElse(0)
-
-    if (src1 > dest || src2 > dest) {
-        dependsOn(buildGui)
+// The node plugin declares repositories which overrides settings repositories
+// We need to explicitly add mavenLocal for SNAPSHOT dependencies, since refresh
+// dependencies overwrites existing files for that special case.
+repositories {
+    mavenLocal()
+    maven {
+        url = uri("https://central.sonatype.com/repository/maven-snapshots/")
+        mavenContent {
+            snapshotsOnly()
         }
-    else {
-        println("$webContent is up to date")
+    }
+    mavenCentral()
+}
+
+dependencies {
+    xdkDistribution(libs.xdk)
+    xtcModule(projects.auth)
+    xtcModule(projects.challenge)
+    xtcModule(projects.common)
+}
+
+// GUI directories
+val guiDir = file("${project.projectDir}/gui")
+val guiDistDir = file("$guiDir/dist")
+
+// Configure node-gradle plugin (default working dirs are under projectDir/.gradle by default, as usual
+node {
+    download = providers.gradleProperty("node.download").map { it.toBoolean() }.getOrElse(true)
+    version = libs.versions.nodejs.get()
+    npmVersion = libs.versions.npm.get()
+    nodeProjectDir = guiDir
+}
+
+// Reference existing setup task
+val yarnSetup by tasks.existing
+
+// Install node modules
+val yarnInstall by tasks.registering(YarnTask::class) {
+    args = listOf("install", "--ignore-engines")
+    workingDir = guiDir
+    dependsOn(yarnSetup)
+
+    // Declare inputs/outputs for proper caching
+    inputs.file("$guiDir/package.json")
+    inputs.file("$guiDir/yarn.lock")
+    outputs.dir("$guiDir/node_modules")
+    outputs.cacheIf { true }
+}
+
+// Build GUI with Quasar
+val buildGui by tasks.registering(YarnTask::class) {
+    args = listOf("quasar", "build")
+    workingDir = guiDir
+    dependsOn(yarnInstall)
+
+    // Declare all inputs that affect the build
+    inputs.dir("$guiDir/src")
+    inputs.dir("$guiDir/public")
+    inputs.file("$guiDir/index.html")
+    inputs.file("$guiDir/package.json")
+    inputs.file("$guiDir/yarn.lock")
+    inputs.file("$guiDir/quasar.config.js")
+    inputs.file("$guiDir/postcss.config.cjs")
+    inputs.file("$guiDir/jsconfig.json")
+
+    // Outputs
+    outputs.dir(guiDistDir)
+    outputs.dir("$guiDir/.quasar")
+    outputs.cacheIf { true }
+}
+
+// Add GUI build output as a resource directory
+sourceSets {
+    main {
+        resources {
+            srcDir(guiDistDir)
+        }
     }
 }
 
-val buildGui = tasks.register<Exec>("buildGui") {
-    workingDir(guiDir)
-    commandLine("yarn", "--ignore-engines", "quasar", "build")
+// Make processResources depend on GUI build
+val processResources by tasks.existing {
+    dependsOn(buildGui)
 }

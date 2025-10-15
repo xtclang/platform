@@ -1,199 +1,326 @@
-# Platform as a Service #
+# Ecstasy Platform as a Service
 
 This is the public repository for the open source Ecstasy PaaS project, sponsored by [xqiz.it](http://xqiz.it).
 
-## Status:
+**Status:** This project is being actively developed, but is not yet considered a production-ready release.
 
-This project is being actively developed, but is not yet considered a production-ready release.
+## Self-Contained Build System
 
-## Layout
+The Ecstasy Platform features a **fully automated, self-contained build system**. The build automatically downloads and manages all required dependencies including the XDK (Ecstasy Development Kit), Node.js, Yarn, Quasar, and all Gradle dependencies. The goal of this build system is to provide a zero-configuration setup where you can clone the repository and build immediately without any manual dependency installation.
 
-The project is organized as a number of sub-projects, with the important ones to know about being:
+The project includes a Gradle wrapper (`./gradlew`), so you don't even need to install Gradle separately. Simply clone and build!
 
-* The *common* library (`./common`), contains common interfaces shared across platform modules. 
-  
-* The *kernel* library (`./kernel`), contains the boot-strapping functionality. It's responsible for starting system services and introducing them to each other. 
-  
-* The *host* library (`./host`), contains the manager for hosted applications.
+## Project Structure
 
-* The *platformDB* library (`./platformDB`), contains the platform database. 
+* `common/` - Common interfaces shared across platform modules
+* `kernel/` - Boot-strapping functionality that starts system services
+* `host/` - Manager for hosted applications
+* `platformDB/` - Platform database
+* `platformUI/` - End-points for the platform web application and Quasar UI
 
-* The *platformUI* library (`./platformUI`), contains the end-points for the platform web-application. 
-  
+For technical details about DNS configuration, ports, build internals, and advanced configuration, see [doc/internals.md](doc/internals.md).
+
+## Prerequisites
+
+**None!** Everything is automated. Just ensure you have:
+- A Java Development Kit (JDK) installed (for running Gradle)
+- Git for cloning the repository
+
+The build system will automatically handle:
+- ✅ XDK (Ecstasy development kit) - resolved as Maven dependency
+- ✅ Node.js and Yarn - downloaded and managed by gradle-node-plugin
+- ✅ Quasar framework - installed automatically during UI build
+- ✅ All other dependencies - managed by Gradle
+
 ## Installation
 
-1. Please follow steps 1-3 of the [XDK Installation](https://github.com/xtclang/xvm#installation).
-2. Clone [the platform repository](https://github.com/xtclang/platform) to your local machine. For purposes of this document, we will assume that the project directory is `~/Development/platform/`, but you may use whatever location makes sense for your environment.
+Clone the repository:
 
-## Steps to test the PAAS functionality:
-
-Note that steps 2 and 3 are temporary, and step 3 needs to be re-executed every time after an OS reboot.
-
-1. Create "xqiz.it" subdirectory under the user home directory for the platform persistent data. The subdirectory "platform" will be used to keep the platform operational information and subdirectory "users" for hosted applications.
-
-2. Create a file "~/xqiz.it/platform/port-forwarding.conf" with the following content:
-
-       rdr pass on lo0 inet proto tcp from any to self port 80  -> 127.0.0.1 port 8080
-       rdr pass on lo0 inet proto tcp from any to self port 443 -> 127.0.0.1 port 8090
-
-3. Run the following command to redirect http and https traffic to unprivileged ports:
-      
-       sudo pfctl -evf ~/xqiz.it/platform/port-forwarding.conf
-
-4. Make sure you can ping the local platform address:
-       
-       ping xtc-platform.localhost.xqiz.it
-                                           
-   The domain name `xtc-platform.localhost.xqiz.it` should resolve to `127.0.0.1`. This allows the same xqiz.it cloud-hosted platform to be self-hosted on the `localhost` loop-back address, enabling local and disconnected development.
-
-   If that address fails to resolve you may need to change the rules on you DNS server. For example, for Verizon routers you would need add an exception entry for "127.0.0.1" to your DNS Server settings: "Exceptions to DNS Rebind Protection" (Advanced - Network Settings - DNS Server)   
-
-5. Make sure you have the latest [gradle](https://gradle.org/), [node](https://nodejs.org/en), [yarn](https://yarnpkg.com/) and  [xdk-latest](https://github.com/xtclang/xvm#readme) installed. If you are using `brew`, you can simply say: 
-        
-        brew install gradle node yarn  
-
-6. Change your directory to the `./platformUI/gui` directory inside the local git repo installed above.
-
-        cd ~/Development/platform/platformUI/gui
-
-7. Make sure all necessary *node* modules are installed within that directory using the following command:
-
-        yarn install
-
-8. If you plan to use `quasar` dev environment, please install it globally by the following command:
-
-        npm install -g @quasar/cli
- 
-9. Build the platform services using the gradle command (from within the "platform" directory):
-
-       cd ~/Development/platform/
-       gradle clean build
-
-10. Start the platform using the command (from within the "platform" directory):
-
-        xec -L lib/ lib/kernel.xtc [password]
-
-    Note: The password you choose during the very first run will be used to encrypt the platform key storage. You will need the same password for all subsequent runs.  
-
-11. Open the [locally hosted platform web page](https://xtc-platform.localhost.xqiz.it): 
-
-        https://xtc-platform.localhost.xqiz.it
-
-    Note: Using the locally-created (self-signed) certificate from step 5 above, you will receive warnings from the browser about the unverifiability of the website and its certificate.
-
-12. Follow the instructions from the [Examples](https://github.com/xtclang/examples) repository to build and "upload" a web application.
-
-13. Log into the "Ecstasy Cloud" platform using the pre-defined test user "admin" and the password "password".
-
-14. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
-
-15. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it  
-
-16. Click on the URL to launch your application web page.
-
-17. To control the hosting platform via the command line interface (CLI), start the command line tool:
-    
-    xec -L lib platformCLI.xqiz.it https://xtc-platform.localhost.xqiz.it admin:[password]
-
-    Type "help" to see all available commands.
-
-18. To stop the server cleanly, use a CLI "shutdown" command or from a separate shell run this:
-
-        curl -k -b cookies.txt -L -i -w '\n' -X POST https://xtc-platform.localhost.xqiz.it/host/shutdown
-
-    If you do not stop the server cleanly, the next start-up will be much slower, since the databases on the server will need to be recovered.
-
-## PAAS in Docker #
-> NOTE: Running the PAAS in Docker does NOT require port-forwarding as described above.
-> In fact port-forwarding must be disabled/removed.
-
-### Build
-
-The Dockerfile uses a multi-stage build with the official XDK base image from GitHub Container Registry.
-
-#### Using Docker:
-```shell
-docker buildx build -t xtc-platform:latest .
+```bash
+git clone https://github.com/xtclang/platform.git
+cd platform
 ```
 
-#### Using Podman:
-```shell
+## Quick Start
+
+```bash
+./gradlew build installDist    # Build and create distribution
+xec -L build/install/platform/lib build/install/platform/lib/kernel.xtc your_password
+# Open https://xtc-platform.localhost.xqiz.it:8090
+# Stop via platformCLI or send shutdown request
+```
+
+**Note:** This is a parallel Gradle build. Don't run `clean` with other tasks simultaneously. Use: `./gradlew clean && ./gradlew build`
+
+## DNS and Network Setup
+
+The platform uses the domain `xtc-platform.localhost.xqiz.it` which resolves to `127.0.0.1` via public DNS. This allows the same xqiz.it cloud-hosted platform to be self-hosted on the localhost loopback address, enabling local and disconnected development with realistic domain names.
+
+### Verifying DNS Resolution
+
+Test that the platform address resolves correctly:
+
+```bash
+ping xtc-platform.localhost.xqiz.it
+```
+
+This should return `127.0.0.1`. If it doesn't resolve, your router may have **DNS rebind protection** enabled. See the DNS Troubleshooting section in step 4 below for workarounds.
+
+### Optional: Using Standard HTTP/HTTPS Ports (macOS)
+
+**Note:** The platform defaults to ports 8080/8090 which work without special configuration. This section is only needed if you want to use standard ports 80/443.
+
+If you want to use privileged ports (80/443) on macOS, you'll need port forwarding:
+
+1. Create a file `~/xqiz.it/platform/port-forwarding.conf`:
+   ```
+   rdr pass on lo0 inet proto tcp from any to self port 80  -> 127.0.0.1 port 8080
+   rdr pass on lo0 inet proto tcp from any to self port 443 -> 127.0.0.1 port 8090
+   ```
+
+2. Enable port forwarding (requires sudo and must be re-run after each OS reboot):
+   ```bash
+   sudo pfctl -evf ~/xqiz.it/platform/port-forwarding.conf
+   ```
+
+**Alternative:** Use Docker/Podman which handle port mapping without requiring privileged access, or simply use the default ports 8080/8090.
+
+## Getting Started
+
+### 1. Build the Platform
+
+```bash
+./gradlew build
+```
+
+The first build downloads all dependencies (XDK, Node.js, Yarn, Quasar) and may take a few minutes. Subsequent builds are much faster.
+
+### 2. Configure Password (Recommended)
+
+For security, set your password in `$GRADLE_USER_HOME/gradle.properties`:
+
+```properties
+platform.password=your_secure_password_here
+```
+
+**Important:** Use `$GRADLE_USER_HOME/gradle.properties` (not project's `gradle.properties`) to avoid committing secrets to git.
+
+### 3. Install Distribution and Start the Platform
+
+```bash
+./gradlew installDist
+xec -L build/install/platform/lib build/install/platform/lib/kernel.xtc your_password
+```
+
+Or if you configured password in `gradle.properties`:
+
+```bash
+./gradlew installDist
+xec -L build/install/platform/lib build/install/platform/lib/kernel.xtc $(grep platform.password $GRADLE_USER_HOME/gradle.properties | cut -d'=' -f2)
+```
+
+The password chosen on first run encrypts the platform key storage and must be used for all subsequent runs.
+
+### 4. Access the Platform
+
+Open in your browser:
+- **HTTP:** http://xtc-platform.localhost.xqiz.it:8080
+- **HTTPS (recommended):** https://xtc-platform.localhost.xqiz.it:8090
+
+**Note:** Self-signed certificates will trigger browser security warnings (expected for local development).
+
+**DNS Troubleshooting:** If the URL doesn't resolve, your router may have DNS rebind protection. Either:
+- Add an exception for `127.0.0.1` in your router's DNS settings, or
+- Use `localhost:8090` directly
+
+For detailed DNS information, see [doc/internals.md](doc/internals.md).
+
+### 5. Login and Deploy an Application
+
+1. Login with test credentials: **username:** `admin`, **password:** `password`
+2. Build an example app from the [Examples](https://github.com/xtclang/examples) repository
+3. Go to "Modules" panel and install your module (e.g., `welcome.examples.org`)
+4. Go to "Application" panel, register a deployment (e.g., `welcome`) and start it
+5. Click the URL to launch your application
+
+### 6. Stop the Platform
+
+Use the platformCLI to shutdown cleanly:
+
+```bash
+xec -L build/install/platform/lib build/install/platform/lib/platformCLI.xtc \
+  https://xtc-platform.localhost.xqiz.it:8090 admin:[password] shutdown
+```
+
+Or send a shutdown request directly (TO BE DEPRECATED):
+If you don't have a privileged port deployment, you may need to use the --resolve argument to force route the
+xtc-platform.localhost.* URL to be overridden.
+
+```bash
+curl -k --resolve xtc-platform.localhost.xqiz.it:8090:127.0.0.1 \
+  -H "Host: xtc-platform.localhost.xqiz.it" \
+  -X POST https://xtc-platform.localhost.xqiz.it:8090/host/shutdown
+```
+
+**Important:** Always stop the server cleanly. An unclean shutdown requires database recovery on next startup, which is much slower.
+
+## Platform CLI
+
+Control the platform from the command line:
+
+```bash
+./gradlew installDist  # Required first time
+xec -L build/install/platform/lib build/install/platform/lib/platformCLI.xtc \
+  https://xtc-platform.localhost.xqiz.it:8090 admin:[password]
+```
+
+Type `help` to see available commands for managing servers, applications, modules, and users.
+
+## Configuration
+
+**Ports:** The platform defaults to HTTP 8080 and HTTPS 8090. To change ports, see [doc/internals.md](doc/internals.md).
+
+**Configuration file:** `~/xqiz.it/platform/cfg.json` (auto-generated on first run from [kernel/src/main/resources/cfg.json](kernel/src/main/resources/cfg.json))
+
+**Data directories:** The platform automatically creates `~/xqiz.it/platform` (for platform configuration and data) and `~/xqiz.it/accounts` (for account information) on first run.
+
+## Running in Docker
+
+> **Note:** Docker handles port mapping internally - do NOT use the macOS port-forwarding setup described in [doc/internals.md](doc/internals.md).
+
+### Build the Image
+
+```bash
+docker buildx build -t xtc-platform:latest .
+# Or with podman:
 podman build -t xtc-platform:latest .
 ```
 
-The build uses the official `ghcr.io/xtclang/xvm:latest` base image and builds the platform in three stages:
-1. UI Builder - Compiles the Quasar web UI using Node.js 22
-2. Platform Builder - Compiles all platform modules using Gradle with the XDK
-3. Runtime - Creates the final minimal image with only the XDK and platform artifacts
+The multi-stage build produces a ~145MB image. First build downloads dependencies; subsequent builds use cache and are faster. For build architecture details, see [doc/internals.md](doc/internals.md).
 
-The final image is approximately **142MB** in size.
+### Run the Container
 
-**Note:** Cache mounts are used for npm and Gradle dependencies to speed up rebuilds. The first build downloads dependencies, but subsequent builds will be much faster.
+The Docker image configures the platform to run on standard HTTP/HTTPS ports (80/443) inside the container. Since containers run as root, there are (currently) no privilege restrictions.
 
-### Run
-#### username:password
-The PAAS requires a username and password to login.
-* The default username is **admin**
-* This password is passed in using **-e PASSWORD=[password]**.
+**Option 1: Privileged ports on host (80/443)**
 
-#### PAAS configuration
-The networking part of the PAAS is configured with a JSON formatted file named **cfg.json**.
-The PAAS is looking for the config file inside the container at **~/xqiz.it/platform**. 
-If a **cfg.json** is already present then it will be loaded and processed.
-Otherwise it will be created from the default template which is here [cfg.json](./kernel/src/main/resources/cfg.json) .
-
-Docker allows mapping a host folder into the container. This allows accessing the files created by the PAAS.
-It is suggested to use the same location as if the PAAS is run locally on the machine. 
-Create the local folder which will be mapped by Docker. 
-```shell
+```bash
 mkdir -p ~/xqiz.it
-```
-If you want to make changes to **cfg.json** then start the PAAS once,
-locate the config file, amend it and restart the container to pick up the changes.
-
-#### Run it for the first time
-```shell
-docker run -e PASSWORD=[password] -p 80:8080 -p 443:8090 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
+docker run --rm -e PASSWORD=password -p 80:80 -p 443:443 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
 ```
 
-Or with Podman:
-```shell
-podman run -e PASSWORD=[password] -p 80:8080 -p 443:8090 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
+Access the platform at:
+- **HTTPS:** https://xtc-platform.localhost.xqiz.it
+
+Docker handles the privileged port binding on the host, so you don't need macOS port-forwarding.
+
+**Option 2: Non-privileged ports on host (8080/8090)**
+
+```bash
+mkdir -p ~/xqiz.it
+docker run --rm -e PASSWORD=password -p 8080:80 -p 8090:443 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
 ```
 
-#### Restart
-```shell
-docker restart xtc-platform
+Access the platform at:
+- **HTTPS:** https://xtc-platform.localhost.xqiz.it:8090
+
+This maps the container's internal 80/443 to host ports 8080/8090.
+
+**Podman equivalent (privileged ports):**
+
+```bash
+mkdir -p ~/xqiz.it
+podman run --rm -e PASSWORD=password -p 80:80 -p 443:443 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
 ```
 
-Or with Podman:
-```shell
-podman restart xtc-platform
+**Configuration:** The platform uses `cfg.json` at `~/xqiz.it/platform/cfg.json` (auto-generated from template on first run).
+
+**Security Note:** The default password is `password`. For production use, change it:
+```bash
+docker run -e PASSWORD=your_secure_password ...
 ```
 
-#### Stop
-```shell
-docker stop xtc-platform
+### Access the Platform
+
+Login credentials:
+- **Username:** `admin`
+- **Password:** `password` (or your custom password if set)
+
+### Manage the Container
+
+```bash
+docker stop xtc-platform               # Stop (container auto-removes with --rm)
+docker rmi xtc-platform:latest         # Remove image
 ```
 
-Or with Podman:
-```shell
-podman stop xtc-platform
+## Build/CI Integration
+
+For automated testing and CI/CD pipelines, you can create custom Gradle tasks that bootstrap the platform from the `installDist` output directory. Here's an example of how to define `up` and `down` tasks:
+
+```kotlin
+// Configure the XTC plugin's runtime behavior
+xtcRun {
+    verbose = true
+    detach = true  // if this is executed from the install lifecycle, live on after the build has exited.
+    modulePath.setFrom(layout.buildDirectory.dir("install/platform/lib"))
+    module {
+        moduleName = "kernel.xqiz.it"
+        moduleArg(providers.gradleProperty("platform.password").orElse("password"))
+    }
+}
+
+// Ensure runXtc depends on installDist
+tasks.runXtc.configure {
+    dependsOn(installDist)
+}
+
+// Up task: install distribution and run the platform
+val up by tasks.registering {
+    group = "application"
+    description = "Start the platform in the background"
+    dependsOn(tasks.runXtc)  // Uses the xtc plugin's runXtc task
+    doLast {
+        logger.lifecycle("Platform started.")
+    }
+}
+
+// Down task: shutdown the platform via curl
+val down by tasks.registering(Exec::class) {
+    group = "application"
+    description = "Shutdown the running platform"
+
+    val httpsPort = platformHttpsPort  // Reference to your port property
+
+    executable = "curl"
+    argumentProviders.add {
+        val port = httpsPort.get()
+        listOf(
+            "-k", "-f", "-s", "-S",
+            "-m", "10",
+            "--resolve", "xtc-platform.localhost.xqiz.it:$port:127.0.0.1",
+            "-H", "Host: xtc-platform.localhost.xqiz.it",
+            "-X", "POST",
+            "https://xtc-platform.localhost.xqiz.it:$port/host/shutdown"
+        )
+    }
+
+    isIgnoreExitValue = true
+    doLast {
+        if (executionResult.get().exitValue == 0) {
+            logger.lifecycle("Platform shutdown command sent")
+        } else {
+            logger.error("Failed to shutdown the platform")
+        }
+    }
+}
 ```
 
-#### Teardown
-Removing the container and the image in case they are not needed anymore
-```shell
-docker rm xtc-platform && docker rmi xtc-platform:latest
-```
+These tasks leverage the XTC Gradle plugin's `runXtc` task and the `installDist` configuration to automate platform lifecycle management. This approach is useful for:
+- Continuous integration testing
+- Automated deployment scripts
+- Development environment setup scripts
 
-Or with Podman:
-```shell
-podman rm xtc-platform && podman rmi xtc-platform:latest
-```
-
-### Accessing the PAAS
-Use the browser to access the PAAS e.g. https://xtc-platform.localhost.xqiz.it
+**Note:** For production use, consider using the platformCLI instead of curl for more reliable shutdown handling.
 
 ## License
 
@@ -210,7 +337,7 @@ the Apache contributor model agreements (modified to identify this specific proj
 found in the [license](./LICENSE) file. Contributors are required to sign and submit an Ecstasy
 Project Individual Contributor License Agreement (ICLA), or be a named employee on an Ecstasy
 Project Corporate Contributor License Agreement (CCLA), both derived directly from the Apache
-agreements of the same name. (Sorry for the paper-work! We hate it, too!)
+agreements of the same name. (Sorry for the paperwork! We hate it too!)
 
 The Ecstasy name is a trademark owned and administered by The Ecstasy Project. Unlicensed use of the
 Ecstasy trademark is prohibited and will constitute infringement.

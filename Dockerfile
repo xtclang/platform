@@ -12,10 +12,12 @@ RUN npm install -g @quasar/cli
 
 # Copy package files first for better caching
 COPY platformUI/gui/package*.json ./
+COPY platformUI/gui/yarn.lock ./
 
 # Install dependencies with cache mount
 RUN --mount=type=cache,target=/root/.npm \
-    npm install
+    yarn install && \
+    npm install -g @quasar/cli
 
 # Copy the rest of the UI source
 COPY platformUI/gui .

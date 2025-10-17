@@ -2,13 +2,16 @@
  * Build the "challenge" module.
  */
 
-tasks.register("build") {
-    dependsOn("compileXcc")
+plugins {
+    alias(libs.plugins.xtc)
 }
 
-tasks.register<Exec>("compileXcc") {
-    val libDir    = "${rootProject.projectDir}/lib"
-    val srcModule = "${projectDir}/src/main/x/challenge.x"
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
+    }
+}
 
-    commandLine("xcc", "-o", libDir, srcModule)
+dependencies {
+    xdkDistribution(libs.xdk)
 }

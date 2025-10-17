@@ -2,24 +2,22 @@
  * Build the "kernel" module.
  */
 
-val libDir = "${rootProject.projectDir}/lib"
-
-tasks.register("build") {
-    group       = "Build"
-    description = "Build this module"
-
-    dependsOn("compileXcc")
+plugins {
+    alias(libs.plugins.xtc)
 }
 
-tasks.register<Exec>("compileXcc") {
-    dependsOn(project(":common")     .tasks["build"])
-    dependsOn(project(":platformDB") .tasks["build"])
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(libs.versions.java.get().toInt()))
+    }
+}
 
-    val srcModule = "${projectDir}/src/main/x/kernel.x"
+dependencies {
+    xdkDistribution(libs.xdk)
+    xtcModule(project(":common"))
+    xtcModule(project(":platformDB"))
+}
 
-    commandLine("xcc", "--verbose",
-                "-o", libDir,
-                "-L", libDir,
-                "-r", "${projectDir}/src/main/resources",
-                srcModule)
+xtcCompile {
+    verbose = true
 }

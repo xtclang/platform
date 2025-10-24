@@ -1,7 +1,7 @@
 {
-"dName":"C=US,ST=MA,L=Lexington,OU=hosting,O=xtclang,CN=xtc-platform.localhost.xqiz.it",
-"cert-provider":"self",
-"httpPort":8080,
-"httpsPort":8090,
-"proxies":[]
+    "dName": "C=US,ST=MA,L=Lexington,OU=hosting,O=xtclang,CN=xtc-platform.localhost.xqiz.it",
+    "cert-provider": "self",
+    "httpPort": 8080,
+    "httpsPort": 8090,
+    "proxies": []
 }

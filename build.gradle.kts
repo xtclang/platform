@@ -1,14 +1,234 @@
 /*
- * Main build file for the "platform" project.
+ * Root build file for the "platform" project.
  */
 
-group   = "platform.xqiz.it"
-version = "0.1.0"
+plugins {
+    alias(libs.plugins.xtc)
+}
 
-val libDir = "${projectDir}/lib"
+group = "platform.xqiz.it"
 
-tasks.register("clean") {
-    group       = "Build"
-    description = "Delete previous build results"
-    delete(libDir)
+// Extract version catalog values for clarity (configuration-time safe)
+val javaLanguageVersion = libs.versions.java.get().toInt()
+val xtcPluginId = libs.plugins.xtc.get().pluginId
+
+// Platform configuration - single source of truth (configuration-cache safe)
+val platformHttpPort = providers.gradleProperty("platform.httpPort").orElse("8080")
+val platformHttpsPort = providers.gradleProperty("platform.httpsPort").orElse("8090")
+
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
+
+    // Apply Java toolchain configuration to all 7subprojects
+    plugins.withType<JavaPlugin> {
+        configure<JavaPluginExtension> {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(javaLanguageVersion))
+            }
+        }
+    }
+
+    // Apply XTC compile configuration to all subprojects
+    pluginManager.withPlugin(xtcPluginId) {
+        extensions.configure<org.xtclang.plugin.XtcCompilerExtension>("xtcCompile") {
+            verbose = false
+        }
+    }
+}
+
+// Configuration to consume cfg.json from kernel
+val cfgJson by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
+dependencies {
+    xdkDistribution(libs.xdk)
+
+    // Declare all platform modules as xtcModule dependencies
+    xtcModule(projects.auth)
+    xtcModule(projects.stub)
+    xtcModule(projects.challenge)
+    xtcModule(projects.common)
+    xtcModule(projects.githubCLI)
+    xtcModule(projects.platformCLI)
+    xtcModule(projects.proxy)
+    xtcModule(projects.platformDB)
+    xtcModule(projects.host)
+    xtcModule(projects.kernel)
+    xtcModule(projects.platformUI)
+
+    // Consume cfg.json from kernel (using project() for configuration parameter)
+    cfgJson(project(":kernel", configuration = "cfgJsonElements"))
+}
+
+// Assemble distribution from resolved xtcModule configuration
+val installDist by tasks.registering(Copy::class) {
+    group = "distribution"
+    description = "Install platform modules to build/install/platform/lib for runtime"
+
+    from(configurations.xtcModule)
+    into(layout.buildDirectory.dir("install/platform/lib"))
+    // Copy cfg.json from kernel's exported configuration
+    from(cfgJson) {
+        into("..")
+    }
+}
+
+// Configure platform runtime
+xtcRun {
+    verbose = true
+    detach = true
+    // Set the module path to use only the "install" directory where all modules are collected.
+    //
+    // Why we use modulePath instead of compiling all modules to the same directory:
+    // - In the old build (lagergren/dsl branch), all subprojects compiled to a shared ${rootProject.projectDir}/lib
+    // - While this worked, it violates Gradle best practices and breaks:
+    //   * Incremental builds (tasks can't detect which inputs changed)
+    //   * Configuration cache (shared output dirs aren't properly isolated)
+    //   * Build cache (can't cache outputs per-project)
+    //   * Parallel builds (multiple tasks writing to same directory causes race conditions)
+    //
+    // Modern approach:
+    // - Each subproject compiles to its own isolated build directory (e.g., kernel/build/xtc/main/lib/)
+    // - installDist collects all compiled modules into build/install/platform/lib/
+    // - modulePath.setFrom() tells xtcRun to use the "install" directory for the module path
+    // - This replicates the old shared directory approach at runtime while maintaining proper build isolation
+    modulePath.setFrom(layout.buildDirectory.dir("install/platform/lib"))
+    module {
+        moduleName = "kernel.xqiz.it"
+        moduleArg(providers.gradleProperty("platform.password").orElse("password"))
+    }
+}
+
+// Ensure runXtc depends on installDist
+tasks.runXtc.configure {
+    dependsOn(installDist)
+}
+
+// Up task: install distribution and run the platform
+val up by tasks.registering {
+    group = "application"
+    description = "Start the platform in the background"
+    dependsOn(tasks.runXtc)
+    doLast {
+        logger.lifecycle("Platform started.")
+    }
+}
+
+// Down task: shutdown the platform
+val down by tasks.registering(Exec::class) {
+    group = "application"
+    description = "Shutdown the running platform"
+
+    // Capture providers at configuration time for configuration cache compatibility
+    val httpsPort = platformHttpsPort
+
+    // Use curl directly (cross-platform: works on Linux, macOS, and Windows)
+    // TODO: This is of course a very coarse way to take down the app, and we should probably just support some REST route or something.
+    executable = "curl"
+
+    argumentProviders.add {
+        val port = httpsPort.get()
+        listOf(
+            "-k",
+            "-f",           // Fail on HTTP errors (4xx, 5xx)
+            "-s", "-S",     // Silent mode but show errors
+            "-m", "10",     // 10 second timeout
+            "--resolve", "xtc-platform.localhost.xqiz.it:$port:127.0.0.1",  // Required to xqiz.it DNS resolving localhost without a port number in the URL.
+            "-H", "Host: xtc-platform.localhost.xqiz.it",
+            "-X", "POST",
+            "https://xtc-platform.localhost.xqiz.it:$port/host/shutdown"
+        )
+    }
+
+    // Don't fail the task immediately on error, handle it ourselves
+    isIgnoreExitValue = true
+
+    doLast {
+        val exitCode = executionResult.get().exitValue
+        if (exitCode == 0) {
+            logger.lifecycle("Platform shutdown command sent")
+            return@doLast
+        }
+        val portValue = httpsPort.get()
+        logger.error("""
+Failed to shutdown the platform.
+Possible reasons:
+  - The platform is not currently running
+  - The platform hasn't fully started yet and is not ready to accept connections
+  - Connection timeout (check if the platform is responding at $portValue)
+        """.trimIndent())
+        throw GradleException("Platform shutdown failed (curl exit code: $exitCode)")
+    }
+}
+
+// Print helpful information after build completes
+tasks.build {
+    // Capture providers at configuration time for configuration cache compatibility
+    val httpPort = platformHttpPort
+    val httpsPort = platformHttpsPort
+
+    doLast {
+        val customPorts = httpPort.isPresent || httpsPort.isPresent
+        val httpPortValue = httpPort.get()
+        val httpsPortValue = httpsPort.get()
+
+        val hostname = "xtc-platform.localhost.xqiz.it"
+        val urls = mapOf(
+            "http" to httpPortValue,
+            "https" to httpsPortValue
+        ).mapValues { (protocol, port) ->
+            val defaultPort = if (protocol == "http") "80" else "443"
+            if (port == defaultPort) "$protocol://$hostname" else "$protocol://$hostname:$port"
+        }
+
+        val portInfo = if (customPorts) {
+            """
+Configuration:
+  HTTP Port:  $httpPortValue
+  HTTPS Port: $httpsPortValue
+  (Custom ports embedded in kernel module)
+"""
+        } else {
+            ""
+        }
+
+        logger.info(
+            $$"""
+
+================================================================================
+Platform Build Successful!
+================================================================================
+$$portInfo
+Next steps:
+
+1. Start the platform:
+   ./gradlew up
+
+   Or use xec directly (requires installDist first):
+   ./gradlew installDist
+   xec -L build/install/platform/lib kernel.xqiz.it [password]
+
+   Alternatively, use the full path to kernel.xtc:
+   xec -L build/install/platform/lib build/install/platform/lib/kernel.xtc [password]
+
+2. Open the platform in your browser:
+       For HTTP:  $${urls["http"]}
+       For HTTPS: $${urls["https"]}
+   
+   Default ports: HTTP 8080, HTTPS 8090 (no special privileges required)
+
+3. Stop the platform cleanly:
+   ./gradlew down
+
+Tips:
+  - Set 'platform.password' in $GRADLE_USER_HOME/gradle.properties to avoid typing it
+  - To change ports, edit ~/xqiz.it/platform/cfg.json after first run
+
+================================================================================
+"""
+        )
+    }
 }

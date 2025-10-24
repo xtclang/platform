@@ -1,0 +1,232 @@
+#
+# GitHub workflow for building and publishing xtc-platform Docker images
+#
+# This workflow builds multi-platform Docker images (amd64/arm64) and pushes them to GHCR.
+# The build is self-contained in the Dockerfile and requires only the codebase.
+#
+
+name: Publish Docker Images
+
+permissions:
+    contents: read
+    packages: write
+
+on:
+    # TODO: Temporarily disabled this flow until it has been merged and manually tested.
+    #push:
+    #    branches:
+    #        - master
+    workflow_dispatch:
+        inputs:
+            cleanup:
+                description: 'Run Docker package cleanup after build'
+                type: boolean
+                required: false
+                default: true
+
+# Concurrency settings: ensure only one Docker build runs at a time to avoid upload conflicts
+# Queue multiple triggers instead of cancelling in-progress uploads
+concurrency:
+    group: publish-docker
+    cancel-in-progress: false
+
+env:
+    DOCKER_IMAGE: ghcr.io/xtclang/xtc-platform
+
+jobs:
+    compute-tags:
+        name: Compute Docker tags
+        runs-on: ubuntu-latest
+        outputs:
+            tags-json: ${{ steps.compute.outputs.tags-json }}
+            is-master: ${{ steps.compute.outputs.is-master }}
+
+        steps:
+            - name: Compute tags
+              id: compute
+              shell: bash
+              run: |
+                  IS_MASTER=${{ github.ref == 'refs/heads/master' }}
+                  echo "is-master=$IS_MASTER" >> $GITHUB_OUTPUT
+
+                  TAGS=$(jq -nc --arg sha "${{ github.sha }}" 'if env.IS_MASTER == "true" then ["latest", $sha] else [$sha] end')
+                  echo "tags-json=$TAGS" >> $GITHUB_OUTPUT
+
+                  echo "🏷️ Computed Docker metadata:"
+                  echo "  Is master: $IS_MASTER"
+                  echo "  Tags: $TAGS"
+
+    docker-build:
+        name: Build Docker image (${{ matrix.arch }})
+        needs: compute-tags
+        runs-on: ${{ matrix.runner }}
+        strategy:
+            matrix:
+                include:
+                    - platform: linux/amd64
+                      arch: amd64
+                      runner: ubuntu-latest
+                    - platform: linux/arm64
+                      arch: arm64
+                      runner: ubuntu-24.04-arm
+
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 1
+                  show-progress: true
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build and push Docker image (${{ matrix.arch }})
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  BASE_TAGS='${{ needs.compute-tags.outputs.tags-json }}'
+
+                  # Generate architecture-specific tags
+                  TAGS=$(echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_IMAGE }}" --arg arch "${{ matrix.arch }}" '.[] | $base + ":" + . + "-" + $arch')
+                  TAG_ARGS=""
+                  for tag in $TAGS; do
+                      TAG_ARGS="$TAG_ARGS --tag $tag"
+                  done
+
+                  echo "🏷️ Architecture-specific tags for ${{ matrix.arch }}:"
+                  echo "$TAGS"
+
+                  # Build and push
+                  docker buildx build \
+                      --platform ${{ matrix.platform }} \
+                      --progress=plain \
+                      $TAG_ARGS \
+                      --label org.opencontainers.image.created=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+                      --label org.opencontainers.image.revision=${{ github.sha }} \
+                      --label org.opencontainers.image.source=https://github.com/${{ github.repository }}/tree/${{ github.ref_name }} \
+                      --cache-from type=gha,scope=${{ matrix.arch }} \
+                      --cache-to type=gha,mode=max,scope=${{ matrix.arch }} \
+                      --provenance=false \
+                      --output type=registry \
+                      .
+
+                  echo "✅ Docker image built and pushed for ${{ matrix.arch }}"
+
+            - name: Summary
+              if: success()
+              shell: bash
+              run: |
+                  BASE_TAGS='${{ needs.compute-tags.outputs.tags-json }}'
+                  ARCH="${{ matrix.arch }}"
+                  COMMIT="${{ github.sha }}"
+
+                  echo "### ✅ Docker Image Built ($ARCH)" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Platform:** ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** $COMMIT" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Published architecture-specific tags:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_IMAGE }}" --arg arch "$ARCH" '.[] | $base + ":" + . + "-" + $arch' >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "Multi-platform manifests will be created after both architectures complete." >> $GITHUB_STEP_SUMMARY
+
+    docker-manifest:
+        name: Create multi-platform manifest
+        needs: [compute-tags, docker-build]
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Create and push manifests
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  BASE_TAGS='${{ needs.compute-tags.outputs.tags-json }}'
+                  echo "Creating multi-platform manifests..."
+                  echo "$BASE_TAGS" | jq -r '.[]' | while read base_tag; do
+                      manifest_tag="${{ env.DOCKER_IMAGE }}:$base_tag"
+                      echo "Creating: $manifest_tag"
+                      docker manifest create $manifest_tag $manifest_tag-amd64 $manifest_tag-arm64
+                      docker manifest push $manifest_tag
+                      echo "✅ Pushed: $manifest_tag"
+                  done
+                  echo "🎉 All multi-platform manifests created"
+
+            - name: Summary
+              if: success()
+              shell: bash
+              run: |
+                  BASE_TAGS='${{ needs.compute-tags.outputs.tags-json }}'
+
+                  echo "### ✅ Multi-Platform Manifests Created" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "Combined amd64 and arm64 images into multi-platform manifests." >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Published tags:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "$BASE_TAGS" | jq -r --arg base "${{ env.DOCKER_IMAGE }}" '.[] | $base + ":" + .'
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "These manifests automatically select the correct architecture (amd64/arm64) when pulled." >> $GITHUB_STEP_SUMMARY
+
+    docker-cleanup:
+        name: Clean up old Docker images
+        needs: docker-manifest
+        runs-on: ubuntu-latest
+        if: ${{ success() && (github.event_name == 'push' || github.event.inputs.cleanup != 'false') }}
+
+        steps:
+            - name: Clean up old Docker image versions (keep 10 newest, preserve latest)
+              uses: actions/delete-package-versions@v5
+              with:
+                  package-name: 'xtc-platform'
+                  package-type: 'container'
+                  min-versions-to-keep: 10
+                  ignore-versions: '^latest(-(amd64|arm64))?$'
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+    summary:
+        name: Workflow summary
+        needs: [compute-tags, docker-cleanup]
+        runs-on: ubuntu-latest
+        if: always()
+
+        steps:
+            - name: Generate summary
+              run: |
+                  echo "### 🐳 Docker Images Published" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Registry:** ghcr.io" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Multi-platform manifests published:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "${{ env.DOCKER_IMAGE }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  if [ "${{ needs.compute-tags.outputs.is-master }}" = "true" ]; then
+                      echo "${{ env.DOCKER_IMAGE }}:latest" >> $GITHUB_STEP_SUMMARY
+                  fi
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Usage:**" >> $GITHUB_STEP_SUMMARY
+                  echo '```bash' >> $GITHUB_STEP_SUMMARY
+                  echo "docker pull ${{ env.DOCKER_IMAGE }}:latest" >> $GITHUB_STEP_SUMMARY
+                  echo "docker run --rm -p 8080:8080 -p 8090:8090 ${{ env.DOCKER_IMAGE }}:latest" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY

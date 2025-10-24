@@ -8,7 +8,6 @@ plugins {
 
 group = "platform.xqiz.it"
 
-// Extract version catalog values for clarity (configuration-time safe)
 val javaLanguageVersion = libs.versions.java.get().toInt()
 
 subprojects {

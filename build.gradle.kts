@@ -76,7 +76,6 @@ val installDist by tasks.registering(Copy::class) {
     }
 }
 
-// Configure platform runtime
 xtcRun {
     verbose = true
     detach = true
@@ -102,13 +101,13 @@ xtcRun {
     }
 }
 
-// Ensure runXtc depends on installDist
 tasks.runXtc.configure {
     dependsOn(installDist)
 }
 
 // Up task: install distribution and run the platform
-// TODO: The up task will continue to use direct xec execution (cannot use platformCLI before server starts)
+// TODO: The server will be brought up and down with platformCLI calls, headlessly. Right now we use legacy methods, that will be replaced when the
+//    xtc-plugin aware build system has been validated.
 val up by tasks.registering {
     group = "application"
     description = "Start the platform in the background"

@@ -64,6 +64,7 @@ val installDist by tasks.registering(Copy::class) {
     group = "distribution"
     description = "Install platform modules to build/install/platform/lib for runtime"
 
+    // Configuration resolution automatically triggers builds of all xtcModule dependencies
     from(configurations.xtcModule)
     into(layout.buildDirectory.dir("install/platform/lib"))
     // Copy cfg.json from kernel's exported configuration

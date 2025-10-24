@@ -209,33 +209,62 @@ cd $PROJECT_DIR
 11. Go to the "Modules" panel and install any of the example module (e.g. "welcome.examples.org").
 12. Go to the "Application" panel, register a deployment (e.g. "welcome") and "start" it
 13. Click on the URL to launch your application web page.
-14. To control the hosting platform via the command line interface (CLI), start the command line
-    tool:
+14. **Platform CLI (platformCLI)** - To control the hosting platform via the command line
+    interface, start the CLI tool:
 
-    xec -L build/install/platform/lib build/install/platform/lib/platformCLI.xtc https://xtc-platform.localhost.xqiz.it admin:[password]
+    **With default ports (8080/8090):**
 
-    Type "help" to see all available commands.
-
-15. To stop the server cleanly, use a CLI "shutdown" command or from a separate shell run this:
+        xec -L build/install/platform/lib build/install/platform/lib/platformCLI.xtc https://xtc-platform.localhost.xqiz.it:8090 admin:[password]
 
     **With standard ports (80/443):**
 
-        curl -k -H "Host: xtc-platform.localhost.xqiz.it" -X POST https://xtc-platform.localhost.xqiz.it/host/shutdown
+        xec -L build/install/platform/lib build/install/platform/lib/platformCLI.xtc https://xtc-platform.localhost.xqiz.it admin:[password]
 
-    **With non-privileged ports (8080/8090):**
+    The platformCLI provides a comprehensive interface for platform management including:
+    - Server management (config, shutdown, debug)
+    - Application management (register, start, stop, logs, stats)
+    - Module management (upload, list)
+    - User/account management
 
-        curl -k --resolve xtc-platform.localhost.xqiz.it:8090:127.0.0.1 -H "Host: xtc-platform.localhost.xqiz.it" -X POST https://xtc-platform.localhost.xqiz.it:8090/host/shutdown
+    Type `help` to see all available commands. The CLI authenticates using the URL format
+    `https://hostname[:port] username:password` and communicates with the platform via REST
+    endpoints.
 
-    **Or use the Gradle task:**
+15. **Stopping the server cleanly:**
+
+    **Recommended: Use platformCLI (requires platform to be running):**
+
+    From within the platformCLI session (see step 14), run:
+
+        shutdown
+
+    Or start platformCLI and run shutdown in one command:
+
+        xec -L build/install/platform/lib build/install/platform/lib/platformCLI.xtc https://xtc-platform.localhost.xqiz.it:8090 admin:[password] shutdown
+
+    **Alternative: Use the Gradle task:**
 
         ./gradlew down
 
-    **Note:** The `--resolve` flag and explicit `Host` header (without port) are required when
-    using non-standard ports due to the DNS localhost resolution. The `down` task handles this
-    automatically.
+    The `down` task currently uses curl to send a POST request to `/host/shutdown`, but this
+    should migrate to using platformCLI in the future for consistency with other platform
+    management operations.
 
-    If you do not stop the server cleanly, the next start-up will be much slower, since the
-    databases on the server will need to be recovered.
+    **Legacy: Direct curl (deprecated, use platformCLI instead):**
+
+    With standard ports (80/443):
+
+        curl -k -H "Host: xtc-platform.localhost.xqiz.it" -X POST https://xtc-platform.localhost.xqiz.it/host/shutdown
+
+    With non-privileged ports (8080/8090):
+
+        curl -k --resolve xtc-platform.localhost.xqiz.it:8090:127.0.0.1 -H "Host: xtc-platform.localhost.xqiz.it" -X POST https://xtc-platform.localhost.xqiz.it:8090/host/shutdown
+
+    **Note:** The `--resolve` flag and explicit `Host` header (without port) are required when
+    using non-standard ports due to the DNS localhost resolution.
+
+    **Important:** If you do not stop the server cleanly, the next start-up will be much slower,
+    since the databases on the server will need to be recovered.
 
 ## PAAS in Docker #
 > NOTE: Running the PAAS in Docker does NOT require port-forwarding as described above.

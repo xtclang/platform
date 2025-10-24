@@ -20,7 +20,7 @@ subprojects {
     group = rootProject.group
     version = rootProject.version
 
-    // Apply Java toolchain configuration to all 7subprojects
+    // Apply Java toolchain configuration to all subprojects
     plugins.withType<JavaPlugin> {
         configure<JavaPluginExtension> {
             toolchain {
@@ -108,6 +108,7 @@ tasks.runXtc.configure {
 }
 
 // Up task: install distribution and run the platform
+// TODO: The up task will continue to use direct xec execution (cannot use platformCLI before server starts)
 val up by tasks.registering {
     group = "application"
     description = "Start the platform in the background"
@@ -118,6 +119,7 @@ val up by tasks.registering {
 }
 
 // Down task: shutdown the platform
+// TODO: Migrate to use platformCLI shutdown command instead of curl for consistency with platform management
 val down by tasks.registering(Exec::class) {
     group = "application"
     description = "Shutdown the running platform"
@@ -126,7 +128,7 @@ val down by tasks.registering(Exec::class) {
     val httpsPort = platformHttpsPort
 
     // Use curl directly (cross-platform: works on Linux, macOS, and Windows)
-    // TODO: This is of course a very coarse way to take down the app, and we should probably just support some REST route or something.
+    // TODO: This is of course a very coarse way to take down the app. Use platformCLI shutdown instead.
     executable = "curl"
 
     argumentProviders.add {
@@ -161,74 +163,5 @@ Possible reasons:
   - Connection timeout (check if the platform is responding at $portValue)
         """.trimIndent())
         throw GradleException("Platform shutdown failed (curl exit code: $exitCode)")
-    }
-}
-
-// Print helpful information after build completes
-tasks.build {
-    // Capture providers at configuration time for configuration cache compatibility
-    val httpPort = platformHttpPort
-    val httpsPort = platformHttpsPort
-
-    doLast {
-        val customPorts = httpPort.isPresent || httpsPort.isPresent
-        val httpPortValue = httpPort.get()
-        val httpsPortValue = httpsPort.get()
-
-        val hostname = "xtc-platform.localhost.xqiz.it"
-        val urls = mapOf(
-            "http" to httpPortValue,
-            "https" to httpsPortValue
-        ).mapValues { (protocol, port) ->
-            val defaultPort = if (protocol == "http") "80" else "443"
-            if (port == defaultPort) "$protocol://$hostname" else "$protocol://$hostname:$port"
-        }
-
-        val portInfo = if (customPorts) {
-            """
-Configuration:
-  HTTP Port:  $httpPortValue
-  HTTPS Port: $httpsPortValue
-  (Custom ports embedded in kernel module)
-"""
-        } else {
-            ""
-        }
-
-        logger.info(
-            $$"""
-
-================================================================================
-Platform Build Successful!
-================================================================================
-$$portInfo
-Next steps:
-
-1. Start the platform:
-   ./gradlew up
-
-   Or use xec directly (requires installDist first):
-   ./gradlew installDist
-   xec -L build/install/platform/lib kernel.xqiz.it [password]
-
-   Alternatively, use the full path to kernel.xtc:
-   xec -L build/install/platform/lib build/install/platform/lib/kernel.xtc [password]
-
-2. Open the platform in your browser:
-       For HTTP:  $${urls["http"]}
-       For HTTPS: $${urls["https"]}
-   
-   Default ports: HTTP 8080, HTTPS 8090 (no special privileges required)
-
-3. Stop the platform cleanly:
-   ./gradlew down
-
-Tips:
-  - Set 'platform.password' in $GRADLE_USER_HOME/gradle.properties to avoid typing it
-  - To change ports, edit ~/xqiz.it/platform/cfg.json after first run
-
-================================================================================
-"""
-        )
     }
 }

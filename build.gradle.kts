@@ -78,22 +78,7 @@ val installDist by tasks.registering(Copy::class) {
 
 xtcRun {
     verbose = true
-    detach = true
-    // Set the module path to use only the "install" directory where all modules are collected.
-    //
-    // Why we use modulePath instead of compiling all modules to the same directory:
-    // - In the old build (lagergren/dsl branch), all subprojects compiled to a shared ${rootProject.projectDir}/lib
-    // - While this worked, it violates Gradle best practices and breaks:
-    //   * Incremental builds (tasks can't detect which inputs changed)
-    //   * Configuration cache (shared output dirs aren't properly isolated)
-    //   * Build cache (can't cache outputs per-project)
-    //   * Parallel builds (multiple tasks writing to same directory causes race conditions)
-    //
-    // Modern approach:
-    // - Each subproject compiles to its own isolated build directory (e.g., kernel/build/xtc/main/lib/)
-    // - installDist collects all compiled modules into build/install/platform/lib/
-    // - modulePath.setFrom() tells xtcRun to use the "install" directory for the module path
-    // - This replicates the old shared directory approach at runtime while maintaining proper build isolation
+    detach = true  // if this is executed from the install lifecycle, live on after the build has exited.
     modulePath.setFrom(layout.buildDirectory.dir("install/platform/lib"))
     module {
         moduleName = "kernel.xqiz.it"
@@ -119,6 +104,7 @@ val up by tasks.registering {
 
 // Down task: shutdown the platform
 // TODO: Migrate to use platformCLI shutdown command instead of curl for consistency with platform management
+//  the curl method, while originally documented as a "hacky" way to shut down cleanly, will of course go away.
 val down by tasks.registering(Exec::class) {
     group = "application"
     description = "Shutdown the running platform"
@@ -127,7 +113,6 @@ val down by tasks.registering(Exec::class) {
     val httpsPort = platformHttpsPort
 
     // Use curl directly (cross-platform: works on Linux, macOS, and Windows)
-    // TODO: This is of course a very coarse way to take down the app. Use platformCLI shutdown instead.
     executable = "curl"
 
     argumentProviders.add {

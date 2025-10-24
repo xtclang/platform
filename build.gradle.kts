@@ -10,7 +10,6 @@ group = "platform.xqiz.it"
 
 // Extract version catalog values for clarity (configuration-time safe)
 val javaLanguageVersion = libs.versions.java.get().toInt()
-val xtcPluginId = libs.plugins.xtc.get().pluginId
 
 subprojects {
     group = rootProject.group
@@ -22,13 +21,6 @@ subprojects {
             toolchain {
                 languageVersion.set(JavaLanguageVersion.of(javaLanguageVersion))
             }
-        }
-    }
-
-    // Apply XTC compile configuration to all subprojects
-    pluginManager.withPlugin(xtcPluginId) {
-        extensions.configure<org.xtclang.plugin.XtcCompilerExtension>("xtcCompile") {
-            verbose = false
         }
     }
 }

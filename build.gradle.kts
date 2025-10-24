@@ -54,7 +54,9 @@ dependencies {
 val installDist by tasks.registering(Copy::class) {
     group = "distribution"
     description = "Install platform modules to build/install/platform/lib for runtime"
-
+    // We could reduce this to just depending on the configuration, but this is
+    // like a "fence" for dependent artifact generation and provides deterministic builds
+    dependsOn(tasks.build)
     // Configuration resolution automatically triggers builds of all xtcModule dependencies
     from(configurations.xtcModule)
     into(layout.buildDirectory.dir("install/platform/lib"))
@@ -63,4 +65,3 @@ val installDist by tasks.registering(Copy::class) {
         into("..")
     }
 }
-

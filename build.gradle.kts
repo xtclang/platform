@@ -12,10 +12,6 @@ group = "platform.xqiz.it"
 val javaLanguageVersion = libs.versions.java.get().toInt()
 val xtcPluginId = libs.plugins.xtc.get().pluginId
 
-// Platform configuration - single source of truth (configuration-cache safe)
-val platformHttpPort = providers.gradleProperty("platform.httpPort").orElse("8080")
-val platformHttpsPort = providers.gradleProperty("platform.httpsPort").orElse("8090")
-
 subprojects {
     group = rootProject.group
     version = rootProject.version

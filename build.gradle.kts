@@ -8,20 +8,9 @@ plugins {
 
 group = "platform.xqiz.it"
 
-val javaLanguageVersion = libs.versions.java.get().toInt()
-
 subprojects {
     group = rootProject.group
     version = rootProject.version
-
-    // Apply Java toolchain configuration to all subprojects
-    plugins.withType<JavaPlugin> {
-        configure<JavaPluginExtension> {
-            toolchain {
-                languageVersion.set(JavaLanguageVersion.of(javaLanguageVersion))
-            }
-        }
-    }
 }
 
 // Configuration to consume cfg.json from kernel

@@ -6,8 +6,9 @@
 FROM eclipse-temurin:25-jdk-alpine AS builder
 
 # Build arguments for HTTP and HTTPS ports
-ARG HTTP_PORT=8080
-ARG HTTPS_PORT=8090
+# Default to privileged ports (80/443) since containers run as root and have no privilege restrictions
+ARG HTTP_PORT=80
+ARG HTTPS_PORT=443
 
 # Install Node.js for building platformUI (Alpine provides musl-compatible binaries)
 # npm is required by gradle-node-plugin's yarnSetup task to install yarn
@@ -29,19 +30,19 @@ COPY . ${PLATFORM_HOME}
 # Build the platform with Gradle using cache mount
 # The gradle-node-plugin will use system Node.js instead of downloading
 # Use --no-daemon and limit workers to reduce memory usage in Docker
+# The installDist will trigger a build
 RUN --mount=type=cache,target=/cache/gradle \
     --mount=type=cache,target=/cache/yarn \
     ./gradlew clean --refresh-dependencies --no-daemon --max-workers=2 -Pnode.download=false && \
-    ./gradlew build --no-daemon --max-workers=2 -Pnode.download=false && \
-    ./gradlew installDist --no-daemon -Pnode.download=false
+    ./gradlew installDist --no-daemon --max-workers=2 -Pnode.download=false
 
 # --- Stage 2: Runtime ---
 # Use the XDK base image which already contains Java and the XDK
 FROM ghcr.io/xtclang/xvm:latest AS runtime
 
-# Redeclare build arguments for runtime stage
-ARG HTTP_PORT=8080
-ARG HTTPS_PORT=8090
+# Redeclare build arguments for runtime stage (must match builder stage defaults)
+ARG HTTP_PORT=80
+ARG HTTPS_PORT=443
 
 # the ports we are listening to
 EXPOSE ${HTTP_PORT} ${HTTPS_PORT}

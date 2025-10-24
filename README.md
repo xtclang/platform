@@ -153,6 +153,8 @@ xec -L build/install/platform/lib build/install/platform/lib/platformCLI.xtc \
 ```
 
 Or send a shutdown request directly (TO BE DEPRECATED):
+If you don't have a privileged port deployment, you may need to use the --resolve argument to force route the
+xtc-platform.localhost.* URL to be overridden.
 
 ```bash
 curl -k --resolve xtc-platform.localhost.xqiz.it:8090:127.0.0.1 \
@@ -198,31 +200,57 @@ The multi-stage build produces a ~145MB image. First build downloads dependencie
 
 ### Run the Container
 
-Create the data directory and run:
+The Docker image configures the platform to run on standard HTTP/HTTPS ports (80/443) inside the container. Since containers run as root, there are (currently) no privilege restrictions.
+
+**Option 1: Privileged ports on host (80/443)**
 
 ```bash
 mkdir -p ~/xqiz.it
-docker run -e PASSWORD=[your_password] \
-  -p 80:8080 -p 443:8090 \
-  -v ~/xqiz.it:/root/xqiz.it \
-  --name xtc-platform \
-  xtc-platform:latest
+docker run --rm -e PASSWORD=password -p 80:80 -p 443:443 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
+```
+
+Access the platform at:
+- **HTTPS:** https://xtc-platform.localhost.xqiz.it
+
+Docker handles the privileged port binding on the host, so you don't need macOS port-forwarding.
+
+**Option 2: Non-privileged ports on host (8080/8090)**
+
+```bash
+mkdir -p ~/xqiz.it
+docker run --rm -e PASSWORD=password -p 8080:80 -p 8090:443 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
+```
+
+Access the platform at:
+- **HTTPS:** https://xtc-platform.localhost.xqiz.it:8090
+
+This maps the container's internal 80/443 to host ports 8080/8090.
+
+**Podman equivalent (privileged ports):**
+
+```bash
+mkdir -p ~/xqiz.it
+podman run --rm -e PASSWORD=password -p 80:80 -p 443:443 -v ~/xqiz.it:/root/xqiz.it --name xtc-platform xtc-platform:latest
 ```
 
 **Configuration:** The platform uses `cfg.json` at `~/xqiz.it/platform/cfg.json` (auto-generated from template on first run).
 
+**Security Note:** The default password is `password`. For production use, change it:
+```bash
+docker run -e PASSWORD=your_secure_password ...
+```
+
 ### Access the Platform
 
-Open in your browser: https://xtc-platform.localhost.xqiz.it
-
-Login with: **username:** `admin`, **password:** `[your_password]`
+Login credentials:
+- **Username:** `admin`
+- **Password:** `password` (or your custom password if set)
 
 ### Manage the Container
 
 ```bash
-docker restart xtc-platform  # Restart
-docker stop xtc-platform     # Stop
-docker rm xtc-platform && docker rmi xtc-platform:latest  # Remove
+docker stop xtc-platform               # Stop (container auto-removes with --rm)
+docker rmi xtc-platform:latest         # Remove image
 ```
 
 ## Build/CI Integration

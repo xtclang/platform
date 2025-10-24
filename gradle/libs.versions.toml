@@ -1,5 +1,4 @@
 [versions]
-java = "25"
 xtc = "0.4.4-SNAPSHOT"
 node = "7.1.0"
 nodejs = "22.11.0"

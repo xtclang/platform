@@ -39,6 +39,7 @@ node {
     download = providers.gradleProperty("node.download").map { it.toBoolean() }.getOrElse(true)
     version = libs.versions.nodejs.get()
     npmVersion = libs.versions.npm.get()
+    yarnVersion = libs.versions.yarn.get()
     nodeProjectDir = guiDir
 }
 

@@ -43,8 +43,11 @@ cd platform
 
 ## Quick Start
 
+(This example assums you are using the non-privileged ports)
+
 ```bash
-./gradlew build installDist    # Build and create distribution
+# Build and create distribution
+./gradlew installDist  # depends on build in the Gradle lifecycle
 xec -L build/install/platform/lib build/install/platform/lib/kernel.xtc your_password
 # Open https://xtc-platform.localhost.xqiz.it:8090
 # Stop via platformCLI or send shutdown request
@@ -54,7 +57,7 @@ xec -L build/install/platform/lib build/install/platform/lib/kernel.xtc your_pas
 
 ## DNS and Network Setup
 
-The platform uses the domain `xtc-platform.localhost.xqiz.it` which resolves to `127.0.0.1` via public DNS. This allows the same xqiz.it cloud-hosted platform to be self-hosted on the localhost loopback address, enabling local and disconnected development with realistic domain names.
+The platform uses the domain `xtc-platform.localhost.xqiz.it` which resolves to `127.0.0.1`.
 
 ### Verifying DNS Resolution
 
@@ -64,9 +67,9 @@ Test that the platform address resolves correctly:
 ping xtc-platform.localhost.xqiz.it
 ```
 
-This should return `127.0.0.1`. If it doesn't resolve, your router may have **DNS rebind protection** enabled. See the DNS Troubleshooting section in step 4 below for workarounds.
+This should return `127.0.0.1`. If it doesn't resolve, see DNS troubleshooting in step 4 below or [doc/internals.md](doc/internals.md) for details.
 
-### Optional: Using Standard HTTP/HTTPS Ports (macOS)
+### Optional: Using Standard HTTP/HTTPS Ports
 
 **Note:** The platform defaults to ports 8080/8090 which work without special configuration. This section is only needed if you want to use standard ports 80/443.
 
@@ -129,11 +132,9 @@ Open in your browser:
 
 **Note:** Self-signed certificates will trigger browser security warnings (expected for local development).
 
-**DNS Troubleshooting:** If the URL doesn't resolve, your router may have DNS rebind protection. Either:
-- Add an exception for `127.0.0.1` in your router's DNS settings, or
-- Use `localhost:8090` directly
-
-For detailed DNS information, see [doc/internals.md](doc/internals.md).
+**DNS Troubleshooting:** If the URL doesn't resolve:
+- Use `localhost:8090` directly, or
+- See [doc/internals.md](doc/internals.md) for DNS rebind protection workarounds
 
 ### 5. Login and Deploy an Application
 

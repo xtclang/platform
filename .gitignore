@@ -1,5 +1,34 @@
-# Logs and databases #
-######################
+# Compiled source
+*.com
+*.class
+*.dll
+*.o
+*.so
+*.dSYM
+*.xtc
+
+# Packages
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# User specific tool settings
+*.swp
+
+# Emacs
+\#*#
+\.#*
+*~
+TAGS
+# Makefile generated make-depends for XTC files
+*.d
+
+# Logs and databases
 *.log
 *.out
 *.tmp
@@ -7,8 +36,9 @@
 *.sql
 *.sqlite
 
-# OS generated files #
-######################
+# OS generated files
+
+# Mac
 .DS_Store
 .DS_Store?
 ._*
@@ -17,20 +47,55 @@
 ehthumbs.db
 Thumbs.db
 
-# build directory #
-###################
+# Build directories (Gradle)
+classes/
 build/
-lib/
 
-# xdk directory #
-###################
+# Build directories (IntelliJ)
+out/
+
+# Platform-specific build directories
+lib/
 xdk/
 
-# user-specific project files #
-###############################
+# Tooling and project files
 prj/
 .idea/
+.gradle/
+!gradle-wrapper.jar
+!javatools_launcher/src/main/resources/javatools/javatools.jar
+!javatools_launcher/src/main/resources/exe/*
 
-# Gradle-specific project files #
-#################################
-.gradle
+# File-based project format IDEA (legacy)
+*.iml
+*.ipr
+*.iws
+
+#temporary files
+*.old
+*.new
+*.bak
+*.backup
+
+# Eventually, after code reformatting and package renaming, we want an .editorconfig in the root.
+# Right now, to phase that in, we allow an .editorconfig symlink in the root pointing out another
+# not yet 100% project standard .editorconfig personal to the user, symlinked from here. Hence,
+# right now, the root directory .editorconfig should be ignored by Git until after the new code
+# conventions have been decided upon, and have enforcement tools in place as part of the build.
+.editorconfig
+
+# Act .secrets file for local testing of GitHub Actions
+.secrets
+
+# Gradle profiler output
+gradle-user-home/
+profile-out/
+
+# Kotlin build
+.kotlin
+
+# Any file named TODO
+TODO
+
+# Local config
+.claude/settings.local.json

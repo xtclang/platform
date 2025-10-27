@@ -1,0 +1,58 @@
+# Build artifacts
+**/build/
+**/dist/
+**/target/
+
+# Gradle
+.gradle/
+**/.gradle/
+
+# Node.js
+**/node_modules/
+**/.npm/
+**/.yarn/
+**/yarn-error.log
+**/npm-debug.log*
+**/.pnpm-debug.log*
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+.dockerenv
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test coverage
+coverage/
+*.coverage
+.nyc_output/

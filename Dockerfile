@@ -1,58 +1,52 @@
 # syntax=docker/dockerfile:1
 # check=skip=SecretsUsedInArgOrEnv
 
-# --- Stage 1: UI Builder ---
-# Use official Node.js image to build the UI (major version only)
-FROM node:22 AS ui-builder
+# --- Stage 1: Platform Builder ---
+# Use a JDK base image to build the platform (Gradle requires javac)
+FROM eclipse-temurin:25-jdk-alpine AS builder
 
-WORKDIR /workspace/platformUI/gui
+# Build arguments for HTTP and HTTPS ports
+# Default to privileged ports (80/443) since containers run as root and have no privilege restrictions
+ARG HTTP_PORT=80
+ARG HTTPS_PORT=443
 
-# Install Quasar CLI globally (Yarn already included in node:22)
-RUN npm install -g @quasar/cli
-
-# Copy package files first for better caching
-COPY platformUI/gui/package*.json ./
-COPY platformUI/gui/yarn.lock ./
-
-# Install dependencies with cache mount
-RUN --mount=type=cache,target=/root/.npm \
-    yarn install && \
-    npm install -g @quasar/cli
-
-# Copy the rest of the UI source
-COPY platformUI/gui .
-
-# Build the UI
-RUN npm run build
-
-# --- Stage 2: Platform Builder ---
-# Use the XDK base image to build the platform
-FROM ghcr.io/xtclang/xvm:latest AS builder
+# Install Node.js for building platformUI (Alpine provides musl-compatible binaries)
+# npm is required by gradle-node-plugin's yarnSetup task to install yarn
+RUN apk add --no-cache nodejs npm
 
 ENV HOME=/root
 ENV PLATFORM_HOME=/root/xtclang/platform
 ENV GRADLE_USER_HOME=/cache/gradle
+
+# Pass port arguments to Gradle as project properties
+ENV ORG_GRADLE_PROJECT_platform.httpPort=${HTTP_PORT}
+ENV ORG_GRADLE_PROJECT_platform.httpsPort=${HTTPS_PORT}
 
 WORKDIR ${PLATFORM_HOME}
 
 # Copy the entire platform source
 COPY . ${PLATFORM_HOME}
 
-# Copy the built UI artifacts from the ui-builder stage
-COPY --from=ui-builder /workspace/platformUI/gui/dist ${PLATFORM_HOME}/platformUI/gui/dist
-
-# Build the platform with Gradle using cache mount and proper flags
-# Build platformUI manually after other modules since it has GUI dependencies
+# Build the platform with Gradle using cache mount
+# Use system Node.js/npm from Alpine (gradle-node-plugin can't handle musl/Alpine architecture)
+# Yarn version from libs.versions.toml will still be downloaded and used
+# Use --no-daemon and limit workers to reduce memory usage in Docker
+# The installDist will trigger a build
 RUN --mount=type=cache,target=/cache/gradle \
-    ./gradlew build -x :platformUI:build --no-daemon --build-cache && \
-    xcc -v -o lib -L lib -r platformUI/gui/dist platformUI/src/main/x/platformUI.x
+    --mount=type=cache,target=/cache/yarn \
+    ./gradlew clean --refresh-dependencies --no-daemon --max-workers=2 -Pnode.download=false && \
+    ./gradlew installDist --no-daemon --max-workers=2 -Pnode.download=false
 
-# --- Stage 3: Runtime ---
+# --- Stage 2: Runtime ---
 # Use the XDK base image which already contains Java and the XDK
 FROM ghcr.io/xtclang/xvm:latest AS runtime
 
+# Redeclare build arguments for runtime stage (must match builder stage defaults)
+ARG HTTP_PORT=80
+ARG HTTPS_PORT=443
+
 # the ports we are listening to
-EXPOSE 8080 8090
+EXPOSE ${HTTP_PORT} ${HTTPS_PORT}
 
 ENV HOME=/root
 ENV PLATFORM_HOME="${HOME}/xtclang/platform"
@@ -61,13 +55,15 @@ ENV PLATFORM_HOME="${HOME}/xtclang/platform"
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Create the platform directory structure
+# Note: /root/xqiz.it is where the kernel looks for config
 RUN mkdir -p "${PLATFORM_HOME}/lib" \
-    # this is where the kernel is looking for the config
     /root/xqiz.it \
     && chmod +x /usr/local/bin/entrypoint.sh
 
-# Copy the platform library from the builder image
-COPY --from=builder "${PLATFORM_HOME}/lib" "${PLATFORM_HOME}/lib"
+# Copy the installed platform distribution from the builder image
+# installDist puts everything in build/install/platform/lib
+COPY --from=builder "${PLATFORM_HOME}/build/install/platform/lib" "${PLATFORM_HOME}/lib"
+COPY --from=builder "${PLATFORM_HOME}/build/install/platform/cfg.json" "${PLATFORM_HOME}/"
 
 WORKDIR "${PLATFORM_HOME}"
 

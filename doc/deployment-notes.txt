@@ -1,12 +1,13 @@
 *** install necessary Java version, for example:
     sudo apt install zulu24-jdk
+    sudo update-alternatives --config java
 
 *** grant the Java executable the capability to bind to privileged ports, for example:
     sudo setcap 'cap_net_bind_service=+ep' /usr/lib/jvm/zulu24/bin/java
 
 *** copy the latest binaries to linux31 (host)
     scp -r ~/Development/xvm/xdk/build/install/xdk/* ops@linux31:~/xdk
-    scp -r ~/Development/platform/lib/* ops@linux31:~/xqiz.it/lib
+    scp -r ~/Development/platform/build/install/platform/lib/* ops@linux31:~/xqiz.it/lib
 
 *** copy the latest binaries to linux30 (nginx)
     scp -r ~/Development/xvm/xdk/build/install/xdk/* ops@linux30:~/xdk

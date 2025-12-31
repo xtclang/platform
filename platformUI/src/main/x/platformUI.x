@@ -95,7 +95,7 @@ module platformUI.xqiz.it {
             server.addRoute(route, new HttpHandler(route, hostManager.challengeApp, extras));
             @Future Tuple result = createCertificate^(
                     keystore, pwd, hostName, dName, provider, homeDir, proxyManager);
-            &result.whenComplete((r, e) -> {
+            result = &result.whenComplete((r, e) -> {
                 if (e == Null) {
                     server.removeRoute(route);
 

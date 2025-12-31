@@ -98,6 +98,8 @@ module kernel.xqiz.it {
             return;
         }
 
+        @Inject(resourceName="server") HttpServer httpServer;
+
         ErrorLog errors = new ErrorLog();
         try {
             String   dName     = config.getOrDefault("dName", "").as(String);
@@ -181,8 +183,6 @@ module kernel.xqiz.it {
                 }
             }
 
-            @Inject(resourceName="server") HttpServer httpServer;
-
             KernelHost pseudoHost = new KernelHost(hostDir, buildDir);
 
             // load the proxy manager (assume it may be missing)
@@ -253,6 +253,7 @@ module kernel.xqiz.it {
             // TODO create and configure the IO-manager, secret-manager, etc.
         } catch (Exception e) {
             errors.add($"Error: Failed to start the XtcPlatform: {e}");
+            httpServer.close(e);
         } finally {
             errors.reportAll(msg -> console.print(msg));
         }

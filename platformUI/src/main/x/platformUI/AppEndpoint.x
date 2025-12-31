@@ -290,7 +290,7 @@ service AppEndpoint
             return new SimpleResponse(Conflict, key);
         }
 
-        Injections injections = appInfo.injections.remove(key);
+        Injections injections = appInfo.injections.put(key, "");
         accountManager.addOrUpdateApp(accountName, appInfo.with(injections=injections));
         return new SimpleResponse(OK);
     }
@@ -306,8 +306,8 @@ service AppEndpoint
         }
 
         // make sure all injections are specified
-        if (appInfo.injections.values.any(v -> v == "")) {
-            return new SimpleResponse(Conflict, "Unspecified injections");
+        if (val entry := appInfo.injections.entries.any(e -> e.value == "")) {
+            return new SimpleResponse(Conflict, $"Unspecified injection: {entry.key.name.quoted()}");
         }
 
         ErrorLog errors = new ErrorLog();

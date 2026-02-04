@@ -37,6 +37,9 @@ import web.responses.SimpleResponse;
 service AppEndpoint
         extends CoreService {
 
+    typedef (AppInfo | SimpleResponse)    as AppResponse;
+    typedef (WebAppInfo | SimpleResponse) as WebResponse;
+
     // ---- generic app end-points -----------------------------------------------------------------
 
     /**
@@ -58,8 +61,8 @@ service AppEndpoint
      * Get an AppInfo for the specified deployment.
      */
     @Get("/deployments{/deployment}")
-    (AppInfo | SimpleResponse) checkStatus(String deployment) {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+    AppResponse checkStatus(String deployment) {
+        AppResponse appInfo = getAppInfo(deployment);
         return appInfo.is(SimpleResponse)
                 ? appInfo
                 : appInfo.with(active=isActive(deployment)).redact();
@@ -69,12 +72,12 @@ service AppEndpoint
      * Set an AppInfo attribute for the specified deployment.
      */
     @Put("/deployments{/deployment}")
-    (AppInfo | SimpleResponse) changeInfo(String deployment,
+    AppResponse changeInfo(String deployment,
             @QueryParam Boolean? autoStart  = Null,
             @QueryParam Boolean? useCookies = Null,
             @QueryParam Boolean? useAuth    = Null,
             ) {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -108,13 +111,8 @@ service AppEndpoint
      */
     @Post("deployments{/deployment}/providers{/provider}")
     @LoginRequired
-    (AppInfo | SimpleResponse) ensureAuthProvider(String deployment, String provider,
-                                                  @BodyParam String secrets) {
+    AppResponse ensureAuthProvider(String deployment, String provider, @BodyParam String secrets) {
 
-        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
-        if (appInfo.is(SimpleResponse)) {
-            return appInfo;
-        }
         assert Int delim := secrets.indexOf(':') as "Invalid secrets format";
 
         String clientId     = secrets[0 ..< delim];
@@ -125,6 +123,19 @@ service AppEndpoint
         clientId     = Base64Format.Instance.decode(clientId).unpackUtf8();
         clientSecret = Base64Format.Instance.decode(clientSecret).unpackUtf8();
 
+        return ensureAuthProvider(deployment, provider, clientId, clientSecret);
+    }
+
+    /**
+     * Internal implementation of "ensureAuthProvider" endpoint.
+     */
+    AppResponse ensureAuthProvider(String deployment, String provider,
+                                   String clientId, String clientSecret) {
+        WebResponse appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+
         Directory      homeDir    = hostManager.ensureDeploymentHomeDirectory(accountName, deployment);
         File           store      = homeDir.fileFor(names.KeyStoreName);
         CryptoPassword storePwd   = accountManager.decrypt(appInfo.password);
@@ -133,8 +144,7 @@ service AppEndpoint
         Decryptor decryptor = utils.createDecryptor(keystore);
 
         // encode for storage using the application's secrets decryptor
-        IdpInfo info = new IdpInfo(utils.encrypt(decryptor, clientId),
-                                   utils.encrypt(decryptor, clientSecret));
+        IdpInfo info = new IdpInfo(clientId, utils.encrypt(decryptor, clientSecret));
         appInfo = appInfo.with(idProviders=appInfo.idProviders.put(provider, info));
 
         accountManager.addOrUpdateApp(accountName, appInfo);
@@ -146,7 +156,7 @@ service AppEndpoint
      */
     @Get("/stats{/deployment}")
     (JsonObject | SimpleResponse) getStats(String deployment) {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -182,7 +192,7 @@ service AppEndpoint
      */
     @Delete("/deployments{/deployment}")
     SimpleResponse unregisterApp(String deployment) {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -212,7 +222,7 @@ service AppEndpoint
      */
     @Get("/injections{/deployment}")
     SimpleResponse injections(String deployment) {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -233,7 +243,7 @@ service AppEndpoint
      */
     @Get("/injections{/deployment}{/name}{/type}")
     SimpleResponse getInjectionValue(String deployment, String name, String type = "") {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -252,7 +262,7 @@ service AppEndpoint
     @Put("/injections{/deployment}{/name}{/type}")
     SimpleResponse setInjectionValue(String deployment, String name, @BodyParam String value,
                                      String type = "") {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -280,7 +290,7 @@ service AppEndpoint
      */
     @Delete("/injections{/deployment}{/name}{/type}")
     SimpleResponse deleteInjectionValue(String deployment, String name, String type = "") {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -299,8 +309,8 @@ service AppEndpoint
      * Handle a request to start a deployment.
      */
     @Post("/start{/deployment}")
-    (AppInfo | SimpleResponse) startApp(String deployment) {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+    AppResponse startApp(String deployment) {
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -350,7 +360,7 @@ service AppEndpoint
      */
     @Post("/stop{/deployment}")
     SimpleResponse stopApp(String deployment) {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -374,7 +384,7 @@ service AppEndpoint
     @Get("/logs{/deployment}{/dbName}")
     @Produces(Text)
     String report(String deployment, String dbName = "") {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return "[unknown]";
         }
@@ -399,7 +409,7 @@ service AppEndpoint
      *  - a deployment has one and only one app
      */
     @Put("/web{/deployment}{/moduleName}{/provider}")
-    (AppInfo | SimpleResponse) registerWebApp(String deployment, String moduleName,
+    AppResponse registerWebApp(String deployment, String moduleName,
                                               String provider = "self") {
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
@@ -442,7 +452,7 @@ service AppEndpoint
      */
     @Post("/renew{/deployment}{/provider}")
     SimpleResponse renewCertificate(String deployment, String provider = "self") {
-        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+        WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -471,8 +481,8 @@ service AppEndpoint
      * Mark a dependent DB module as "shared".
      */
     @Put("/shared{/deployment}{/dbDeployment}")
-    (AppInfo | SimpleResponse) markShared(String deployment, String dbDeployment) {
-        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+    AppResponse markShared(String deployment, String dbDeployment) {
+        WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -512,8 +522,8 @@ service AppEndpoint
      * Unmark a dependent DB module as "shared".
      */
     @Delete("/shared{/deployment}{/dbDeployment}")
-    (AppInfo | SimpleResponse) unmarkShared(String deployment, String dbDeployment) {
-        (WebAppInfo|SimpleResponse) appInfo = getWebInfo(deployment);
+    AppResponse unmarkShared(String deployment, String dbDeployment) {
+        WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
         }
@@ -542,7 +552,7 @@ service AppEndpoint
      * Handle a request to register a db app for a module.
      */
     @Put("/db{/deployment}{/moduleName}")
-    (AppInfo | SimpleResponse) registerDbApp(String deployment, String moduleName) {
+    AppResponse registerDbApp(String deployment, String moduleName) {
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
         if (injections.is(SimpleResponse)) {
@@ -559,7 +569,7 @@ service AppEndpoint
     /**
      * Get an AppInfo for the specified deployment.
      */
-    (AppInfo | SimpleResponse) getAppInfo(String deployment) {
+    AppResponse getAppInfo(String deployment) {
         AccountInfo accountInfo;
         if (!(accountInfo := accountManager.getAccount(accountName))) {
             return new SimpleResponse(NotFound, $"Account '{accountName}' is missing");
@@ -572,10 +582,10 @@ service AppEndpoint
     /**
      * Get a WebAppInfo for the specified deployment.
      */
-    (WebAppInfo | SimpleResponse) getWebInfo(String deployment) {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+    WebResponse getWebInfo(String deployment) {
+        AppResponse appInfo = getAppInfo(deployment);
 
-        return appInfo.is(WebAppInfo|SimpleResponse)
+        return appInfo.is(WebResponse)
                 ? appInfo
                 : new SimpleResponse(NotFound, $"Deployment '{deployment}' is not a WebApp");
     }
@@ -584,7 +594,7 @@ service AppEndpoint
      * Get a DbAppInfo for the specified deployment.
      */
     (DbAppInfo | SimpleResponse) getDbInfo(String deployment) {
-        (AppInfo|SimpleResponse) appInfo = getAppInfo(deployment);
+        AppResponse appInfo = getAppInfo(deployment);
 
         return appInfo.is(DbAppInfo|SimpleResponse)
                 ? appInfo

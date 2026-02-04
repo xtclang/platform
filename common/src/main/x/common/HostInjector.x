@@ -246,8 +246,9 @@ service HostInjector(AppHost appHost)
                 assert String  provider := opts.is(String),
                        WebHost webHost  := appHost.is(WebHost);
                 if (IdpInfo info := webHost.appInfo.idProviders.get(provider)) {
-                    String value = name == "clientId" ? info.clientId : info.clientSecret;
-                    return utils.decrypt(webHost.secretsDecryptor, value);
+                    return name == "clientId"
+                        ? info.clientId
+                        : utils.decrypt(webHost.secretsDecryptor, info.clientSecret);
                 }
                 throw new Exception($"An OAuth {provider.quoted()} provider must be configured");
             };

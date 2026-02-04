@@ -93,7 +93,15 @@ package model {
     /**
      * Identity Provider info contains encoded clientId and clientSecret
      */
-    const IdpInfo(String clientId, String clientSecret);
+    const IdpInfo(String clientId, String clientSecret) {
+        assert() {
+            assert clientSecret.size > 8 as "inadequate secret length";
+        }
+
+        IdpInfo redact() = new IdpInfo(clientId,
+                                $|{"*".dup(10)}{clientSecret.substring(-6)}
+                                );
+    }
 
     typedef Map<InjectionKey, String> as Injections;
     typedef Map<String, IdpInfo> as IdpInfos;
@@ -192,7 +200,7 @@ package model {
         @Override
         WebAppInfo redact() = this.with(password="")
                                   .with(idProviders=idProviders.map(e ->
-                                      new IdpInfo("", ""), new CollectImmutableMap<String, IdpInfo>()));
+                                      e.value.redact(), new CollectImmutableMap<String, IdpInfo>()));
     }
 
     const DbAppInfo(

@@ -5,9 +5,12 @@ import web.responses.SimpleResponse;
 import common.model.AccountInfo;
 import common.model.AppInfo;
 import common.model.ModuleInfo;
+import common.model.IdpInfo;
 import common.model.InjectionKey;
 import common.model.Injections;
 import common.model.WebAppInfo;
+
+import AppEndpoint.AppResponse;
 
 /**
  * New API for project (deployment) management.
@@ -70,7 +73,7 @@ service Projects
         }
         assert ModuleInfo moduleInfo := accountInfo.modules.get(moduleName);
 
-        AppInfo|SimpleResponse appInfo;
+        AppResponse appInfo;
         if (moduleInfo.kind == Web) {
             if (provider == Null || provider.empty) {
                 provider = "certbot";
@@ -93,7 +96,7 @@ service Projects
     JsonObject updateApp(String id, @BodyParam JsonObject projectInfo) {
         assert AccountInfo accountInfo := accountManager.getAccount(accountName);
 
-        AppInfo|SimpleResponse appInfo = delegate.getAppInfo(id);
+        AppResponse appInfo = delegate.getAppInfo(id);
         if (appInfo.is(SimpleResponse)) {
             return toJsonObject(appInfo);
         }
@@ -126,6 +129,19 @@ service Projects
         return delegate.unregisterApp(id);
     }
 
+    @Patch("{/id}/oauth-providers{/provider}")
+    JsonObject ensureAuthProvider(String id, String provider, @BodyParam JsonObject secrets) {
+
+        String clientId     = secrets["clientId"].as(String);
+        String clientSecret = secrets["clientSecret"].as(String);
+
+        AppResponse appInfo = delegate.ensureAuthProvider(id, provider, clientId, clientSecret);
+        if (appInfo.is(SimpleResponse)) {
+            return toJsonObject(appInfo);
+        }
+        return toJsonObject(appInfo.as(AppInfo));
+    }
+
     /**
      * Find all projects that have the specified module as it's primary module or depend on it.
      */
@@ -152,7 +168,7 @@ service Projects
 
     @Post("/{id}/start")
     JsonObject start(String id) {
-        (AppInfo | SimpleResponse) appInfo = delegate.startApp(id);
+        AppResponse appInfo = delegate.startApp(id);
         if (appInfo.is(SimpleResponse)) {
             return toJsonObject(appInfo);
         }
@@ -163,7 +179,7 @@ service Projects
     JsonObject stop(String id) {
         SimpleResponse result = delegate.stopApp(id);
         if (result.status == OK) {
-            AppInfo|SimpleResponse appInfo = delegate.getAppInfo(id);
+            AppResponse appInfo = delegate.getAppInfo(id);
             if (appInfo.is(AppInfo)) {
                 return toJsonObject(appInfo);
             } else {
@@ -193,6 +209,13 @@ service Projects
                 "useCookies"   = info.useCookies,
                 "useAuth"      = info.useAuth,
             ]);
+
+            JsonObjectBuilder idProviders = json.objectBuilder();
+            for ((String key, IdpInfo value) : info.idProviders) {
+                idProviders.add(key,
+                    ["clientId"=value.clientId, "clientSecret"=value.redact().clientSecret]);
+            }
+            project.add("idProviders", idProviders);
         } else if (info.is(DbAppInfo)) {
             project.add("kind", "db");
         }

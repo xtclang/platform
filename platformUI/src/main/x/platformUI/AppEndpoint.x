@@ -148,6 +148,11 @@ service AppEndpoint
         appInfo = appInfo.with(idProviders=appInfo.idProviders.put(provider, info));
 
         accountManager.addOrUpdateApp(accountName, appInfo);
+
+        if (AppHost host := hostManager.getHost(deployment)) {
+            // update the webHost
+            host.appInfo = appInfo;
+        }
         return appInfo.redact();
     }
 

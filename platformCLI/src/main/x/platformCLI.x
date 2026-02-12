@@ -8,6 +8,7 @@ module platformCLI.xqiz.it
         incorporates TerminalApp.Mixin("Platform Command Line Tool", "Platform CLI>") {
 
     package convert import convert.xtclang.org;
+    package json    import json.xtclang.org;
     package web     import web.xtclang.org;
     package webauth import webauth.xtclang.org;
     package webcli  import webcli.xtclang.org;
@@ -27,7 +28,9 @@ module platformCLI.xqiz.it
 
         (String name, String password) = Gateway.getPassword();
         while (True) {
-            (_, HttpStatus status) = Gateway.sendRequest(POST, $"/user/login/{name}", password, Text);
+            // (_, HttpStatus status) = Gateway.sendRequest(POST, $"/user/login/{name}", password, Text);
+            json.JsonObject login = ["email"=name, "password"=password];
+            (_, HttpStatus status) = Gateway.sendRequest(POST, $"/api/v1/auth/login", login, Json);
 
             if (status == OK) {
                 String account = Gateway.sendRequest(GET, "/user/account");

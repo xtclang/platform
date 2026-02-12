@@ -661,6 +661,17 @@ service AppEndpoint
     }
 
     /**
+     * @return True iff there are some changes to the deployment info that require a restart
+     *         to take effect
+     */
+    Boolean isRestartRequired(String deployment) {
+        if (AppHost host := hostManager.getHost(deployment)) {
+            return host.restartRequired;
+        }
+        return False;
+    }
+
+    /**
      * Check if the specified name could be used as a part of the "authority" section of the Uri.
      *
      * @param name  the deployment name

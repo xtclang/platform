@@ -189,6 +189,12 @@ service Projects
         return toJsonObject(result);
     }
 
+    @Get("/{id}/log{/dbName}")
+    @Produces(Text)
+    String report(String id, String dbName = "") {
+        return delegate.report(id, dbName);
+    }
+
     JsonObject toJsonObject(AppInfo info) {
         JsonObjectBuilder project    = json.objectBuilder();
         String            deployment = info.deployment;

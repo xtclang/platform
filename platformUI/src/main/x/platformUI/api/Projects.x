@@ -190,14 +190,15 @@ service Projects
     }
 
     JsonObject toJsonObject(AppInfo info) {
-        JsonObjectBuilder project = json.objectBuilder();
-        String deployment = info.deployment;
+        JsonObjectBuilder project    = json.objectBuilder();
+        String            deployment = info.deployment;
         project.addAll([
             "id"        = deployment,
             "name"      = deployment,
             "module"    = info.moduleName,
             "autoStart" = info.autoStart,
             "active"    = delegate.isActive(deployment),
+            "restart"   = delegate.isRestartRequired(deployment),
         ]);
 
         if (info.is(WebAppInfo)) {

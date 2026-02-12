@@ -283,7 +283,8 @@ service AppEndpoint
 
         if (AppHost host := hostManager.getHost(deployment)) {
             // update the webHost - the new injections value will take effect upon re-activation
-            host.appInfo = appInfo;
+            host.appInfo         = appInfo;
+            host.restartRequired = True;
         }
         return new SimpleResponse(OK);
     }

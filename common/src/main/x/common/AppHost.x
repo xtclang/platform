@@ -46,6 +46,12 @@ class AppHost(String moduleName, AppInfo? appInfo, Directory homeDir, Directory 
     @RO Boolean active;
 
     /**
+     * A transient flag that indicates whether or not there are some changes in the AppInfo that
+     * would take effect only after the application is re-started.
+     */
+    Boolean restartRequired;
+
+    /**
      * Log the specified message to the application "console" file.
      */
     void log(String message) {

@@ -69,10 +69,8 @@ module platformUI.xqiz.it {
             throw new IllegalState($"Invalid host address: {hostName.quoted()}");
         }
 
-        File storeFile = homeDir.fileFor(names.KeyStoreName);
-        @Inject(opts=new KeyStore.Info(storeFile.contents, pwd)) KeyStore keystore;
-
-        HostInfo route = new HostInfo(hostName);
+        KeyStore keystore = loadKeyStore(homeDir.fileFor(names.KeyStoreName), pwd);
+        HostInfo route    = new HostInfo(hostName);
 
         import challenge.AcmeChallenge;
         import platformAuth.UserEndpoint;
@@ -166,6 +164,17 @@ module platformUI.xqiz.it {
     }
 
     /**
+     * Load the [KeyStore] from the specified file.
+     *
+     * Note: the `KeyStore` is a "constant" content object; it doesn't reflect any changes made to
+     *       the file after the `KeeStore` was loaded.
+     */
+     KeyStore loadKeyStore(File storeFile, CryptoPassword pwd) {
+        @Inject(opts=new KeyStore.Info(storeFile.contents, pwd)) KeyStore keystore;
+        return keystore;
+     }
+
+    /**
      * Make sure the platform certificate is up-to-date.
      */
     void ensureCertificate(KeyStore keystore, CryptoPassword pwd, String hostName, String dName,
@@ -227,6 +236,9 @@ module platformUI.xqiz.it {
 
         console.print($|Info: {exists ? "Renewed" : "Created"} a certificate for "{hostName}"
                      );
+
+        // reload the keystore
+        keystore = loadKeyStore(homeDir.fileFor(names.KeyStoreName), pwd);
         proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName, console.&print);
     }
 

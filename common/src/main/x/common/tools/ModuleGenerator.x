@@ -50,7 +50,7 @@ class ModuleGenerator(ModuleTemplate webModule, WebAppInfo appInfo) {
                 Time? dbStamp    = webModule.parent.created;
                 Time? hostStamp  = hostModule.parent.created;
                 if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp) {
-                    errors.add($|Info: Host module "{hostName}" for "{webModule.qualifiedName}" \
+                    errors.add($|Info : Host module "{hostName}" for "{webModule.qualifiedName}" \
                                 |is up to date
                               );
                     return True, repository.getResolvedModule(hostName);
@@ -61,8 +61,8 @@ class ModuleGenerator(ModuleTemplate webModule, WebAppInfo appInfo) {
         File sourceFile = buildDir.fileFor($"{appName}_web.x");
 
         if (createModule(sourceFile, appName, qualifier, appInfo, errors) &&
-            compileModule(repository, sourceFile, buildDir, errors)) {
-            errors.add($|Info: Created a host module "{hostName}" for "{webModule.qualifiedName}"
+                compileModule(repository, sourceFile, buildDir, errors)) {
+            errors.add($|Info : Created a host module "{hostName}" for "{webModule.qualifiedName}"
                       );
             return True, repository.getResolvedModule(hostName);
         }

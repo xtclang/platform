@@ -357,7 +357,7 @@ service HostManager
     conditional WebHost createWebHost(String accountName, WebAppInfo webAppInfo,
                                       CryptoPassword storePwd, Log errors) {
         if (deployedHosts.contains(webAppInfo.deployment)) {
-            errors.add($|Info: Deployment "{webAppInfo.deployment}" is already active
+            errors.add($|Info : Deployment "{webAppInfo.deployment}" is already active
                       );
             return False;
         }

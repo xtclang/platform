@@ -313,8 +313,8 @@ service ModuleEndpoint
                 // redeploy if necessary and possible
                 if (host.active) {
                     // TODO: schedule a redeployment for later
-                    host.log($|Warning: The application "{deployment}" is active and needs to \
-                              |be redeployed manually"
+                    host.log($|Warn : The application "{deployment}" is active and needs to be \
+                              |redeployed manually"
                             );
                 } else if (appInfo.autoStart) {
                     hostManager.removeHost(host);

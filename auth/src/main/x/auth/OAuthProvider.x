@@ -124,7 +124,7 @@ import webauth.OAuthCredential;
                      );
         }
 
-        console.print($"Info: Requesting authorization from {provider}");
+        console.print($"Info : Requesting authorization from {provider}");
 
         // store off the application redirect path and create a request state
         @Inject Random random;

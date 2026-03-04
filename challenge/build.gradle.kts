@@ -8,4 +8,5 @@ plugins {
 
 dependencies {
     xdkDistribution(libs.xdk)
+    xtcModule(projects.common)
 }

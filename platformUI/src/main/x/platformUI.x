@@ -82,7 +82,8 @@ module platformUI.xqiz.it {
 
         if (checkCertificate(keystore, hostName, provider)) {
             // they could have configured new proxies; need to update them just in case
-            proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName, console.&print);
+            proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName,
+                msg -> console.print($"{common.logTime($)} {msg}"));
 
             // schedule the next check in a week
             clock.schedule(Duration.ofDays(7), () ->
@@ -150,14 +151,14 @@ module platformUI.xqiz.it {
                 randomAccess     = True);
 
         void reportInitialized(AppInfo appInfo, String type) {
-            console.print($|Info: Initialized {type} deployment: "{appInfo.deployment}" \
-                           |of "{appInfo.moduleName}"
+            console.print($|{common.logTime($)} Info : Initialized {type} deployment: \
+                           |"{appInfo.deployment}" of "{appInfo.moduleName}"
                          );
         }
 
         void reportFailedInitialization(AppInfo appInfo, String type, ErrorLog errors) {
-            console.print($|Warning: Failed to initialize {type} deployment: "{appInfo.deployment}" \
-                           |of "{appInfo.moduleName}"
+            console.print($|{common.logTime($)} Warn : Failed to initialize {type} deployment: \
+                           |"{appInfo.deployment}" of "{appInfo.moduleName}"
                          );
             errors.reportAll(msg -> console.print(msg));
         }
@@ -212,7 +213,8 @@ module platformUI.xqiz.it {
 
             Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
             if (daysLeft > 14) {
-                console.print($|Info: The certificate for "{hostName}" is valid for {daysLeft} more days
+                console.print($|{common.logTime($)} Info : The certificate for "{hostName}" \
+                               |is valid for {daysLeft} more days
                              );
                 return True, True;
             }
@@ -234,12 +236,14 @@ module platformUI.xqiz.it {
         @Inject(opts=provider) CertificateManager manager;
         manager.createCertificate(storeFile, pwd, names.PlatformTlsKey, dName);
 
-        console.print($|Info: {exists ? "Renewed" : "Created"} a certificate for "{hostName}"
+        console.print($|{common.logTime($)} Info : {exists ? "Renewed" : "Created"} a \
+                       |certificate for "{hostName}"
                      );
 
         // reload the keystore
         keystore = loadKeyStore(homeDir.fileFor(names.KeyStoreName), pwd);
-        proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName, console.&print);
+        proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName,
+            msg -> console.print($"{common.logTime($)} {msg}"));
     }
 
     /**

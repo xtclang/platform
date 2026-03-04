@@ -4,7 +4,8 @@
  */
 @WebApp
 module challenge.xqiz.it {
-    package web import web.xtclang.org;
+    package common import common.xqiz.it;
+    package web    import web.xtclang.org;
 
     import web.*;
 
@@ -25,7 +26,7 @@ module challenge.xqiz.it {
         @Get("{/path}")
         conditional ResponseOut getResource(String path) {
             @Inject Console console;
-            console.print($"### acme challenge: {path}"); // TODO REMOVE
+            console.print($"{common.logTime($)} Trace: acme challenge: {path}"); // TODO REMOVE
 
             return super($".well-known/acme-challenge/{path}");
         }

@@ -72,8 +72,8 @@ service ProxyManager(Uri[] receivers)
             }
 
             if (!success) {
-                report($|Failed to update the route for "{hostName}" at the proxy server "{receiver}" \
-                        |reason="{reason}"
+                report($|Error: Failed to update the route for "{hostName}" at the proxy server \
+                        |"{receiver}" reason="{reason}"
                       );
             }
         }
@@ -91,7 +91,7 @@ service ProxyManager(Uri[] receivers)
             }
 
             if (!success) {
-                report($|Failed to remove "{hostName}" route from the proxy server "{receiver}"
+                report($|Error: Failed to remove "{hostName}" route from the proxy server "{receiver}"
                       );
             }
         }

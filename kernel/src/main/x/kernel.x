@@ -80,7 +80,7 @@ module kernel.xqiz.it {
             String jsonConfig;
             if (configFile.exists) {
                 if (configFile.modified <= configInit.modified) {
-                    console.print($|Warning: Your local config file is out of date; \
+                    console.print($|Warn : Your local config file is out of date; \
                                    |please make sure it confirms to the current structure
                                  );
                 }
@@ -128,9 +128,9 @@ module kernel.xqiz.it {
                     }
                 }
             } else {
-                console.print($|Warning: *** The platform keystore does not exist; creating a new one\
+                console.print($|Warn : *** The platform keystore does not exist; creating a new one\
                                | with a self-signed certificate for the platform web server.
-                               |Warning: *** The password you have provided will be used to encrypt it.
+                               |Warn : *** The password you have provided will be used to encrypt it.
                              );
 
                 @Inject CertificateManager manager;
@@ -146,7 +146,7 @@ module kernel.xqiz.it {
 
             // initialize the account manager; it's inside the kernel for now, but we need to
             // consider creating a separate container for it
-            console.print("Info: Starting the AccountManager...");
+            console.print($"{common.logTime($)} Info : Starting the AccountManager...");
 
             AccountManager accountManager = new AccountManager();
             Connection     connection     = accountManager.init(repository, hostDir, buildDir,
@@ -203,14 +203,14 @@ module kernel.xqiz.it {
                     }
                 } else {
                     proxyManager = NoProxies;
-                    console.print(\|Warning: Failed to load the ProxyManager; new deployment \
-                                   |configurations *will not be* propagated to proxy servers
+                    console.print($|{common.logTime($)} Warn : Failed to load the ProxyManager; new \
+                                   |deployment configurations *will not be* propagated to proxy servers
                                  );
                 }
             }
 
             // create a container for the host manager and configure it
-            console.print("Info: Starting the HostManager...");
+            console.print($"{common.logTime($)} Info : Starting the HostManager...");
 
             ModuleTemplate hostModule = repository.getResolvedModule("host.xqiz.it");
             HostManager    hostManager;
@@ -223,7 +223,7 @@ module kernel.xqiz.it {
             }
 
             // create a container for the platformUI controller and configure it
-            console.print("Info: Starting the platform UI controller...");
+            console.print($"{common.logTime($)} Info : Starting the platform UI controller...");
 
             ModuleTemplate uiModule = repository.getResolvedModule("platformUI.xqiz.it");
             if (Container  container :=
@@ -248,7 +248,7 @@ module kernel.xqiz.it {
                 return;
             }
 
-            console.print($"Info: Started the XtcPlatform at https://{hostName}");
+            console.print($"{common.logTime($)} Info : Started the XtcPlatform at https://{hostName}");
 
             // TODO create and configure the IO-manager, secret-manager, etc.
         } catch (Exception e) {
@@ -280,7 +280,7 @@ module kernel.xqiz.it {
                     uris += new Uri(scheme="https", host=host, port=port);
                 } else {
                     uris += new Uri(scheme="https", host=addr, port=port);
-                    console.print($"Failed to lookup the proxy name: {proxy.quoted()}");
+                    console.print($"Error: Failed to lookup the proxy name: {proxy.quoted()}");
                 }
             } else {
                 assert IPAddress[] ips := network.nameService.resolve(addr), !ips.empty as

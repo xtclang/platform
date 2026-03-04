@@ -53,10 +53,4 @@ val installDist by tasks.registering(Copy::class) {
     from(cfgJson) {
         into("..")
     }
-    // Preserve original timestamp so the kernel doesn't report false staleness
-    val kernelCfgJsonOriginal = file("kernel/src/main/resources/cfg.json")
-    val installedCfgJson = layout.buildDirectory.file("install/platform/cfg.json")
-    doLast {
-        installedCfgJson.get().asFile.setLastModified(kernelCfgJsonOriginal.lastModified())
-    }
 }

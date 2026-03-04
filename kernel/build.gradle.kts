@@ -35,20 +35,26 @@ tasks.named<ProcessResources>("processResources") {
     }
 }
 
-// Export processed cfg.json for distribution
-val exportConfig by tasks.registering(Copy::class) {
-    group = "distribution"
-    description = "Export processed cfg.json for platform distribution"
+val cfgJsonOriginal = file("src/main/resources/cfg.json")
+val cfgJsonProcessed = layout.buildDirectory.file("xtc/main/resources/cfg.json")
 
-    from(layout.buildDirectory.file("xtc/main/resources/cfg.json"))
-    into(layout.buildDirectory.dir("dist"))
-
-    dependsOn(tasks.processResources, tasks.processXtcResources)
+// Restore original timestamp after processing so the kernel doesn't see it as "newer"
+// Uses Exec (touch -r) instead of doLast lambda for configuration cache compatibility
+val preserveCfgJsonTimestamp by tasks.registering(Exec::class) {
+    dependsOn(tasks.processXtcResources)
+    commandLine("touch", "-r", cfgJsonOriginal.absolutePath, cfgJsonProcessed.get().asFile.absolutePath)
 }
 
-// Create a consumable configuration for cfg.json
+// Ensure compileXtc sees the correct timestamp
+tasks.compileXtc {
+    dependsOn(preserveCfgJsonTimestamp)
+}
+
+// Expose processed cfg.json directly (no intermediate copy)
 val cfgJsonElements by configurations.creating {
     isCanBeConsumed = true
     isCanBeResolved = false
-    outgoing.artifact(exportConfig.map { it.outputs.files.singleFile })
+    outgoing.artifact(cfgJsonProcessed) {
+        builtBy(preserveCfgJsonTimestamp)
+    }
 }

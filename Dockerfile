@@ -63,7 +63,6 @@ RUN mkdir -p "${PLATFORM_HOME}/lib" \
 # Copy the installed platform distribution from the builder image
 # installDist puts everything in build/install/platform/lib
 COPY --from=builder "${PLATFORM_HOME}/build/install/platform/lib" "${PLATFORM_HOME}/lib"
-COPY --from=builder "${PLATFORM_HOME}/build/install/platform/cfg.json" "${PLATFORM_HOME}/"
 
 WORKDIR "${PLATFORM_HOME}"
 

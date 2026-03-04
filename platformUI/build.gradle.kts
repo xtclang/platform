@@ -52,12 +52,11 @@ val yarnInstall by tasks.registering(YarnTask::class) {
     workingDir = guiDir
     dependsOn(yarnSetup)
 
-    // Declare inputs/outputs for up-to-date checking
+    // Declare inputs/outputs for proper caching
     inputs.file("$guiDir/package.json")
     inputs.file("$guiDir/yarn.lock")
     outputs.dir("$guiDir/node_modules")
-    // node_modules contains symlinks in .bin/ that break when restored from Gradle's build cache
-    outputs.cacheIf { false }
+    outputs.cacheIf { true }
 }
 
 // Build GUI with Quasar

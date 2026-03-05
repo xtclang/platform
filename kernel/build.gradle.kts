@@ -38,15 +38,18 @@ tasks.named<ProcessResources>("processResources") {
 val cfgJsonOriginal = file("src/main/resources/cfg.json")
 val cfgJsonProcessed = layout.buildDirectory.file("xtc/main/resources/cfg.json")
 
+// Restore original timestamp on processed cfg.json so the XTC compiler embeds the
+// correct (original) timestamp in the .xtc module, preventing false staleness warnings.
+// Uses Exec (not doFirst lambda) for configuration cache compatibility.
+val preserveCfgJsonTimestamp by tasks.registering(Exec::class) {
+    dependsOn(tasks.processXtcResources)
+    commandLine("touch", "-r", cfgJsonOriginal.absolutePath, cfgJsonProcessed.get().asFile.absolutePath)
+}
+
+// compileXtc must not start until the timestamp is restored
 tasks.compileXtc {
-    // Restore original cfg.json timestamp right before compilation so the XTC
-    // compiler embeds the correct (original) timestamp in the .xtc module.
-    // This MUST be doFirst (not a separate task) to guarantee the timestamp is
-    // set at the exact moment the compiler reads the file.
-    doFirst {
-        val originalTs = cfgJsonOriginal.lastModified()
-        cfgJsonProcessed.get().asFile.let { if (it.exists()) it.setLastModified(originalTs) }
-    }
+    dependsOn(preserveCfgJsonTimestamp)
+    mustRunAfter(preserveCfgJsonTimestamp)
 }
 
 // Expose processed cfg.json directly (no intermediate copy)
@@ -54,6 +57,6 @@ val cfgJsonElements by configurations.creating {
     isCanBeConsumed = true
     isCanBeResolved = false
     outgoing.artifact(cfgJsonProcessed) {
-        builtBy(tasks.processXtcResources)
+        builtBy(preserveCfgJsonTimestamp)
     }
 }

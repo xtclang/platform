@@ -35,7 +35,9 @@ COPY . ${PLATFORM_HOME}
 RUN --mount=type=cache,target=/cache/gradle \
     --mount=type=cache,target=/cache/yarn \
     ./gradlew clean --refresh-dependencies --no-daemon --max-workers=2 -Pnode.download=false && \
-    ./gradlew installDist --no-daemon --max-workers=2 -Pnode.download=false
+    # --no-build-cache: force fresh compilation so the XTC compiler embeds the correct
+    # (timestamp-preserved) cfg.json into kernel.xtc, avoiding false staleness warnings.
+    ./gradlew installDist --no-build-cache --no-daemon --max-workers=2 -Pnode.download=false
 
 # --- Stage 2: Runtime ---
 # Use the XDK base image which already contains Java and the XDK

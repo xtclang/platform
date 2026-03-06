@@ -154,12 +154,14 @@ package model {
         }
     }
 
+    import names.SelfSigner as Self;
+
     const WebAppInfo(
             String     deployment,           // @see AppInfo
             String     moduleName,           // @see AppInfo
             String     hostName,             // the full host name (e.g. "shop.acme.com.xqiz.it")
             String     password,             // an encrypted password to the keystore for this deployment
-            String     provider    = "self", // the name of the certificate provider
+            String     provider    = Self,   // the name of the certificate provider
             Boolean    autoStart   = False,  // @see AppInfo
             Boolean    active      = False,  // @see AppInfo
             Injections injections  = [],     // @see AppInfo

@@ -9,4 +9,5 @@ plugins {
 dependencies {
     xdkDistribution(libs.xdk)
     xtcModule(projects.auth)
+    xtcModule(projects.common)
 }

@@ -103,7 +103,7 @@ module kernel.xqiz.it {
         ErrorLog errors = new ErrorLog();
         try {
             String   dName     = config.getOrDefault("dName", "").as(String);
-            String   provider  = config.getOrDefault("cert-provider", "self").as(String);
+            String   provider  = config.getOrDefault("cert-provider", names.SelfSigner).as(String);
             UInt16   httpPort  = config.getOrDefault("httpPort",  8080).as(IntLiteral).toUInt16();
             UInt16   httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
             String[] proxies   = config.getOrDefault("proxies", []).as(Doc[])
@@ -158,7 +158,7 @@ module kernel.xqiz.it {
                 realm = new DBRealm(names.PlatformRealm, connection);
             } else {
                 String userName    = "admin";
-                String accountName = "self";
+                String accountName = names.SingleAccount;
 
                 import common.model.AccountInfo;
                 import common.model.UserInfo;

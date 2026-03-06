@@ -13,6 +13,7 @@ module platformCLI.xqiz.it
     package webcli  import webcli.xtclang.org;
 
     package platformAuth import auth.xqiz.it;
+    package common       import common.xqiz.it;
 
     import webcli.*;
 

@@ -28,4 +28,14 @@ package names {
      * The platform Realm name.
      */
     static String PlatformRealm = "platform";
+
+    /**
+     * The self-signing provider name.
+     */
+    static String SelfSigner = "self";
+
+    /**
+     * The single account name.
+     */
+    static String SingleAccount = "self";
 }

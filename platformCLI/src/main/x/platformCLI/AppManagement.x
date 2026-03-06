@@ -1,5 +1,7 @@
 class AppManagement {
 
+    import common.names;
+
     // ---- generic app end-points -----------------------------------------------------------------
 
     @Command("apps", "Show all registered apps")
@@ -118,11 +120,11 @@ class AppManagement {
     // ---- web app end-points ---------------------------------------------------------------------
 
     @Command("register-web", "Register a web app")
-    String registerWebApp(String deploymentName, String moduleName, String provider = "self") =
+    String registerWebApp(String deploymentName, String moduleName, String provider = names.SelfSigner) =
         platformCLI.put($"/apps/web/{deploymentName}/{moduleName}/{provider}");
 
     @Command("renew", "Renew the certificate for a web app")
-    String renewWebApp(String deploymentName, String provider = "self") =
+    String renewWebApp(String deploymentName, String provider = names.SelfSigner) =
         platformCLI.post($"/apps/renew/{deploymentName}/{provider}");
 
     @Command("mark-shared", "Mark the specified DB deployment as shared")

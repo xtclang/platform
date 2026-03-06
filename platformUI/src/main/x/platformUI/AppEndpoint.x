@@ -416,7 +416,7 @@ service AppEndpoint
      */
     @Put("/web{/deployment}{/moduleName}{/provider}")
     AppResponse registerWebApp(String deployment, String moduleName,
-                                              String provider = "self") {
+                               String provider = names.SelfSigner) {
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
         if (injections.is(SimpleResponse)) {
@@ -457,7 +457,7 @@ service AppEndpoint
      * Handle a request to renew the certificate.
      */
     @Post("/renew{/deployment}{/provider}")
-    SimpleResponse renewCertificate(String deployment, String provider = "self") {
+    SimpleResponse renewCertificate(String deployment, String provider = names.SelfSigner) {
         WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;

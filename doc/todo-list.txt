@@ -1,3 +1,7 @@
+- check for "Null" injection key
+
+- test db logs (change the API)
+
 - report an error if the project module is neither Web nor DB
 
 - use email as a username for the platform authentication
@@ -10,9 +14,6 @@
 - DEFERRED: create an admin group 0; admin user belongs to admin group; group="user"
 
 - use "notifyOnClose" handler to report a connection failure due to unloaded db app
-
-- always start registration with "self" provider (to create a temporary key) before "renewing"
-  with certbot; alternatively we can simply disallow passing a provider into "register" API
 
 - consider a possibility of multi-certificate "host", e.g. "host.cvs.com.xqiz.it" and
   "xtc-host.cvs.com" both pointing to the same Azure hosted "xtc-host.eastus.cloudapp.azure.com"

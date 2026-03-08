@@ -150,9 +150,19 @@ module platformUI.xqiz.it {
             // create WebHosts for all `autoStart` web applications
             for (AppInfo appInfo : accountInfo.apps.values) {
                 if (appInfo.is(WebAppInfo)) {
-                    CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
+                    Directory      appDir   = hostManager.ensureDeploymentHomeDirectory(
+                                                    accountName, appInfo.deployment);
+                    CryptoPassword appPwd   = accountManager.decrypt(appInfo.password);
+                    KeyStore       appStore = loadKeyStore(appDir.fileFor(names.KeyStoreName), appPwd);
+                    String         appHost  = appInfo.hostName;
+
+                    if (Certificate cert := appStore.getCertificate(appHost)) {
+                        proxyManager.updateProxyConfig^(appStore, appPwd, appHost, appHost,
+                            msg -> console.print($"{common.logTime($)} {msg}"));
+                    }
+
                     if (appInfo.autoStart) {
-                        if (hostManager.createWebHost(accountName, appInfo, storePwd, errors)) {
+                        if (hostManager.createWebHost(accountName, appInfo, appPwd, errors)) {
                             reportInitialized(appInfo, "Web");
                             continue;
                         }
@@ -160,7 +170,7 @@ module platformUI.xqiz.it {
                         reportFailedInitialization(appInfo, "Web", errors);
                     }
                     // set up the stub in either case
-                    hostManager.addStubRoute(accountName, appInfo, storePwd);
+                    hostManager.addStubRoute(accountName, appInfo, appPwd);
                 }
             }
         }

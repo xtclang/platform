@@ -162,6 +162,9 @@ module platformUI.xqiz.it {
                     }
 
                     if (appInfo.autoStart) {
+                        // the "stub" will serve the ACME protocol challenge requests
+                        hostManager.addStubRoute(accountName, appInfo, appPwd);
+
                         if (hostManager.createWebHost(accountName, appInfo, appPwd, errors)) {
                             reportInitialized(appInfo, "Web");
                             continue;

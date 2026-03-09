@@ -24,6 +24,8 @@ import common.model.RequiredModule;
 
 import common.utils;
 
+import crypto.CryptoPassword;
+
 /**
  * Dedicated service for hosting modules.
  */
@@ -317,26 +319,25 @@ service ModuleEndpoint
                               |redeployed manually"
                             );
                 } else if (appInfo.autoStart) {
-                    hostManager.removeHost(host);
-
+                    Boolean success;
                     if (appInfo.is(WebAppInfo)) {
-                        if (!hostManager.createWebHost(accountName, appInfo,
-                                accountManager.decrypt(appInfo.password), errors)) {
-                            host.log($|Error: Failed to redeploy "{deployment}"; \
-                                      |reason: {errors}"
-                                      |
-                                      );
-                            newInfo = appInfo.with(autoStart=False);
-                        }
-                    } else if (appInfo.is(DbAppInfo)) {
-                        if (!(host := hostManager.createDbHost(accountName, appInfo, errors))) {
-                            host.log($|Error: Failed to redeploy "{deployment}"; \
-                                  |reason: {errors}"
-                                  |
-                                  );
-                            newInfo = appInfo.with(autoStart=False);
-                        }
+                        // replace the deployment with the "stub"
+                        CryptoPassword appPwd = accountManager.decrypt(appInfo.password);
+                        hostManager.addStubRoute(accountName, appInfo, appPwd);
+
+                        success = hostManager.createWebHost(accountName, appInfo, appPwd, errors);
+                    } else {
+                        assert appInfo.is(DbAppInfo);
+                        hostManager.removeHost(host);
+                        success = hostManager.createDbHost(accountName, appInfo, errors);
                     }
+
+                    if (!success) {
+                        host.log($|Error: Failed to redeploy "{deployment}"; reason: {errors}
+                                );
+                        newInfo = appInfo.with(autoStart=False);
+                    }
+
                     errors.reset();
 
                     if (newInfo != Null) {

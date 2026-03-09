@@ -1,8 +1,4 @@
-- check for "Null" injection key
-
 - test db logs (change the API)
-
-- report an error if the project module is neither Web nor DB
 
 - use email as a username for the platform authentication
 

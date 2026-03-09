@@ -106,10 +106,11 @@ service Projects
 
         if (injections != Null) {
             for ((Doc key, Doc value) : injections) {
-                SimpleResponse response = delegate.setInjectionValue(
-                    id, key.as(String), value.as(String));
-                if (response.status != OK) {
-                    return toJsonObject(response);
+                if (key.is(String) && value.is(String)) {
+                    SimpleResponse response = delegate.setInjectionValue(id, key, value);
+                    if (response.status != OK) {
+                        return toJsonObject(response);
+                    }
                 }
             }
         }

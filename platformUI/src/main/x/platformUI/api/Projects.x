@@ -196,6 +196,16 @@ service Projects
         return delegate.report(id, dbName);
     }
 
+    @Get("/{id}/logs/{kind}{/specifier}")
+    @Produces(Text)
+    String report(String id, String kind, String specifier = "") {
+        return switch (kind) {
+            case "db" : delegate.report(id, specifier == "" ? "*" : specifier);
+            case "web": delegate.report(id);
+            default   : "[Unknown log {kind=}]";
+        };
+    }
+
     JsonObject toJsonObject(AppInfo info) {
         JsonObjectBuilder project    = json.objectBuilder();
         String            deployment = info.deployment;

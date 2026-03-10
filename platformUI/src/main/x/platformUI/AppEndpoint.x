@@ -395,15 +395,31 @@ service AppEndpoint
             return "[unknown]";
         }
 
+        conditional String readConsoleFile(Directory homeDir) {
+            File console = homeDir.fileFor("console.log");
+            return console.exists
+                ? (True, (console.size > 0 ? console.contents.unpackUtf8() : "[empty]"))
+                : False;
+        }
+
         Directory homeDir = hostManager.ensureDeploymentHomeDirectory(accountName, deployment);
-        if (dbName != "") {
-            homeDir = homeDir.dirFor(dbName);
+        if (dbName == "") {
+            return readConsoleFile(homeDir) ?: "[no logs]";
         }
-        File console = homeDir.fileFor("console.log");
-        if (console.exists && console.size > 0) {
-            return console.contents.unpackUtf8();
+
+        StringBuffer buffer = new StringBuffer();
+        for (Directory dbDir : homeDir.dirs()) {
+            if (dbName == "*") {
+                if (String logContent := readConsoleFile(dbDir)) {
+                    buffer.addAll($"Database: {dbDir.name}\n")
+                          .addAll(logContent)
+                          .add('\n');
+                }
+            } else if (dbDir.name.startsWith(dbName)) {
+                return readConsoleFile(dbDir) ?: "[no logs]";
+            }
         }
-        return "[empty]";
+        return buffer.empty ? "[no logs]" : buffer.toString();
     }
 
     // ---- Web app end-points ---------------------------------------------------------------------

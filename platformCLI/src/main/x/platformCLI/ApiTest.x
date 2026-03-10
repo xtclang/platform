@@ -84,5 +84,9 @@ class ApiTest {
     String start(String projectName) = platformCLI.post($"/api/v1/projects/{projectName}/start");
 
     @Command("api-stop", "API V1: stop the app")
-    String stop(String projectName)  = platformCLI.post($"/api/v1/projects/{projectName}/stop");
+    String stop(String projectName) = platformCLI.post($"/api/v1/projects/{projectName}/stop");
+
+    @Command("api-logs", "API V1: show the logs")
+    String showLogs(String projectName, String logKind, String specifier = "") =
+        platformCLI.get($"/api/v1/projects/{projectName}/logs/{logKind}/{specifier}");
 }

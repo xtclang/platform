@@ -190,12 +190,6 @@ service Projects
         return toJsonObject(result);
     }
 
-    @Get("/{id}/log{/dbName}")
-    @Produces(Text)
-    String report(String id, String dbName = "") {
-        return delegate.report(id, dbName);
-    }
-
     @Get("/{id}/logs/{kind}{/specifier}")
     @Produces(Text)
     String report(String id, String kind, String specifier = "") {

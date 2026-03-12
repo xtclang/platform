@@ -44,5 +44,6 @@ include(
     ":platformUI",
     ":platformCLI",
     ":proxy",
-    ":stub"
+    ":stub",
+    ":tests"
 )

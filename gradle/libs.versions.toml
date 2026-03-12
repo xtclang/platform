@@ -4,6 +4,7 @@ node = "7.1.0"
 nodejs = "22.21.0"
 npm = "11.6.2"
 yarn = "1.22.22"
+junit = "6.0.3"
 
 [plugins]
 xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xtc" }
@@ -11,3 +12,6 @@ node = { id = "com.github.node-gradle.node", version.ref = "node" }
 
 [libraries]
 xdk = { module = "org.xtclang:xdk", version.ref = "xtc" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }

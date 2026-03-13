@@ -105,7 +105,13 @@ service HostInjector(AppHost appHost)
     Supplier getResource(Type type, String name) {
         import Container.Linker;
 
-        switch (type, name) {
+        Boolean isNullable = False;
+        Type    sansNull   = type;
+        if (sansNull := type.isNullable()) {
+            isNullable = True;
+        }
+
+        switch (sansNull, name) {
         case (Console, "console"):
             if (platform) {
                 @Inject Console console;
@@ -169,7 +175,7 @@ service HostInjector(AppHost appHost)
                 return &temp.maskAs(Directory);
 
             default:
-                throw new Exception($"Invalid Directory resource: \"{name}\"");
+                throw new Exception($"Invalid Directory resource: {name.quoted()}");
             }
 
         case (Random, "random"):
@@ -203,7 +209,7 @@ service HostInjector(AppHost appHost)
                 return keystore;
             };
 
-        case (Broker?, "sessionBroker"):
+        case (Broker, "sessionBroker"):
             return (Inject.Options opts) -> {
                 WebApp webApp;
                 if (platform) {
@@ -260,20 +266,27 @@ service HostInjector(AppHost appHost)
                 return (Inject.Options opts) -> injector.inject(type, name, opts);
             }
 
-            // see utils.collectDestringableInjections()
-            if (AppInfo appInfo ?= appHost.appInfo,
-                String  value   := appInfo.injections.get(new InjectionKey(name, type.toString()))) {
-                assert type.is(Type<Destringable>) as $"Type is not Destringable: \"{type}\"";
-                return new type.DataType(value);
-            }
-            if (Null.is(type)) {
-                // allow any Nullable injections that we are not aware of
-                return Null;
+            // TODO: remove the try-catch when Type.toString() is guaranteed not to throw
+            String typeName;
+            try {
+                typeName = sansNull.toString();
+
+                // see utils.collectDestringableInjections()
+                if (AppInfo appInfo ?= appHost.appInfo,
+                    String  value   := appInfo.injections.get(new InjectionKey(name, typeName))) {
+                    assert sansNull.is(Type<Destringable>) as $"Type is not Destringable: {typeName.quoted()}";
+                    return new sansNull.DataType(value);
+                }
+                if (isNullable) {
+                    // allow any Nullable injections that we are not aware of
+                    return Null;
+                }
+            } catch (Exception e)  {
+                typeName = "[foreign type]";
             }
 
             return (Inject.Options opts) ->
-                throw new Exception($|Invalid resource: name="{name}", type="{type}"
-                                   );
+                throw new Exception($"Invalid resource: name={name.quoted()}, type={typeName.quoted()}");
         }
     }
 }

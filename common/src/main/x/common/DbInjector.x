@@ -57,11 +57,17 @@ service DbInjector(AppHost appHost, DbHost[] dbHosts)
 
     @Override
     Supplier getResource(Type type, String name) {
+        Boolean isNullable = False;
+        Type    sansNull   = type;
+        if (sansNull := type.isNullable()) {
+            isNullable = True;
+        }
+
         // first, check for any subclass of the "RootSchema"
-        if (type.is(Type<RootSchema>)) {
-            Type schemaType = type;
-            if (type.is(Type<Connection>)) {
-                assert schemaType := type.resolveFormalType("Schema");
+        if (sansNull.is(Type<RootSchema>)) {
+            Type schemaType = sansNull;
+            if (schemaType.is(Type<Connection>)) {
+                assert schemaType := schemaType.resolveFormalType("Schema");
             }
 
             // Note, that we activate the dbHosts during the container validation phase to minimize
@@ -74,7 +80,7 @@ service DbInjector(AppHost appHost, DbHost[] dbHosts)
                     Type hostSchemaType = dbHost.schemaType;
                     Type hostConnType   = hostSchemaType + Connection.as(Type).parameterize([hostSchemaType]);
                     if (hostConnType.isA(schemaType)) {
-                        return (Inject.Options opts) -> maskConnection(createConnection, type);
+                        return (Inject.Options opts) -> maskConnection(createConnection, sansNull);
                     }
                 } else {
                     errors.reportAll(consoleImpl.print);
@@ -84,8 +90,8 @@ service DbInjector(AppHost appHost, DbHost[] dbHosts)
             throw new Exception($"Failed to find a database for {schemaType}");
         }
 
-        switch (type, name) {
-        case (Authenticator?, "authenticator"):
+        switch (sansNull, name) {
+        case (Authenticator, "authenticator"):
             return (Inject.Options opts) -> {
                 if (WebAppInfo appInfo := appHost.appInfo.is(WebAppInfo), appInfo.useAuth) {
 

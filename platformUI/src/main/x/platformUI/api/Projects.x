@@ -105,8 +105,8 @@ service Projects
         JsonObject? injections = projectInfo["injections"].as(JsonObject?);
 
         if (injections != Null) {
-            for ((Doc key, Doc value) : injections) {
-                if (key.is(String) && value.is(String)) {
+            for ((String key, Doc value) : injections) {
+                if (value.is(String)) {
                     SimpleResponse response = delegate.setInjectionValue(id, key, value);
                     if (response.status != OK) {
                         return toJsonObject(response);

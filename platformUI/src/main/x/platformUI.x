@@ -335,15 +335,5 @@ module platformUI.xqiz.it {
             this.keystore       = keystore;
             this.realm          = realm;
         }
-
-        /**
-         * Add a stub route for the specified deployment.
-         */
-        void addStubRoute(String hostName) {
-            StubHandler handler = new StubHandler(/build/not-deployed.html, ["%deployment%"=hostName]);
-
-            httpServer.addRoute(hostName, handler, keystore,
-                    names.PlatformTlsKey, names.CookieEncryptionKey);
-        }
     }
 }

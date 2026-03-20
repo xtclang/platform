@@ -215,6 +215,8 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
                 dependent.deactivate(False);
             }
             if (!explicit) {
+                @Inject Console console;
+                console.print($"{common.logTime($)} Trace: Unloading {appInfo.deployment}");
                 // TODO: container.pause(); container.store();
             }
 
@@ -261,12 +263,15 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
         }
         this.deferredRequests = [];
 
+        @Inject Console console;
+        console.print($|{common.logTime($)} Trace: Resuming {appInfo.deployment}\
+                       |{{if (deferredRequests.size > 0)
+                       |{$.addAll($" with {deferredRequests.size} deferred requests");}}}
+                     );
+
         Log errors = new ErrorLog();
         if (activate(False, errors)) {
-            deferredRequests.forEach(request -> // handle^(request));
-            {
-            handle^(request);
-            });
+            deferredRequests.forEach(request -> handle^(request));
         } else {
             errors.reportAll(log);
             deferredRequests.forEach(request ->
@@ -294,16 +299,23 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
                     handler          = new HttpHandler(route, challengeApp, extras);
                     challengeHandler = handler;
                 }
-                handler.handle^(request);
-                return;
+                Tuple result = handler.handle^(request);
+                return result;
             }
 
+            @Inject Console console;
             if (paused) {
-                if (!deferRequest(request)) {
+                if (deferRequest(request)) {
+                    console.print($|{common.logTime($)} Trace: Deferring request for \
+                                   |{route.host}/{request.uriString}
+                                 );
+                } else {
                     request.respond(HttpStatus.TooManyRequests.code, [], [], []);
                 }
                 return;
             }
+
+            console.print($"{common.logTime($)} Trace: Activating {appInfo.deployment}");
 
             Log errors = new ErrorLog();
             if (!(handler := activate(False, errors))) {
@@ -318,7 +330,8 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
         pendingRequests++;
 
         request.observe((_) -> {--pendingRequests;});
-        handler.handle^(request);
+        Tuple result = handler.handle^(request);
+        return result;
     }
 
     // ----- Helper methods ------------------------------------------------------------------------

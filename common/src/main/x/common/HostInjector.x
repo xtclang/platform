@@ -50,13 +50,20 @@ service HostInjector(AppHost appHost)
     @Lazy FileStore store.calc() = new ecstasy.fs.DirectoryFileStore(appHost.homeDir);
 
     /**
+     * The maximum log size retained upon restart.
+     */
+    static Int ConsoleSizeThreshold = 10K;
+
+    /**
      * The [Console] for the hosted container.
      */
     @Lazy ConsoleImpl consoleImpl.calc() {
         File consoleFile = appHost.homeDir.fileFor("console.log");
         if (consoleFile.exists) {
-            // remove the old content
-            consoleFile.truncate(0);
+            // truncate the old content if necessary (very naive; needs improvement)
+            if (consoleFile.size > ConsoleSizeThreshold) {
+                consoleFile.truncate(ConsoleSizeThreshold);
+            }
         } else {
             consoleFile.ensure();
         }
@@ -69,7 +76,6 @@ service HostInjector(AppHost appHost)
     class ConsoleImpl(File consoleFile)
             implements Console {
 
-        @Inject Clock clock;
         private Boolean addTimestamp = True;
 
         @Override
@@ -77,11 +83,11 @@ service HostInjector(AppHost appHost)
             String message;
             switch (addTimestamp, suppressNewline) {
             case (True, False):
-                message = $"{clock.now}: {o}\n";
+                message = $"{common.logTime($)}: {o}\n";
                 break;
 
             case (True, True):
-                message = $"{clock.now}: {o}";
+                message = $"{common.logTime($)}: {o}";
                 addTimestamp = False;
                 break;
 

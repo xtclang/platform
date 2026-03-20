@@ -181,6 +181,9 @@ service HostManager
 
         enum Reason {Inactivity, HyperActivity, Pending}
         void pause(String deployment, Reason reason) {
+            @Inject Console console;
+            console.print($"{common.logTime($)} Trace: Pausing {deployment} due to {reason}");
+
             assert AppHost host := getHost(deployment), host.is(WebHost);
             if (host.deactivate(reason == Pending)) {
                 // to prevent an unnecessary churn, don't resume for some period of time

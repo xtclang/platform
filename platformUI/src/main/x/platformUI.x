@@ -126,7 +126,7 @@ module platformUI.xqiz.it {
             }
         }
 
-        ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm);
+        ControllerConfig.init(accountManager, hostManager, server, baseDomain, keystore, realm, provider);
 
         server.addRoute(route, new HttpHandler(route, this, extras), keystore,
                         names.PlatformTlsKey, names.CookieEncryptionKey);
@@ -326,14 +326,18 @@ module platformUI.xqiz.it {
         @Unassigned
         Realm realm;
 
-        void init(AccountManager accountManager, HostManager hostManager,
-                  HttpServer httpServer, String baseDomain, KeyStore keystore, Realm realm) {
+        @Unassigned
+        String provider;
+
+        void init(AccountManager accountManager, HostManager hostManager, HttpServer httpServer,
+                  String baseDomain, KeyStore keystore, Realm realm, String provider) {
             this.accountManager = accountManager;
             this.hostManager    = hostManager;
             this.httpServer     = httpServer;
             this.baseDomain     = baseDomain;
             this.keystore       = keystore;
             this.realm          = realm;
+            this.provider       = provider;
         }
     }
 }

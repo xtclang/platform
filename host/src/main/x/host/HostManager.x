@@ -268,18 +268,21 @@ service HostManager
                 ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
 
         String  hostName = appInfo.hostName;
+        String  provider = appInfo.provider;
         File    store    = homeDir.fileFor(names.KeyStoreName);
         Boolean newStore = !store.exists;
+        Boolean newCert  = True;
 
         try {
             if (!newStore && !force) {
-                @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
-                @Inject(opts=appInfo.provider) CertificateManager manager;
+                @Inject(opts=provider) CertificateManager manager;
+                KeyStore keystore = manager.keystoreFor(store, pwd);
 
                 ensureEncryptionKeys(keystore, manager, store, pwd);
 
                 CheckValid:
                 if (Certificate cert := keystore.getCertificate(hostName)) {
+                    newCert = False;
 
                     Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
                     if (daysLeft < 14) {
@@ -290,14 +293,26 @@ service HostManager
                 }
             }
 
-            @Inject(opts=appInfo.provider) CertificateManager manager;
-
-            // create or renew the certificate using the host name as its name (alias)
             String dName = CertificateManager.distinguishedName(hostName,
                                 org=accountName, orgUnit=appInfo.deployment);
+
+            Boolean selfSigner = provider == names.SelfSigner;
+            if (newCert && !selfSigner) {
+                // if there are any proxies, we need to make sure they have registered a new "site"
+                // before we can create the real certificate; use self-signed one
+                @Inject(opts=names.SelfSigner) CertificateManager manager;
+                manager.createCertificate(store, pwd, hostName, dName);
+
+                // wait for the manager to get back a confirmation, so we can proceed with signing
+                proxyManager.updateProxyConfig(manager.keystoreFor(store, pwd),
+                        pwd, hostName, hostName, &log(homeDir));
+            }
+
+            // create or renew the certificate using the host name as its name (alias)
+            @Inject(opts=provider) CertificateManager manager;
             manager.createCertificate(store, pwd, hostName, dName);
 
-            @Inject(opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+            KeyStore keystore = manager.keystoreFor(store, pwd);
             assert Certificate cert := keystore.getCertificate(hostName), cert.valid;
 
             ensureEncryptionKeys(keystore, manager, store, pwd);

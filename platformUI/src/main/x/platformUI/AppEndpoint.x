@@ -432,11 +432,15 @@ service AppEndpoint
      */
     @Put("/web{/deployment}{/moduleName}{/provider}")
     AppResponse registerWebApp(String deployment, String moduleName,
-                               String provider = names.SelfSigner) {
+                               String? provider = Null) {
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
         if (injections.is(SimpleResponse)) {
             return injections;
+        }
+
+        if (provider == Null) {
+            provider = ControllerConfig.provider;
         }
 
         // compute the full host name (e.g. "welcome.localhost.xqiz.it")
@@ -473,10 +477,14 @@ service AppEndpoint
      * Handle a request to renew the certificate.
      */
     @Post("/renew{/deployment}{/provider}")
-    SimpleResponse renewCertificate(String deployment, String provider = names.SelfSigner) {
+    SimpleResponse renewCertificate(String deployment, String? provider = Null) {
         WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
+        }
+
+        if (provider == Null) {
+            provider = ControllerConfig.provider;
         }
 
         Boolean changeProvider = False;

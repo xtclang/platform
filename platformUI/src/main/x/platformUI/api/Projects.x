@@ -76,7 +76,7 @@ service Projects
         AppResponse appInfo;
         if (moduleInfo.kind == Web) {
             if (provider == Null || provider.empty) {
-                provider = "certbot";
+                provider = ControllerConfig.provider;
             }
             appInfo = delegate.registerWebApp(deployment, moduleName, provider);
         } else if (moduleInfo.kind == Db) {

@@ -224,7 +224,7 @@ service ModuleEndpoint
                 String moduleName = template.qualifiedName;
                 String storeName = $"{moduleName}.xtc";
 
-                // TODO: this is very temporary; we should keep old the versions until they are
+                // TODO: this is very temporary; we should keep the old versions until they are
                 //       no longer used and provide a way to evolve DBs
                 if (File fileOld := libDir.findFile(storeName)) {
                     fileOld.delete();
@@ -244,10 +244,22 @@ service ModuleEndpoint
      */
     private ModuleInfo buildModuleInfo(ModuleRepository accountRepo, String moduleName,
                                        Time uploaded) {
+        Boolean          resolved      = False;
+        ModuleKind       kind          = Generic;
+        String[]         issues        = [];
+        InjectionKey[]   injectionKeys = [];
+        RequiredModule[] dependencies  = [];
+
          // collect the dependencies (the module names the specified module depends on)
-        RequiredModule[] dependencies = [];
-        if (ModuleTemplate moduleTemplate := accountRepo.getModule(moduleName)) {
-            for ((_, ModuleTemplate depends) : moduleTemplate.modulesByPath) {
+        if (ModuleTemplate template := accountRepo.getModule(moduleName)) {
+
+            if (utils.isWebModule(template)) {
+                kind = Web;
+            } else if (utils.isDbModule(template)) {
+                kind = Db;
+            }
+
+            for ((_, ModuleTemplate depends) : template.modulesByPath) {
                 // everything depends on Ecstasy module; don't show it
                 String requiredName = depends.qualifiedName;
                 if (requiredName != TypeSystem.MackKernel &&
@@ -256,26 +268,19 @@ service ModuleEndpoint
                         new RequiredModule(requiredName, accountRepo.getModule(requiredName));
                 }
             }
-        }
 
-        // resolve the module
-        Boolean        resolved      = False;
-        ModuleKind     kind          = Generic;
-        String[]       issues        = [];
-        InjectionKey[] injectionKeys = [];
-        try {
-            ModuleTemplate template = accountRepo.getResolvedModule(moduleName);
-            resolved = True;
+            // resolve the module
+            try {
+                template = accountRepo.getResolvedModule(moduleName);
+                resolved = True;
 
-            assert injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName);
+                assert injectionKeys := utils.collectDestringableInjections(accountRepo, moduleName);
 
-            if (utils.isWebModule(template)) {
-                kind = Web;
-            } else if (utils.isDbModule(template)) {
-                kind = Db;
+            } catch (Exception e) {
+                issues += e.text?;
             }
-        } catch (Exception e) {
-            issues += e.text?;
+        } else {
+            issues += "Module {moduleName.quoted()} is missing";
         }
 
         return new ModuleInfo(moduleName, resolved, uploaded, kind, issues, dependencies,

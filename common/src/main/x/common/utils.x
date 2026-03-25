@@ -6,6 +6,7 @@ import ecstasy.mgmt.ModuleRepository;
 import ecstasy.mgmt.LinkedRepository;
 
 import ecstasy.reflect.ClassTemplate;
+import ecstasy.reflect.ClassTemplate.Composition;
 import ecstasy.reflect.FileTemplate;
 import ecstasy.reflect.ModuleTemplate;
 import ecstasy.reflect.TypeTemplate;
@@ -124,17 +125,27 @@ package utils {
      */
     static Boolean isWebModule(ModuleTemplate template) {
         TypeTemplate webAppTemplate = web.WebApp.as(Type).template;
-        return template.type.isA(webAppTemplate);
+
+        if (template.resolved) {
+            return template.type.isA(webAppTemplate);
+        } else {
+            assert Composition webAppClass := webAppTemplate.fromClass();
+            return template.annotatedBy(webAppClass) || template.incorporates(webAppClass);
+        }
     }
 
     /**
      * @return True iff the specified ModuleTemplate represents a Database module
      */
     static Boolean isDbModule(ModuleTemplate template) {
-        assert template.resolved;
-
         TypeTemplate databaseTemplate = oodb.Database.as(Type).template;
-        return template.type.isA(databaseTemplate);
+
+        if (template.resolved) {
+            return template.type.isA(databaseTemplate);
+        } else {
+            assert Composition databaseAppClass := databaseTemplate.fromClass();
+            return template.annotatedBy(databaseAppClass) || template.incorporates(databaseAppClass);
+        }
     }
 
     /**

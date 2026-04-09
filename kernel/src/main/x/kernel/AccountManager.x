@@ -46,7 +46,8 @@ service AccountManager
      */
     Connection init(ModuleRepository repository, Directory homeDir, Directory buildDir,
               Decryptor decryptor, Log errors) {
-        repository = new LinkedRepository([new DirRepository(buildDir), repository].freeze(True));
+        repository = new LinkedRepository(
+            [new DirRepository(buildDir), repository].toArray(Constant, inPlace=True));
         assert this.platformDbHost := utils.createDbHost(repository, "platformDB.xqiz.it", Null,
                                                         "jsondb", homeDir, buildDir, errors);
 

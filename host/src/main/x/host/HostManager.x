@@ -561,7 +561,7 @@ service HostManager
         @Inject("repository") ModuleRepository coreRepo;
 
         ModuleRepository[] baseRepos  = [coreRepo, new DirRepository(libDir), new DirRepository(buildDir)];
-        return new LinkedRepository(baseRepos.freeze(True));
+        return new LinkedRepository(baseRepos.toArray(Constant, inPlace=True));
     }
 
     private void removeFiles(Directory dir, Boolean keepLogs) {

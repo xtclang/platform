@@ -189,7 +189,7 @@ package utils {
      */
      static ModuleRepository getModuleRepository(Directory libDir) {
         @Inject("repository") ModuleRepository coreRepo;
-        return new LinkedRepository([coreRepo, new DirRepository(libDir)].freeze(True));
+        return new LinkedRepository([coreRepo, new DirRepository(libDir)].toArray(Constant, True));
     }
 
     /**

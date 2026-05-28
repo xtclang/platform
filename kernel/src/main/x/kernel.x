@@ -46,6 +46,7 @@ module kernel.xqiz.it {
     import crypto.NamedPassword;
 
     import json.Doc;
+    import json.JsonObject;
     import json.Parser;
 
     import net.IPAddress;
@@ -73,7 +74,7 @@ module kernel.xqiz.it {
         Directory hostDir     = platformDir.dirFor("host").ensure();
 
         // get the configuration
-        Map<String, Doc> config;
+        JsonObject config;
         try {
             File   configFile = platformDir.fileFor("cfg.json");
             File   configInit = /cfg.json;
@@ -92,7 +93,7 @@ module kernel.xqiz.it {
                 configFile.contents = configData;
             }
 
-            config = new Parser(jsonConfig.toReader()).parseDoc().as(Map<String, Doc>);
+            config = new Parser(jsonConfig.toReader()).parseDoc().as(JsonObject);
         } catch (Exception e) {
             console.print($"Error: Invalid config file");
             return;
@@ -108,6 +109,9 @@ module kernel.xqiz.it {
             UInt16   httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
             String[] proxies   = config.getOrDefault("proxies", []).as(Doc[])
                                        .map(addr -> addr.as(String)).toArray();
+            Int      required  = config.getOrDefault("proxies-required", 1).as(IntLiteral).toInt()
+                                       .minOf(proxies.size).maxOf(0);
+            String   timeout   = config.getOrDefault("proxies-timeout", "10S").as(String);
 
             assert String hostName := dName.splitMap().get("CN"), hostName.count('.') >= 2
                     as "Invalid \"dName\" configuration value";
@@ -197,7 +201,8 @@ module kernel.xqiz.it {
                     (Uri[] receivers, proxyIPs) = parseProxies(proxies);
                     if (Container container :=
                             utils.createContainer(repository, proxyModule, pseudoHost, errors)) {
-                        proxyManager = container.invoke("configure", Tuple:(receivers))[0].as(ProxyManager);
+                        proxyManager = container.invoke("configure",
+                            Tuple:(receivers, required, new Duration(timeout)))[0].as(ProxyManager);
                     } else {
                         return;
                     }

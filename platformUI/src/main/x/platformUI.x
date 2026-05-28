@@ -83,8 +83,10 @@ module platformUI.xqiz.it {
         (Boolean valid, Boolean exists) = checkCertificate(keystore, hostName, provider);
         if (valid) {
             // they could have configured new proxies; need to update them just in case
-            proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName,
-                msg -> console.print($"{common.logTime($)} {msg}"));
+            if (!proxyManager.updateProxyConfig(keystore, pwd, names.PlatformTlsKey, hostName,
+                    msg -> console.print($"{common.logTime($)} {msg}"))) {
+                throw new Exception("Failed to update the proxy configuration");
+            }
 
             // schedule the next check in a week
             clock.schedule(Duration.ofDays(7), () ->
@@ -96,8 +98,10 @@ module platformUI.xqiz.it {
             // platform server; we don't need a valid cert for that, anything will do
             if (exists && !selfSigner) {
                 // wait for the manager to get back a confirmation, so we can proceed with signing
-                proxyManager.updateProxyConfig(keystore, pwd, names.PlatformTlsKey, hostName,
-                    msg -> console.print($"{common.logTime($)} {msg}"));
+                if (!proxyManager.updateProxyConfig(keystore, pwd, names.PlatformTlsKey,
+                        hostName, msg -> console.print($"{common.logTime($)} {msg}"))) {
+                    throw new Exception("Failed to update the proxy configuration");
+                }
             } else {
                 // with any provider we have to start with a self-signed one to register the route;
                 // only then we can ask the "real" provider to supply a valid certificate

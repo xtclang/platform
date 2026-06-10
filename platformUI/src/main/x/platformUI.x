@@ -38,6 +38,7 @@ module platformUI.xqiz.it {
 
     import sec.Realm;
 
+    import web.HttpClient;
     import web.HttpsRequired;
     import web.StaticContent;
     import web.WebApp;
@@ -80,6 +81,13 @@ module platformUI.xqiz.it {
             AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure()),
             ];
 
+        Boolean selfSigner = provider == names.SelfSigner;
+
+        // if we ever need to create or update the certificate we need to activate the challenge app
+        if (!selfSigner) {
+            server.addRoute(route, new HttpHandler(route, hostManager.challengeApp, extras));
+        }
+
         (Boolean valid, Boolean exists) = checkCertificate(keystore, hostName, provider);
         if (valid) {
             // they could have configured new proxies; need to update them just in case
@@ -92,8 +100,6 @@ module platformUI.xqiz.it {
             clock.schedule(Duration.ofDays(7), () ->
                     ensureCertificate(keystore, pwd, hostName, dName, provider, homeDir, proxyManager));
         } else {
-            Boolean selfSigner = provider == names.SelfSigner;
-
             // if there are any proxies, we need to make sure they have registered a route to the
             // platform server; we don't need a valid cert for that, anything will do
             if (exists && !selfSigner) {
@@ -112,9 +118,13 @@ module platformUI.xqiz.it {
             // for self-signer we've already created a valid certificate and the proxies have been
             // updated; there is nothing else to do
             if (!selfSigner) {
-                // before we proceed we need to create a certificate; for that to work (unless the
-                // provider is self-signing), we need to activate the challenge app
-                server.addRoute(route, new HttpHandler(route, hostManager.challengeApp, extras));
+                // before we proceed we need to create a certificate, but before we talk to the CA
+                // provider we need to make sure that it can reach us; otherwise our requests for
+                // the certificate may look like an abuse
+                if (!checkReachability(
+                        new HttpClient(), hostName, clock.now + proxyManager.updateTimeout)) {
+                    throw new Exception("The host {hostName.quoted()} is not reachable");
+                }
 
                 @Future Tuple result = createCertificate^(
                         keystore, pwd, hostName, dName, provider, homeDir, proxyManager);
@@ -285,6 +295,38 @@ module platformUI.xqiz.it {
         proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName,
             msg -> console.print($"{common.logTime($)} {msg}"));
         return keystore;
+    }
+
+    /**
+     * Check if the specified host name is reachable over HTTP.
+     */
+    private Boolean checkReachability(HttpClient client, String hostName, Time cutoff) {
+        import web.ResponseIn;
+
+        Time now = clock.now;
+        if (now > cutoff) {
+            return False;
+        }
+
+        try (val _ = new Timeout(cutoff - now)) {
+            String uri = $"http://{hostName}/.well-known/self-test";
+
+            // the "self-test" is a non-exising resource, so 404 is the positive response;
+            // treat any other response as a "need to repeat" attempt
+            ResponseIn result = client.get(uri);
+            if (result.status == NotFound) {
+                return True;
+            }
+        } catch (TimedOut e) {
+            return False;
+        }
+
+        // repeat in two seconds
+        @Future Boolean done;
+        clock.schedule(Duration.ofSeconds(2), () -> {
+            done = checkReachability^(client, hostName, cutoff);
+        });
+        return done;
     }
 
     /**

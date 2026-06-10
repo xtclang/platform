@@ -8,6 +8,11 @@ import crypto.KeyStore;
 interface ProxyManager {
 
     /**
+     * Maximum allowed update duration.
+     */
+    @RO Duration updateTimeout;
+
+    /**
      * Send the proxy config updates updates to all proxies. The success of this operation may
      * depend on the configuration of the required proxies and the timeout.
      *

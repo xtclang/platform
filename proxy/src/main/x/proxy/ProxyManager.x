@@ -6,6 +6,7 @@ import crypto.CryptoPassword;
 import crypto.KeyStore;
 
 import common.Reporting;
+import common.utils;
 
 import web.Client;
 import web.HttpClient;
@@ -57,7 +58,6 @@ service ProxyManager(Uri[] receivers, Int required, Duration updateTimeout)
                       );
         }
         String pemCert = buf.toString();
-        Time   cutoff  = clock.now + updateTimeout;
 
         @Future Boolean allDone;
         Future<Boolean> done = &allDone;
@@ -66,7 +66,7 @@ service ProxyManager(Uri[] receivers, Int required, Duration updateTimeout)
 
         for (Uri receiver : receivers) {
             Updater updater = new Updater(receiver, pemKey, pemCert, hostName, report);
-            Boolean success = updater.updateProxy^(cutoff);
+            Boolean success = updater.updateProxy^(updateTimeout);
             &success.whenComplete((r, x) -> {
                 if (r == True) {
                     if (++successCount >= required) {
@@ -107,26 +107,8 @@ service ProxyManager(Uri[] receivers, Int required, Duration updateTimeout)
         /**
          * Async update.
          */
-        Boolean updateProxy(Time cutoff) {
-            Time now = clock.now;
-            if (now > cutoff) {
-                return False;
-            }
-
-            try (val _ = new Timeout(cutoff - now)) {
-                if (update()) {
-                    return True;
-                }
-            } catch (TimedOut e) {
-                return False;
-            }
-
-            // repeat in two seconds
-            @Future Boolean done;
-            clock.schedule(Duration.ofSeconds(2), () -> {
-                done = updateProxy^(cutoff);
-            });
-            return done;
+        Boolean updateProxy(Duration timeout) {
+            return utils.repeatAction(&update, timeout, False);
         }
 
         /**

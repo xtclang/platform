@@ -56,7 +56,6 @@ module kernel.xqiz.it {
 
     import xenia.HttpServer;
 
-    @Inject Clock   clock;
     @Inject Console console;
 
     void run(String[] args=[]) {
@@ -290,7 +289,15 @@ module kernel.xqiz.it {
                     console.print($"Error: Failed to lookup the proxy name: {proxy.quoted()}");
                 }
             } else {
-                IPAddress[] ips = resolve(network.nameService, addr, clock.now + timeout);
+                function IPAddress[] () resolve = () -> {
+                    if (IPAddress[] ips := network.nameService.resolve(addr)) {
+                        return ips;
+                    } else {
+                        return [];
+                    }
+                };
+
+                IPAddress[] ips = utils.repeatAction(resolve, timeout, []);
                 assert !ips.empty as $"Unresolvable proxy name: {proxy.quoted()}";
 
                 addrs += ips; // if more than one (quite rare), add them all
@@ -299,33 +306,4 @@ module kernel.xqiz.it {
         }
         return uris.freeze(inPlace=True), addrs.freeze(inPlace=True);
     }
-
-    /**
-     * Resolve the specified address.
-     */
-    private IPAddress[] resolve(net.NameService nameService, String addr, Time cutoff) {
-        Time now = clock.now;
-        if (now > cutoff) {
-            return [];
-        }
-
-        try (val _ = new Timeout(cutoff - now)) {
-            if (IPAddress[] ips := nameService.resolve(addr), !ips.empty) {
-                return ips;
-            }
-            // ignore a negative response and repeat in two seconds
-        } catch (TimedOut e) {
-            return [];
-        } catch (Exception _) {
-            // ignore any other exception and repeat in two seconds
-        }
-
-        // repeat in two seconds
-        @Future IPAddress[] ips;
-        clock.schedule(Duration.ofSeconds(2), () -> {
-            ips = resolve^(nameService, addr, cutoff);
-        });
-        return ips;
-    }
-
 }

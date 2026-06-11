@@ -56,6 +56,7 @@ module kernel.xqiz.it {
 
     import xenia.HttpServer;
 
+    @Inject Clock   clock;
     @Inject Console console;
 
     void run(String[] args=[]) {
@@ -198,11 +199,12 @@ module kernel.xqiz.it {
                 if (ModuleTemplate proxyModule := repository.getModule("proxy_manager.xqiz.it")) {
                     proxyModule = proxyModule.parent.resolve(repository).mainModule;
 
-                    (Uri[] receivers, proxyIPs) = parseProxies(proxies);
+                    Duration timeoutDuration = new Duration(timeout);
+                    (Uri[] receivers, proxyIPs) = parseProxies(proxies, timeoutDuration);
                     if (Container container :=
                             utils.createContainer(repository, proxyModule, pseudoHost, errors)) {
                         proxyManager = container.invoke("configure",
-                            Tuple:(receivers, required, new Duration(timeout)))[0].as(ProxyManager);
+                            Tuple:(receivers, required, timeoutDuration))[0].as(ProxyManager);
                     } else {
                         return;
                     }
@@ -264,7 +266,7 @@ module kernel.xqiz.it {
         }
     }
 
-    private (Uri[] uris, IPAddress[] addrs) parseProxies(String[] proxies) {
+    private (Uri[] uris, IPAddress[] addrs) parseProxies(String[] proxies, Duration timeout) {
         @Inject("secureNetwork") net.Network network;
 
         Int         count = proxies.size;
@@ -288,12 +290,42 @@ module kernel.xqiz.it {
                     console.print($"Error: Failed to lookup the proxy name: {proxy.quoted()}");
                 }
             } else {
-                assert IPAddress[] ips := network.nameService.resolve(addr), !ips.empty as
-                    $"Unresolvable proxy name: {proxy.quoted()}";
+                IPAddress[] ips = resolve(network.nameService, addr, clock.now + timeout);
+                assert !ips.empty as $"Unresolvable proxy name: {proxy.quoted()}";
+
                 addrs += ips; // if more than one (quite rare), add them all
-                uris += new Uri(scheme="https", host=addr, port=port);
+                uris  += new Uri(scheme="https", host=addr, port=port);
             }
         }
         return uris.freeze(inPlace=True), addrs.freeze(inPlace=True);
     }
+
+    /**
+     * Resolve the specified address.
+     */
+    private IPAddress[] resolve(net.NameService nameService, String addr, Time cutoff) {
+        Time now = clock.now;
+        if (now > cutoff) {
+            return [];
+        }
+
+        try (val _ = new Timeout(cutoff - now)) {
+            if (IPAddress[] ips := nameService.resolve(addr), !ips.empty) {
+                return ips;
+            }
+            // ignore a negative response and repeat in two seconds
+        } catch (TimedOut e) {
+            return [];
+        } catch (Exception _) {
+            // ignore any other exception and repeat in two seconds
+        }
+
+        // repeat in two seconds
+        @Future IPAddress[] ips;
+        clock.schedule(Duration.ofSeconds(2), () -> {
+            ips = resolve^(nameService, addr, cutoff);
+        });
+        return ips;
+    }
+
 }

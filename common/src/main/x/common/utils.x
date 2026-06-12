@@ -238,6 +238,54 @@ package utils {
         decryptor.decrypt(Base64Format.Instance.decode(value)).unpackUtf8();
 
     /**
+     * Repeatedly invoke the specified action until it returns a value other than `retryValue`, or
+     * until the timeout is reached. Any exception raised by the action is ignored and causes the
+     * action to be retried.
+     *
+     * @param action      the action function
+     * @param timeout     the maximum time allowed for all attempts, including delays between retries
+     * @param retryValue  the `Result` value indicating that the action should be retried; this
+     *                    value is also returned if the timeout is reached
+     * @param retryDelay  (optional) delay between attempts; if not specified, a delay is computed
+     *                    automatically to allow up to five retries, with a minimum delay of one
+     *                    second
+     */
+    static <Result> Result repeatAction(function Result() action, Duration timeout,
+                                        Result retryValue, Duration? retryDelay = Null) {
+        @Inject Clock clock;
+
+        if (retryDelay == Null) {
+            retryDelay = (timeout/5).notLessThan(Second);
+        }
+
+        Time start = clock.now;
+        try (val _ = new Timeout(timeout)) {
+            Result result = action();
+            if (result != retryValue) {
+                return result;
+            }
+            // retry result; schedule another attempt
+        } catch (TimedOut e) {
+            return retryValue;
+        } catch (Exception _) {
+            // ignore any other exception and schedule another attempt
+        }
+
+        // adjust the timeout, accounting for the upcoming repeat wait time
+        timeout = timeout - (clock.now - start) - retryDelay;
+        if (timeout.sign != Positive) {
+            return retryValue;
+        }
+
+        // repeat as specified
+        @Future Result result;
+        clock.schedule(retryDelay, () -> {
+            result = repeatAction^(action, timeout, retryValue, retryDelay);
+        });
+        return result;
+    }
+
+    /**
      * A "new line" character as a Byte[].
      */
     static Byte[] NewLine = ['\n'.toByte()];

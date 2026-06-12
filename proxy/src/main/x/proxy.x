@@ -13,8 +13,8 @@ module proxy_manager.xqiz.it {
     /**
      * Bootstrapping: configure and return the ProxyManager.
      */
-    common.ProxyManager configure(Uri[] receivers) {
-        ProxyManager mgr = new ProxyManager(receivers);
+    common.ProxyManager configure(Uri[] receivers, Int required, Duration updateTimeout) {
+        ProxyManager mgr = new ProxyManager(receivers, required, updateTimeout);
         return &mgr.maskAs(common.ProxyManager);
     }
 }

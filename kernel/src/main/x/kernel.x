@@ -46,6 +46,7 @@ module kernel.xqiz.it {
     import crypto.NamedPassword;
 
     import json.Doc;
+    import json.JsonObject;
     import json.Parser;
 
     import net.IPAddress;
@@ -73,7 +74,7 @@ module kernel.xqiz.it {
         Directory hostDir     = platformDir.dirFor("host").ensure();
 
         // get the configuration
-        Map<String, Doc> config;
+        JsonObject config;
         try {
             File   configFile = platformDir.fileFor("cfg.json");
             File   configInit = /cfg.json;
@@ -92,7 +93,7 @@ module kernel.xqiz.it {
                 configFile.contents = configData;
             }
 
-            config = new Parser(jsonConfig.toReader()).parseDoc().as(Map<String, Doc>);
+            config = new Parser(jsonConfig.toReader()).parseDoc().as(JsonObject);
         } catch (Exception e) {
             console.print($"Error: Invalid config file");
             return;
@@ -108,6 +109,9 @@ module kernel.xqiz.it {
             UInt16   httpsPort = config.getOrDefault("httpsPort", 8090).as(IntLiteral).toUInt16();
             String[] proxies   = config.getOrDefault("proxies", []).as(Doc[])
                                        .map(addr -> addr.as(String)).toArray();
+            Int      required  = config.getOrDefault("proxies-required", 1).as(IntLiteral).toInt()
+                                       .minOf(proxies.size).maxOf(0);
+            String   timeout   = config.getOrDefault("proxies-timeout", "10S").as(String);
 
             assert String hostName := dName.splitMap().get("CN"), hostName.count('.') >= 2
                     as "Invalid \"dName\" configuration value";
@@ -194,10 +198,12 @@ module kernel.xqiz.it {
                 if (ModuleTemplate proxyModule := repository.getModule("proxy_manager.xqiz.it")) {
                     proxyModule = proxyModule.parent.resolve(repository).mainModule;
 
-                    (Uri[] receivers, proxyIPs) = parseProxies(proxies);
+                    Duration timeoutDuration = new Duration(timeout);
+                    (Uri[] receivers, proxyIPs) = parseProxies(proxies, timeoutDuration);
                     if (Container container :=
                             utils.createContainer(repository, proxyModule, pseudoHost, errors)) {
-                        proxyManager = container.invoke("configure", Tuple:(receivers))[0].as(ProxyManager);
+                        proxyManager = container.invoke("configure",
+                            Tuple:(receivers, required, timeoutDuration))[0].as(ProxyManager);
                     } else {
                         return;
                     }
@@ -259,7 +265,7 @@ module kernel.xqiz.it {
         }
     }
 
-    private (Uri[] uris, IPAddress[] addrs) parseProxies(String[] proxies) {
+    private (Uri[] uris, IPAddress[] addrs) parseProxies(String[] proxies, Duration timeout) {
         @Inject("secureNetwork") net.Network network;
 
         Int         count = proxies.size;
@@ -283,10 +289,19 @@ module kernel.xqiz.it {
                     console.print($"Error: Failed to lookup the proxy name: {proxy.quoted()}");
                 }
             } else {
-                assert IPAddress[] ips := network.nameService.resolve(addr), !ips.empty as
-                    $"Unresolvable proxy name: {proxy.quoted()}";
+                function IPAddress[] () resolve = () -> {
+                    if (IPAddress[] ips := network.nameService.resolve(addr)) {
+                        return ips;
+                    } else {
+                        return [];
+                    }
+                };
+
+                IPAddress[] ips = utils.repeatAction(resolve, timeout, []);
+                assert !ips.empty as $"Unresolvable proxy name: {proxy.quoted()}";
+
                 addrs += ips; // if more than one (quite rare), add them all
-                uris += new Uri(scheme="https", host=addr, port=port);
+                uris  += new Uri(scheme="https", host=addr, port=port);
             }
         }
         return uris.freeze(inPlace=True), addrs.freeze(inPlace=True);

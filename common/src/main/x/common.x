@@ -42,18 +42,6 @@ module common.xqiz.it {
     }
 
     /**
-     * Create a fixed length string with the specified (or current) time.
-     */
-    static String logTime(Time? time = Null) {
-        if (time == Null) {
-            @Inject Clock clock;
-            time = clock.now;
-        }
-
-        return appendLogTime(new StringBuffer(23), time).toString();
-    }
-
-    /**
      * Append the specified (or current) time into the buffer as a fixed length string.
      *
      * This helper exists to be used within Ecstasy template strings, e.g.

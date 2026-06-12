@@ -6,6 +6,7 @@ import crypto.CryptoPassword;
 import crypto.KeyStore;
 
 import common.Reporting;
+import common.utils;
 
 import web.Client;
 import web.HttpClient;
@@ -13,28 +14,32 @@ import web.ResponseIn;
 
 /**
  * The proxy management API.
+ *
+ * @param receivers      the receivers associated with proxy servers
+ * @param required       the minimum number of proxies that are required to be successfully updated for
+ *                       the [updateProxyConfig] operation to claim success
+ * @param updateTimeout  the timeout duration for receivers' updates
  */
-service ProxyManager(Uri[] receivers)
+service ProxyManager(Uri[] receivers, Int required, Duration updateTimeout)
         implements common.ProxyManager {
 
-    /**
-     * The receivers associated with proxy servers.
-     */
+    @Inject Clock clock;
+
     private Uri[] receivers;
+    private Int   required;
+
+    assert() {
+        assert 0 <= required <= receivers.size;
+    }
 
     /**
      * The client used to talk to external services.
      */
     @Lazy Client client.calc() = new HttpClient();
 
-    /**
-     * The timeout duration for receivers' updates.
-     */
-    static Duration receiverTimeout = Duration.ofSeconds(10);
-
     @Override
-    void updateProxyConfig(KeyStore keystore, CryptoPassword pwd,
-                           String keyName, String hostName, Reporting report) {
+    Boolean updateProxyConfig(KeyStore keystore, CryptoPassword pwd,
+                              String keyName, String hostName, Reporting report) {
         @Inject CertificateManager manager;
 
         Byte[] bytes  = manager.extractKey(keystore, pwd, keyName);
@@ -44,25 +49,81 @@ service ProxyManager(Uri[] receivers)
                          |
                          ;
 
+        StringBuffer buf = new StringBuffer();
+        for (Certificate cert : keystore.getCertificateChain(keyName)) {
+            buf.append($|-----BEGIN CERTIFICATE-----
+                        |{Base64Format.Instance.encode(cert.toDerBytes(), pad=True, lineLength=64)}
+                        |-----END CERTIFICATE-----
+                        |
+                      );
+        }
+        String pemCert = buf.toString();
+
+        @Future Boolean allDone;
+        Future<Boolean> done = &allDone;
+
+        @Volatile Int successCount = 0;
+
+        for (Uri receiver : receivers) {
+            Updater updater = new Updater(receiver, pemKey, pemCert, hostName, report);
+            Boolean success = updater.updateProxy^(updateTimeout);
+            &success.whenComplete((r, x) -> {
+                if (r == True) {
+                    if (++successCount >= required) {
+                        done.complete(True);
+                    }
+                } else {
+                    // this can only be caused by a timeout
+                    done.complete(False);
+                }
+            });
+        }
+        return allDone;
+    }
+
+
+    @Override
+    void removeProxyConfig(String hostName, Reporting report) {
         for (Uri receiver : receivers) {
             Boolean success;
+            try (val _ = new Timeout(updateTimeout)) {
+                ResponseIn response = client.delete(receiver.with(path=$"/nginx/{hostName}"));
+                success = response.status == OK;
+            } catch (Exception e) {
+                success = False;
+            }
+
+            if (!success) {
+                report($|Error: Failed to remove "{hostName}" route from the proxy server "{receiver}"
+                      );
+            }
+        }
+    }
+
+    /**
+     * A simple updater service that is used to communicate with a receiver.
+     */
+    service Updater(Uri receiver, String pemKey, String pemCert, String hostName, Reporting report) {
+        /**
+         * Async update.
+         */
+        Boolean updateProxy(Duration timeout) {
+            return utils.repeatAction(&update, timeout, False);
+        }
+
+        /**
+         * Internal synchronous operation.
+         */
+        private Boolean update() {
+            Boolean success;
             String  reason;
-            try (val _ = new Timeout(receiverTimeout)) {
+            try {
                 ResponseIn response = client.put(
                         receiver.with(path=$"/nginx/{hostName}/key"), pemKey, Text);
 
                 if (response.status == OK) {
-                    StringBuffer pemCert = new StringBuffer();
-                    for (Certificate cert : keystore.getCertificateChain(keyName)) {
-                        pemCert.append(
-                                $|-----BEGIN CERTIFICATE-----
-                                 |{Base64Format.Instance.encode(cert.toDerBytes(), pad=True, lineLength=64)}
-                                 |-----END CERTIFICATE-----
-                                 |
-                                 );
-                    }
                     response = client.put(
-                        receiver.with(path=$"/nginx/{hostName}/cert"), pemCert.toString(), Text);
+                        receiver.with(path=$"/nginx/{hostName}/cert"), pemCert, Text);
                 }
                 success = response.status == OK;
                 reason  = $"Status: {response.status}";
@@ -76,24 +137,7 @@ service ProxyManager(Uri[] receivers)
                         |"{receiver}" reason="{reason}"
                       );
             }
-        }
-    }
-
-    @Override
-    void removeProxyConfig(String hostName, Reporting report) {
-        for (Uri receiver : receivers) {
-            Boolean success;
-            try (val _ = new Timeout(receiverTimeout)) {
-                ResponseIn response = client.delete(receiver.with(path=$"/nginx/{hostName}"));
-                success = response.status == OK;
-            } catch (Exception e) {
-                success = False;
-            }
-
-            if (!success) {
-                report($|Error: Failed to remove "{hostName}" route from the proxy server "{receiver}"
-                      );
-            }
+            return success;
         }
     }
 }

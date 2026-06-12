@@ -23,6 +23,7 @@ module platformUI.xqiz.it {
     import common.WebHost;
 
     import common.names;
+    import common.utils;
 
     import common.model.AccountInfo;
     import common.model.AppInfo;
@@ -38,6 +39,7 @@ module platformUI.xqiz.it {
 
     import sec.Realm;
 
+    import web.HttpClient;
     import web.HttpsRequired;
     import web.StaticContent;
     import web.WebApp;
@@ -80,24 +82,33 @@ module platformUI.xqiz.it {
             AcmeChallenge = () -> new AcmeChallenge(homeDir.dirFor(".challenge").ensure()),
             ];
 
+        Boolean selfSigner = provider == names.SelfSigner;
+
+        // if we ever need to create or update the certificate we need to activate the challenge app
+        if (!selfSigner) {
+            server.addRoute(route, new HttpHandler(route, hostManager.challengeApp, extras));
+        }
+
         (Boolean valid, Boolean exists) = checkCertificate(keystore, hostName, provider);
         if (valid) {
             // they could have configured new proxies; need to update them just in case
-            proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName,
-                msg -> console.print($"{common.logTime($)} {msg}"));
+            if (!proxyManager.updateProxyConfig(keystore, pwd, names.PlatformTlsKey, hostName,
+                    msg -> console.print($"{common.logTime($)} {msg}"))) {
+                throw new Exception("Failed to update the proxy configuration");
+            }
 
             // schedule the next check in a week
             clock.schedule(Duration.ofDays(7), () ->
                     ensureCertificate(keystore, pwd, hostName, dName, provider, homeDir, proxyManager));
         } else {
-            Boolean selfSigner = provider == names.SelfSigner;
-
             // if there are any proxies, we need to make sure they have registered a route to the
             // platform server; we don't need a valid cert for that, anything will do
             if (exists && !selfSigner) {
                 // wait for the manager to get back a confirmation, so we can proceed with signing
-                proxyManager.updateProxyConfig(keystore, pwd, names.PlatformTlsKey, hostName,
-                    msg -> console.print($"{common.logTime($)} {msg}"));
+                if (!proxyManager.updateProxyConfig(keystore, pwd, names.PlatformTlsKey,
+                        hostName, msg -> console.print($"{common.logTime($)} {msg}"))) {
+                    throw new Exception("Failed to update the proxy configuration");
+                }
             } else {
                 // with any provider we have to start with a self-signed one to register the route;
                 // only then we can ask the "real" provider to supply a valid certificate
@@ -108,9 +119,20 @@ module platformUI.xqiz.it {
             // for self-signer we've already created a valid certificate and the proxies have been
             // updated; there is nothing else to do
             if (!selfSigner) {
-                // before we proceed we need to create a certificate; for that to work (unless the
-                // provider is self-signing), we need to activate the challenge app
-                server.addRoute(route, new HttpHandler(route, hostManager.challengeApp, extras));
+                // before we proceed we need to create a certificate, but before we talk to the CA
+                // provider we need to make sure that it can reach us; otherwise our requests for
+                // the certificate may look like an abuse
+                HttpClient client = new HttpClient();
+                function Boolean () checkReachability = () -> {
+                    // the "self-test" is a non-exising resource, so 404 is the positive response;
+                    // treat any other response as a "need to repeat" attempt
+                    String uri = $"http://{hostName}/.well-known/self-test";
+                    return client.get(uri).status == NotFound;
+                };
+
+                if (!utils.repeatAction(checkReachability, proxyManager.updateTimeout, False)) {
+                    throw new Exception("The host {hostName.quoted()} is not reachable");
+                }
 
                 @Future Tuple result = createCertificate^(
                         keystore, pwd, hostName, dName, provider, homeDir, proxyManager);

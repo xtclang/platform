@@ -8,6 +8,8 @@ import ecstasy.text.Log;
 import crypto.CryptoPassword;
 import crypto.Decryptor;
 
+import metrics.TimeSeries;
+
 import web.HttpStatus;
 import web.WebApp;
 
@@ -31,6 +33,8 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
                 )
         extends AppHost(appInfo.moduleName, appInfo, homeDir, buildDir)
         implements Handler {
+
+    @Inject Clock clock;
 
     @Override
     WebAppInfo appInfo.get() = super().as(WebAppInfo);
@@ -128,6 +132,26 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
      */
     static Int MaxDeferredRequests = 50;
 
+    // ----- statistics ----------------------------------------------------------------------------
+
+    /**
+     * The base frequency of all statistics collection. The collection frequency for a specific stat
+     * should be a factor of the base frequency.
+     */
+    static Duration StatsInterval = ofSeconds(10);
+
+    /**
+     * The request info is collected every minute and the retention window is 7 days.
+     *
+     * The total cost is 60*24*7 ~ 10,000 of Int32 values ~ 40KB
+     */
+    TimeSeries<UInt32> requestStats = new TimeSeries(Minute, ofDays(7));
+
+    /**
+     * The frequency of the request collection; collected every minute (every 6th base cycle).
+     */
+    static Int RequestRate = 60/10;
+
     // ----- AppHost methods -----------------------------------------------------------------------
 
     /*
@@ -176,6 +200,8 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
                     // if a challengeHandler has been activated, close and drop it
                     challengeHandler?.close^();
                     challengeHandler = Null;
+
+                    clock.schedule(StatsInterval, &collectStats(0, totalRequests));
 
                     return True, handler;
                 } catch (Exception e) {
@@ -263,10 +289,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
 
         Log errors = new ErrorLog();
         if (activate(False, errors)) {
-            deferredRequests.forEach(request -> // handle^(request));
-            {
-            handle^(request);
-            });
+            deferredRequests.forEach(request -> handle^(request));
         } else {
             errors.reportAll(log);
             deferredRequests.forEach(request ->
@@ -320,6 +343,32 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
         request.observe((_) -> {--pendingRequests;});
         handler.handle^(request);
     }
+
+    // ----- Statistics support --------------------------------------------------------------------
+
+    /**
+     * @param collectCount      the monotonic counter of consecutive invocations
+     * @param prevRequestCount  the `totalRequests` Count during the previous invocation
+     */
+    void collectStats(Int collectCount, Int prevRequestCount) {
+        if (collectCount % RequestRate == 0) {
+            requestStats.add(clock.now, (totalRequests - prevRequestCount).toUInt32());
+            prevRequestCount = totalRequests;
+        }
+
+        if (active) {
+            clock.schedule(StatsInterval, &collectStats(collectCount+1, prevRequestCount));
+        }
+    }
+
+    /**
+     * Collect the request count stats.
+     *
+     * return the array of request numbers from the TimeSeries
+     * return the timestamp of the oldest sample
+     */
+    (immutable UInt32[] counts, Time endTime) queryRequests(Duration rate, Int limit) =
+            requestStats.query(rate, limit, new agg.Sum<UInt32>());
 
     // ----- Helper methods ------------------------------------------------------------------------
 

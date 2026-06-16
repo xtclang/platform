@@ -179,9 +179,7 @@ service AppEndpoint
                 }
                 break;
             case WebHost:
-                if (host.active) {
-                    stats["requests"] = host.totalRequests.toIntLiteral();
-                }
+                stats["requests"] = host.totalRequests.toIntLiteral();
                 break;
             default:
                 return new SimpleResponse(NotFound, $"Unknown deployment type for {host}");

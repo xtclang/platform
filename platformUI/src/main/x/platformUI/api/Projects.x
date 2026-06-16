@@ -1,6 +1,10 @@
 import json.*;
+
 import web.*;
 import web.responses.SimpleResponse;
+
+import common.AppHost;
+import common.WebHost;
 
 import common.model.AccountInfo;
 import common.model.AppInfo;
@@ -188,6 +192,34 @@ service Projects
             }
         }
         return toJsonObject(result);
+    }
+
+    @Get("/{id}/stats/requests{?rate,limit}")
+    (JsonArray | SimpleResponse) requestStats(String id, @UriParam("rate") String rateString, Int limit) {
+        AppResponse appInfo = delegate.getAppInfo(id);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+
+        JsonArrayBuilder response = json.arrayBuilder();
+        if (AppHost host := hostManager.getHost(id), host.is(WebHost)) {
+            try {
+                Duration rate = switch (rateString) {
+                    case "minute": Minute;
+                    case "hour":   Hour;
+                    case "day":    ofHours(24);
+                    default   :    throw new IllegalArgument($"Invalid {rateString=}");
+                };
+                (UInt32[] counts, Time time) = host.queryRequests(rate, limit);
+                for (UInt32 count : counts) {
+                    response.addObject(["time"=time.toString(), "requests"=count.toIntLiteral()]);
+                    time += rate;
+                }
+            } catch (Exception e) {
+                return new SimpleResponse(Conflict, e.toString());
+            }
+        }
+        return response.build();
     }
 
     @Get("/{id}/logs/{kind}{/specifier}")

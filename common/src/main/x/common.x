@@ -2,9 +2,11 @@
  * The module for all platform APIs.
  */
 module common.xqiz.it {
+    package agg     import aggregate.xtclang.org;
     package conv    import convert.xtclang.org;
     package crypto  import crypto.xtclang.org;
     package jsondb  import jsondb.xtclang.org;
+    package metrics import metrics.xtclang.org;
     package oodb    import oodb.xtclang.org;
     package sec     import sec.xtclang.org;
     package web     import web.xtclang.org;

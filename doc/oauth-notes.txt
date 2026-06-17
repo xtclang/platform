@@ -24,7 +24,7 @@ application deployers have to follow the outlined steps:
         https://console.cloud.google.com/projectcreate
         https://console.cloud.google.com/auth/overview
     - apple: the process for Apple is more complicated and requires the application deployer to
-             create a "brand" and request an access for the OAuth 2.0 API from Apple
+             create a "brand" and request access for the OAuth 2.0 API from Apple
 
     During the registration you would configure the attributes in a natural way, with only one
     requirement: the "callback" (or "return") URL would have to be set to:

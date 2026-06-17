@@ -42,8 +42,11 @@ interface ProxyManager {
         construct() {} finally { makeImmutable(); }
 
         @Override
+        Duration updateTimeout.get() = ofSeconds(5);
+
+        @Override
         Boolean updateProxyConfig(KeyStore keystore, CryptoPassword pwd,
-                               String keyName, String hostName, Reporting report) = True;
+                                  String keyName, String hostName, Reporting report) = True;
 
         @Override
         void removeProxyConfig(String hostName, Reporting report) {}

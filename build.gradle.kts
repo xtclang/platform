@@ -14,7 +14,7 @@ subprojects {
 }
 
 // Configuration to consume cfg.json from kernel
-val cfgJson by configurations.creating {
+val cfgJson = configurations.create("cfgJson") {
     isCanBeConsumed = false
     isCanBeResolved = true
 }
@@ -40,7 +40,7 @@ dependencies {
 }
 
 // Assemble distribution from resolved xtcModule configuration
-val installDist by tasks.registering(Copy::class) {
+val installDist = tasks.register<Copy>("installDist") {
     group = "distribution"
     description = "Install platform modules to build/install/platform/lib for runtime"
     // We could reduce this to just depending on the configuration, but this is

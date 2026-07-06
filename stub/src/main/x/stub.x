@@ -15,7 +15,7 @@ module stub.xqiz.it {
     @WebService("/")
     service Unavailable {
         construct(Map<String, String> tags) {
-            bytes = StubContent.applyTags($./not-deployed.html, tags).utf8();
+            bytes = applyTags($./not-deployed.html, tags).utf8();
         }
 
         /**
@@ -25,7 +25,7 @@ module stub.xqiz.it {
 
         @Get("{/path?}")
         SimpleResponse getResource(String path) {
-            return StubContent.isLandingPath(path)
+            return isLandingPath(path)
                 ? new SimpleResponse(OK, HTML, bytes)
                 : unavailable();
         }
@@ -36,13 +36,9 @@ module stub.xqiz.it {
         }
 
         private SimpleResponse unavailable() = new SimpleResponse(ServiceUnavailable);
-    }
 
-    /**
-     * Pure, dependency-free helpers for the stub WebApp, factored out of the [Unavailable] service
-     * so they can be unit-tested without standing up a web server or any injection context.
-     */
-    class StubContent {
+        // ----- pure helpers (static: callable and unit-testable without a running service) -------
+
         /**
          * Does this request path address the stub's landing page (the site root or its
          * `index.html`), as opposed to some other resource that should yield a "service

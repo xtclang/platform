@@ -54,12 +54,7 @@ module stub.xqiz.it {
          * Produce the page content by substituting each `tag` placeholder found in `template`
          * with its replacement value.
          */
-        static String applyTags(String template, Map<String, String> tags) {
-            String html = template;
-            for ((String tag, String value) : tags) {
-                html = html.replace(tag, value);
-            }
-            return html;
-        }
+        static String applyTags(String template, Map<String, String> tags) =
+                tags.reduce(template, (html, entry) -> html.replace(entry.key, entry.value));
     }
 }

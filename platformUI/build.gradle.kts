@@ -44,10 +44,10 @@ node {
 }
 
 // Reference existing setup task
-val yarnSetup by tasks.existing
+val yarnSetup = tasks.named("yarnSetup")
 
 // Install node modules
-val yarnInstall by tasks.registering(YarnTask::class) {
+val yarnInstall = tasks.register<YarnTask>("yarnInstall") {
     args = listOf("install", "--ignore-engines")
     workingDir = guiDir
     dependsOn(yarnSetup)
@@ -61,7 +61,7 @@ val yarnInstall by tasks.registering(YarnTask::class) {
 }
 
 // Build GUI with Quasar
-val buildGui by tasks.registering(YarnTask::class) {
+val buildGui = tasks.register<YarnTask>("buildGui") {
     args = listOf("quasar", "build")
     workingDir = guiDir
     dependsOn(yarnInstall)
@@ -92,6 +92,6 @@ sourceSets {
 }
 
 // Make processResources depend on GUI build
-val processResources by tasks.existing {
+val processResources = tasks.named("processResources") {
     dependsOn(buildGui)
 }

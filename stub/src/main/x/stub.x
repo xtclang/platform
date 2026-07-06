@@ -15,11 +15,7 @@ module stub.xqiz.it {
     @WebService("/")
     service Unavailable {
         construct(Map<String, String> tags) {
-            String html = $./not-deployed.html;
-            for ((String tag, String value) : tags) {
-                html = html.replace(tag, value);
-            }
-            bytes = html.utf8();
+            bytes = applyTags($./not-deployed.html, tags).utf8();
         }
 
         /**
@@ -29,7 +25,7 @@ module stub.xqiz.it {
 
         @Get("{/path?}")
         SimpleResponse getResource(String path) {
-            return path == "" || path == "index.html"
+            return isLandingPath(path)
                 ? new SimpleResponse(OK, HTML, bytes)
                 : unavailable();
         }
@@ -40,5 +36,21 @@ module stub.xqiz.it {
         }
 
         private SimpleResponse unavailable() = new SimpleResponse(ServiceUnavailable);
+
+        // ----- pure helpers (static: callable and unit-testable without a running service) -------
+
+        /**
+         * Does this request path address the stub's landing page (the site root or its
+         * `index.html`), as opposed to some other resource that should yield a "service
+         * unavailable" response?
+         */
+        static Boolean isLandingPath(String path) = path == "" || path == "index.html";
+
+        /**
+         * Produce the page content by substituting each `tag` placeholder found in `template`
+         * with its replacement value.
+         */
+        static String applyTags(String template, Map<String, String> tags) =
+                tags.reduce(template, (html, entry) -> html.replace(entry.key, entry.value));
     }
 }

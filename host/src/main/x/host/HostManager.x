@@ -272,18 +272,26 @@ service HostManager
             certs += ensureCertificate(homeDir, store, pwd, accountName,
                         deployment, certName, provider, force);
 
-            if (String externalHost ?= appInfo.externalHost) {
+            for (String externalHost : appInfo.externalHosts) {
                 certName = externalHost;
+
+                String certProvider = provider;
                 if (store.exists) {
-                    @Inject(opts=provider) CertificateManager manager;
+                    @Inject(opts=certProvider) CertificateManager manager;
                     KeyStore keystore = manager.keystoreFor(store, pwd);
-                    if (!keystore.getCertificate(certName)) {
-                        provider = names.SelfSigner;
+                    if (Certificate cert := keystore.getCertificate(certName)) {
+                        if (utils.isSelfSigned(cert, externalHost) && !force) {
+                            certProvider = names.SelfSigner;
+                        }
+                    } else {
+                        certProvider = names.SelfSigner;
                     }
+                } else {
+                    certProvider = names.SelfSigner;
                 }
 
                 certs += ensureCertificate(homeDir, store, pwd, accountName,
-                            deployment, certName, provider, force);
+                            deployment, certName, certProvider, force);
             }
 
             return True, certs.makeImmutable();
@@ -334,8 +342,7 @@ service HostManager
                         break CheckValid;
                     }
 
-                    String issuerCN = cert.issuer.splitMap().getOrDefault("CN", "");
-                    if (issuerCN == certName && certProvider != names.SelfSigner) {
+                    if (certProvider != names.SelfSigner && utils.isSelfSigned(cert, certName)) {
                         break CheckValid;
                     }
 
@@ -403,6 +410,23 @@ service HostManager
         }
 
         addStubRoute(homeDir, store, hostName, pwd);
+    }
+
+    @Override
+    void removeWebRoute(String accountName, WebAppInfo appInfo, CryptoPassword pwd, String hostName) {
+        Directory homeDir = ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
+        File      store   = homeDir.fileFor(names.KeyStoreName);
+
+        httpServer.removeRoute(hostName);
+
+        try {
+            if (store.exists) {
+                @Inject(opts=appInfo.provider) CertificateManager manager;
+                manager.revokeCertificate(store, pwd, hostName);
+            }
+        } catch (Exception ignore) {}
+
+        proxyManager.removeProxyConfig^(hostName, &log(homeDir));
     }
 
     private void addStubRoute(Directory homeDir, File store, String hostName, CryptoPassword? pwd) {
@@ -554,7 +578,7 @@ service HostManager
             if (store.exists) {
                 @Inject(opts=webAppInfo.provider) CertificateManager manager;
                 manager.revokeCertificate(store, storePwd, hostName);
-                if (String externalHost ?= webAppInfo.externalHost) {
+                for (String externalHost : webAppInfo.externalHosts) {
                     manager.revokeCertificate(store, storePwd, externalHost);
                 }
                 store.delete();

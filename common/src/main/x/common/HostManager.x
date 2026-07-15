@@ -81,7 +81,7 @@ interface HostManager {
      * certificates for the application host names and a symmetrical key for cookie encryption.
      *
      * @param accountName  the account the web app belongs to
-     * @param webAppInfo   the web application info
+     * @param appInfo      the web application info
      * @param pwd          the password to use for the keystore
      * @param errors       the logger to report errors to
      * @param force        (optional) if True, create a new certificate regardless of the expiry
@@ -102,6 +102,16 @@ interface HostManager {
      * @param hostName     the host name to route
      */
     void addWebRoute(String accountName, WebAppInfo appInfo, CryptoPassword pwd, String hostName);
+
+    /**
+     * Remove a route for one host name of the specified web app.
+     *
+     * @param accountName  the account name
+     * @param appInfo      the web application info
+     * @param pwd          the password to use for the keystore
+     * @param hostName     the host name to remove
+     */
+    void removeWebRoute(String accountName, WebAppInfo appInfo, CryptoPassword pwd, String hostName);
 
     /**
      * Add a stub route for the specified web app.

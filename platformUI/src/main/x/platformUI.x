@@ -256,8 +256,7 @@ module platformUI.xqiz.it {
                                                      String provider) {
         if (Certificate cert := keystore.getCertificate(names.PlatformTlsKey)) {
 
-            String issuerCN = cert.issuer.splitMap().getOrDefault("CN", "");
-            if (issuerCN == hostName && provider != names.SelfSigner) {
+            if (utils.isSelfSigned(cert, hostName) && provider != names.SelfSigner) {
                 // the current certificate is self-issued; replace using the specified provider
                 return False, True;
             }

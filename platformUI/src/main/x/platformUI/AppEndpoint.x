@@ -430,8 +430,7 @@ service AppEndpoint
      *  - a deployment has one and only one app
      */
     @Put("/web{/deployment}{/moduleName}{/provider}")
-    AppResponse registerWebApp(String deployment, String moduleName, String? provider = Null,
-                               @QueryParam String? externalHost = Null) {
+    AppResponse registerWebApp(String deployment, String moduleName, String? provider = Null) {
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
         if (injections.is(SimpleResponse)) {
@@ -443,28 +442,7 @@ service AppEndpoint
         }
 
         // compute the full host name (e.g. "welcome.localhost.xqiz.it")
-        String hostName;
-        String? registeredExternalHost = Null;
-        if (externalHost != Null) {
-            if (provider == names.SelfSigner) {
-                return new SimpleResponse(Conflict,
-                        $"Self-signer cannot be used for external URLs");
-            }
-
-            if (String error := validateDeploymentName(externalHost)) {
-                return new SimpleResponse(Conflict,
-                        $"Invalid external host {externalHost.quoted()}: {error}");
-            }
-
-            @Inject Random random;
-            // String suffix = random.uint128(100_000_000_000 .. 999_999_999_999).toString(); // 12 digits
-            String suffix = "7f3a9c";
-
-            registeredExternalHost = externalHost.toLowercase();
-            hostName               = $"{registeredExternalHost}.{suffix}.{baseDomain}".toLowercase();
-        } else {
-            hostName = $"{deployment}.{baseDomain}".toLowercase();
-        }
+        String hostName = $"{deployment}.{baseDomain}".toLowercase();
 
         if (httpServer.routes.keys.any(route -> route.host.toString() == hostName)) {
             return new SimpleResponse(Conflict, $"Deployment already exists: '{deployment}'");
@@ -476,8 +454,7 @@ service AppEndpoint
         CryptoPassword cryptoPwd = accountManager.decrypt(encrypted);
 
         WebAppInfo appInfo = new WebAppInfo(
-                deployment, moduleName, hostName, encrypted, provider,
-                injections=injections, externalHost=registeredExternalHost);
+                deployment, moduleName, hostName, encrypted, provider, injections=injections);
 
         // the deployment is not active; the "stub" will serve the ACME protocol challenge requests
         // as well as give them something better than "HttpStatus 404: Page Not Found" to look at
@@ -490,7 +467,6 @@ service AppEndpoint
         }
 
         accountManager.addOrUpdateApp(accountName, appInfo);
-
         return appInfo.redact();
     }
 
@@ -517,8 +493,9 @@ service AppEndpoint
         CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
         ErrorLog       errors   = new ErrorLog();
 
+        Boolean force = changeProvider || !appInfo.externalHosts.empty;
         if (Certificate[] certs := hostManager.ensureCertificate(accountName, appInfo, storePwd,
-                                        errors, force=changeProvider)) {
+                                        errors, force=force)) {
             if (changeProvider) {
                 accountManager.addOrUpdateApp(accountName, appInfo);
             }
@@ -527,6 +504,109 @@ service AppEndpoint
         } else {
             return new SimpleResponse(Conflict, errors.collectErrors());
         }
+    }
+
+    /**
+     * Add an external host name for a registered web app.
+     */
+    @Put("/external{/deployment}{/externalHost}")
+    AppResponse addExternalHost(String deployment, String externalHost) {
+        WebResponse appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+
+        if (appInfo.provider == names.SelfSigner) {
+            return new SimpleResponse(Conflict,
+                    $"Self-signer cannot be used for external URLs");
+        }
+
+        if (String error := validateDeploymentName(externalHost)) {
+            return new SimpleResponse(Conflict,
+                    $"Invalid external host {externalHost.quoted()}: {error}");
+        }
+
+        externalHost = externalHost.toLowercase();
+        if (externalHost.endsWith(baseDomain)) {
+            return new SimpleResponse(Conflict,
+                    $"External host is a subdomain: {externalHost.quoted()}");
+        }
+
+        String[] externalHosts = appInfo.externalHosts;
+        Boolean  addHost       = !externalHosts.contains(externalHost);
+        Boolean  routeExists   = httpServer.routes.keys.any(route ->
+                                    route.host.toString() == externalHost);
+        if (addHost && routeExists) {
+            return new SimpleResponse(Conflict,
+                    $"External host is already registered {externalHost.quoted()}");
+        }
+
+        String UUID;
+        if (String id ?= appInfo.UUID) {
+            UUID = id;
+        } else {
+            @Inject Random random;
+            UUID = random.uint(1_000_000 .. 9_999_999).toString();
+        }
+
+        if (addHost || appInfo.UUID == Null) {
+            appInfo = appInfo.with(UUID=UUID,
+                    externalHosts=addHost ? externalHosts + externalHost : externalHosts);
+        }
+
+        CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
+        ErrorLog       errors   = new ErrorLog();
+        if (!hostManager.ensureCertificate(accountName, appInfo, storePwd, errors)) {
+            return new SimpleResponse(Conflict, errors.collectErrors());
+        }
+
+        if (!routeExists) {
+            hostManager.addWebRoute(accountName, appInfo, storePwd, externalHost);
+        }
+
+        if (AppHost host := hostManager.getHost(deployment)) {
+            host.appInfo = appInfo;
+        }
+
+        accountManager.addOrUpdateApp(accountName, appInfo);
+
+        String cnameTarget = $"{externalHost}.{UUID}.{baseDomain}";
+        return new SimpleResponse(OK, cnameTarget);
+    }
+
+    /**
+     * Remove an external host name from a registered web app.
+     */
+    @Delete("/external{/deployment}{/externalHost}")
+    AppResponse removeExternalHost(String deployment, String externalHost) {
+        WebResponse appInfo = getWebInfo(deployment);
+        if (appInfo.is(SimpleResponse)) {
+            return appInfo;
+        }
+
+        if (String error := validateDeploymentName(externalHost)) {
+            return new SimpleResponse(Conflict,
+                    $"Invalid external host {externalHost.quoted()}: {error}");
+        }
+
+        externalHost = externalHost.toLowercase();
+
+        String[] externalHosts = appInfo.externalHosts;
+        if (!externalHosts.contains(externalHost)) {
+            return new SimpleResponse(NotFound,
+                    $"External host is not registered {externalHost.quoted()}");
+        }
+
+        CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
+        hostManager.removeWebRoute(accountName, appInfo, storePwd, externalHost);
+
+        appInfo = appInfo.with(externalHosts=externalHosts.remove(externalHost));
+        if (AppHost host := hostManager.getHost(deployment)) {
+            host.appInfo = appInfo;
+        }
+
+        accountManager.addOrUpdateApp(accountName, appInfo);
+        return appInfo.redact();
     }
 
     /**

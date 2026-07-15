@@ -40,7 +40,8 @@ class ApiTest {
     String getProject(String projectName) = platformCLI.get($"/api/v1/projects/{projectName}");
 
     @Command("api-add-project", "API V1: add project")
-    String addProject(String projectName, String moduleName, String? injections = Null) {
+    String addProject(String projectName, String moduleName, String? injections = Null,
+                      String? externalHost = Null, String? provider = Null) {
         JsonObjectBuilder project = json.objectBuilder();
         project.addAll([
             "name"   = projectName,
@@ -54,6 +55,12 @@ class ApiTest {
                 injectionValues.addObject([key=value]);
             }
             project.add("injections", injectionValues.build());
+        }
+        if (externalHost != Null && !externalHost.empty) {
+            project.add("externalHost", externalHost);
+        }
+        if (provider != Null && !provider.empty) {
+            project.add("certProvider", provider);
         }
         return platformCLI.post($"/api/v1/projects", project.build(), Json);
     }
@@ -85,6 +92,14 @@ class ApiTest {
 
     @Command("api-stop", "API V1: stop the app")
     String stop(String projectName) = platformCLI.post($"/api/v1/projects/{projectName}/stop");
+
+    @Command("api-add-external", "API V1: add an external host to a project")
+    String addExternalHost(String projectName, String externalHost) =
+        platformCLI.put($"/api/v1/projects/{projectName}/external-hosts/{externalHost}");
+
+    @Command("api-remove-external", "API V1: remove an external host from a project")
+    String removeExternalHost(String projectName, String externalHost) =
+        platformCLI.delete($"/api/v1/projects/{projectName}/external-hosts/{externalHost}");
 
     @Command("api-requests", "API V1: show requests stats")
     String requestStats(String projectName, String rate = "hour", Int limit = 24) =

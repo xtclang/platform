@@ -24,8 +24,8 @@ class AppManagement {
                 assert Doc moduleName := info.get("moduleName");
                 buf.append($"{deployment}: {moduleName}");
                 buf.append(", hostName=").append(info.get("hostName")?);
-                if (Doc externalHost := info.get("externalHost")) {
-                    buf.append(", externalHost=").append(externalHost);
+                if (Doc externalHosts := info.get("externalHosts")) {
+                    buf.append(", externalHosts=").append(externalHosts);
                 }
                 Boolean started = info.getOrDefault("autoStart", False).as(Boolean);
                 if (started) {
@@ -124,14 +124,20 @@ class AppManagement {
 
     @Command("register-web", "Register a web app")
     String registerWebApp(String deploymentName, String moduleName,
-                          String provider = names.SelfSigner, String externalHost = "") {
-        String query = externalHost.empty ? "" : $"?{externalHost=}";
-        return platformCLI.put($"/apps/web/{deploymentName}/{moduleName}/{provider}{query}");
-    }
+                          String provider = names.SelfSigner) =
+        platformCLI.put($"/apps/web/{deploymentName}/{moduleName}/{provider}");
 
     @Command("renew", "Renew the certificate for a web app")
     String renewWebApp(String deploymentName, String provider = names.SelfSigner) =
         platformCLI.post($"/apps/renew/{deploymentName}/{provider}");
+
+    @Command("add-external", "Add an external host to a web app")
+    String addExternalHost(String deploymentName, String externalHost) =
+        platformCLI.put($"/apps/external/{deploymentName}/{externalHost}");
+
+    @Command("remove-external", "Remove an external host from a web app")
+    String removeExternalHost(String deploymentName, String externalHost) =
+        platformCLI.delete($"/apps/external/{deploymentName}/{externalHost}");
 
     @Command("mark-shared", "Mark the specified DB deployment as shared")
     String markShared(String deploymentName, String dbDeploymentName) =

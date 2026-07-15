@@ -15,6 +15,7 @@ import ecstasy.text.Log;
 
 import conv.formats.Base64Format;
 
+import crypto.Certificate;
 import crypto.Decryptor;
 import crypto.KeyStore;
 
@@ -236,6 +237,12 @@ package utils {
      */
     static String decrypt(Decryptor decryptor, String value) =
         decryptor.decrypt(Base64Format.Instance.decode(value)).unpackUtf8();
+
+    /**
+     * @return True iff the certificate is signed by the specified host
+     */
+    static Boolean isSelfSigned(Certificate cert, String hostName) =
+        cert.issuer.splitMap().getOrDefault("CN", "") == hostName;
 
     /**
      * Repeatedly invoke the specified action until it returns a value other than `retryValue`, or

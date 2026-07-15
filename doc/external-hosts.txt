@@ -1,40 +1,41 @@
-External Host Workflow
+# External Host Workflow
 
-The platform supports an external host only as part of web app registration. Adding external hosts
-to an existing web app is intentionally out of scope for now.
+A web app is registered normally first, using its platform host name. Any number of external hosts
+are attached later to an existing deployment.
 
-Registration
+Registration happens in a standard way, for example:
 
-When a web app is registered with an external host, for example:
+    register-web w1 welcome.examples.org certbot
 
-    externalHost=files.acme.com
+the platform creates the regular deployment host:
 
-the platform:
+    w1.xqiz.it
 
-1. Generates an internal host name for the deployment, for example:
+No external host is assigned during registration.
 
-       files.acme.com.7f3a9c.xqiz.it
+# External Host Setup
 
-2. Stores the external host in WebAppInfo.externalHost:
+After registration, the customer can attach an external host, for example:
 
-       "files.acme.com"
+    add-external w1 welcome.acme.com
 
-3. Ensures certificates for all host names:
+The platform:
 
-   - the internal host gets a certificate from the configured provider
-   - the external host gets a self-signed placeholder certificate
+1. Stores the external host in WebAppInfo:
 
-The nullable external host is the only persisted external-host state. Whether the external
-certificate is still pending is determined from the keystore: a self-signed certificate for the
-external host is a placeholder, while a provider-issued certificate is the active public
-certificate.
+       "welcome.acme.com"
 
-DNS Setup
+2. Creates a route and a self-certified keystore entry for the external host.
 
-After registration, the customer points the external host at the generated internal host. For
+# DNS Setup
+
+After external-host setup, the customer points the external host at the generated unique route. For
 example:
 
-    files.acme.com -> files.acme.com.7f3a9c.xqiz.it
+    welcome -> 23940954.welcome.acme.com.xqiz.it
+
+The "xqiz.it" part is neccessary for routing; the "welcome.acme.com" part serves as a documentation
+for the customer; the UUID part is used for the platform verification purposes.
 
 Certificate Renewal
 
@@ -43,7 +44,9 @@ platform:
 
 1. Calls ensureCertificate().
 2. Sees the existing self-signed placeholder for WebAppInfo.externalHost.
-3. Uses the configured provider to replace that placeholder with a provider-issued certificate.
+3. Checks the DNS record ensuring it confirms to the required shape (UUID at all).
+4. Uses the configured provider to replace that placeholder with a provider-issued certificate.
 
 If certificate issuance fails, the stored WebAppInfo does not change and the self-signed
 placeholder remains in the keystore. A later renewal can retry the provider-issued certificate.
+

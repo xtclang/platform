@@ -83,7 +83,17 @@ service Projects
             if (provider == Null || provider.empty) {
                 provider = ControllerConfig.provider;
             }
-            appInfo = delegate.registerWebApp(deployment, moduleName, provider, externalHost=externalHost);
+            appInfo = delegate.registerWebApp(deployment, moduleName, provider);
+            if (appInfo.is(SimpleResponse)) {
+                return toJsonObject(appInfo);
+            }
+
+            if (externalHost != Null && !externalHost.empty) {
+                appInfo = delegate.addExternalHost(deployment, externalHost);
+                if (appInfo.is(SimpleResponse) && appInfo.status != OK) {
+                    return toJsonObject(appInfo);
+                }
+            }
         } else if (moduleInfo.kind == Db) {
             appInfo = delegate.registerDbApp(deployment, moduleName);
 
@@ -133,6 +143,24 @@ service Projects
     @Delete("{/id}")
     SimpleResponse deleteProject(String id) {
         return delegate.unregisterApp(id);
+    }
+
+    @Put("{/id}/external-hosts{/externalHost}")
+    JsonObject addExternalHost(String id, String externalHost) {
+        AppResponse appInfo = delegate.addExternalHost(id, externalHost);
+        if (appInfo.is(SimpleResponse)) {
+            return toJsonObject(appInfo);
+        }
+        return toJsonObject(appInfo.as(AppInfo));
+    }
+
+    @Delete("{/id}/external-hosts{/externalHost}")
+    JsonObject removeExternalHost(String id, String externalHost) {
+        AppResponse appInfo = delegate.removeExternalHost(id, externalHost);
+        if (appInfo.is(SimpleResponse)) {
+            return toJsonObject(appInfo);
+        }
+        return toJsonObject(appInfo.as(AppInfo));
     }
 
     @Patch("{/id}/oauth-providers{/provider}")
@@ -253,7 +281,8 @@ service Projects
                 "certProvider" = info.provider,
                 "useCookies"   = info.useCookies,
                 "useAuth"      = info.useAuth,
-                "externalHost" = info.externalHost,
+                "externalHosts"= info.externalHosts,
+                "UUID"         = info.UUID,
             ]);
 
             JsonObjectBuilder idProviders = json.objectBuilder();

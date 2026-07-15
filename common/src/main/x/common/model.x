@@ -169,7 +169,8 @@ package model {
             Boolean    useCookies     = True,  // use CookieBroker as a session broker
             Boolean    useAuth        = False, // use DBRealm for authentication
             IdpInfos   idProviders    = [],    // IdentityProvider (via OAuth) info by provider
-            String?    externalHost   = Null,  // the optional external host name
+            String?    UUID           = Null,  // the unique id (lazily created for now)
+            String[]   externalHosts  = [],    // the optional external host names
             )
             extends AppInfo(deployment, moduleName, autoStart, active, injections) {
 
@@ -185,7 +186,8 @@ package model {
             Boolean?    useCookies     = Null,
             Boolean?    useAuth        = Null,
             IdpInfos?   idProviders    = Null,
-            String?     externalHost   = Null,
+            String?     UUID           = Null,
+            String[]?   externalHosts  = Null,
             ) {
             return new WebAppInfo(deployment, moduleName,
                 hostName       ?: this.hostName,
@@ -198,7 +200,8 @@ package model {
                 useCookies     ?: this.useCookies,
                 useAuth        ?: this.useAuth,
                 idProviders    ?: this.idProviders,
-                externalHost   ?: this.externalHost,
+                UUID           ?: this.UUID,
+                externalHosts  ?: this.externalHosts,
                 );
         }
 
@@ -211,7 +214,7 @@ package model {
          */
         void forEachHostName(function void(String) process) {
             process(hostName);
-            if (String host ?= externalHost) {
+            for (String host : externalHosts) {
                 process(host);
             }
         }

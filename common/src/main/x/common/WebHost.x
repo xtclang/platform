@@ -29,7 +29,7 @@ import common.model.WebAppInfo;
 service WebHost(HostInfo route, String account, ModuleRepository repository,
                 WebAppInfo appInfo, Directory homeDir, Directory buildDir,
                 Map<String, DbHost> sharedDbHosts, WebApp challengeApp, CatalogExtras extras,
-                Decryptor secretsDecryptor, function void() addStubRoute
+                Decryptor secretsDecryptor, function void(WebAppInfo) addStubRoute
                 )
         extends AppHost(appInfo.moduleName, appInfo, homeDir, buildDir)
         implements Handler {
@@ -84,7 +84,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
     /**
      * The function that is responsible for adding a stub route for this deployment.
      */
-    public/protected function void() addStubRoute;
+    public/protected function void(WebAppInfo) addStubRoute;
 
     /**
      * The AppHosts for the containers this module depends on.

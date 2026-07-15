@@ -35,6 +35,16 @@ package names {
     static String SelfSigner = "self";
 
     /**
+     * The production Let's Encrypt provider name.
+     */
+    static String LetsEncrypt = "certbot";
+
+    /**
+     * The staging Let's Encrypt provider name.
+     */
+    static String LetsEncryptStaging = "certbot-staging";
+
+    /**
      * The single account name.
      */
     static String SingleAccount = "self";

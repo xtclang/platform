@@ -24,6 +24,9 @@ class AppManagement {
                 assert Doc moduleName := info.get("moduleName");
                 buf.append($"{deployment}: {moduleName}");
                 buf.append(", hostName=").append(info.get("hostName")?);
+                if (Doc externalHost := info.get("externalHost")) {
+                    buf.append(", externalHost=").append(externalHost);
+                }
                 Boolean started = info.getOrDefault("autoStart", False).as(Boolean);
                 if (started) {
                     Boolean active = info.getOrDefault("active", False).as(Boolean);
@@ -120,8 +123,11 @@ class AppManagement {
     // ---- web app end-points ---------------------------------------------------------------------
 
     @Command("register-web", "Register a web app")
-    String registerWebApp(String deploymentName, String moduleName, String provider = names.SelfSigner) =
-        platformCLI.put($"/apps/web/{deploymentName}/{moduleName}/{provider}");
+    String registerWebApp(String deploymentName, String moduleName,
+                          String provider = names.SelfSigner, String externalHost = "") {
+        String query = externalHost.empty ? "" : $"?{externalHost=}";
+        return platformCLI.put($"/apps/web/{deploymentName}/{moduleName}/{provider}{query}");
+    }
 
     @Command("renew", "Renew the certificate for a web app")
     String renewWebApp(String deploymentName, String provider = names.SelfSigner) =

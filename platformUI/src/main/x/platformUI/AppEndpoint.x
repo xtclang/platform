@@ -24,6 +24,7 @@ import crypto.Decryptor;
 import json.JsonObject;
 
 import net.IPAddress;
+import net.Uri;
 
 import web.*;
 import web.responses.SimpleResponse;
@@ -205,7 +206,7 @@ service AppEndpoint
         }
 
         if (appInfo.is(WebAppInfo)) {
-            httpServer.removeRoute(appInfo.hostName);
+            appInfo.forEachHostName(hostName -> httpServer.removeRoute(hostName));
 
             hostManager.removeWebDeployment(
                 accountName, appInfo, accountManager.decrypt(appInfo.password));
@@ -429,8 +430,8 @@ service AppEndpoint
      *  - a deployment has one and only one app
      */
     @Put("/web{/deployment}{/moduleName}{/provider}")
-    AppResponse registerWebApp(String deployment, String moduleName,
-                               String? provider = Null) {
+    AppResponse registerWebApp(String deployment, String moduleName, String? provider = Null,
+                               @QueryParam String? externalHost = Null) {
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
         if (injections.is(SimpleResponse)) {
@@ -442,7 +443,28 @@ service AppEndpoint
         }
 
         // compute the full host name (e.g. "welcome.localhost.xqiz.it")
-        String hostName = $"{deployment}.{baseDomain}".toLowercase();
+        String hostName;
+        String? registeredExternalHost = Null;
+        if (externalHost != Null) {
+            if (provider == names.SelfSigner) {
+                return new SimpleResponse(Conflict,
+                        $"Self-signer cannot be used for external URLs");
+            }
+
+            if (String error := validateDeploymentName(externalHost)) {
+                return new SimpleResponse(Conflict,
+                        $"Invalid external host {externalHost.quoted()}: {error}");
+            }
+
+            @Inject Random random;
+            // String suffix = random.uint128(100_000_000_000 .. 999_999_999_999).toString(); // 12 digits
+            String suffix = "7f3a9c";
+
+            registeredExternalHost = externalHost.toLowercase();
+            hostName               = $"{registeredExternalHost}.{suffix}.{baseDomain}".toLowercase();
+        } else {
+            hostName = $"{deployment}.{baseDomain}".toLowercase();
+        }
 
         if (httpServer.routes.keys.any(route -> route.host.toString() == hostName)) {
             return new SimpleResponse(Conflict, $"Deployment already exists: '{deployment}'");
@@ -454,7 +476,8 @@ service AppEndpoint
         CryptoPassword cryptoPwd = accountManager.decrypt(encrypted);
 
         WebAppInfo appInfo = new WebAppInfo(
-                deployment, moduleName, hostName, encrypted, provider, injections=injections);
+                deployment, moduleName, hostName, encrypted, provider,
+                injections=injections, externalHost=registeredExternalHost);
 
         // the deployment is not active; the "stub" will serve the ACME protocol challenge requests
         // as well as give them something better than "HttpStatus 404: Page Not Found" to look at
@@ -462,7 +485,7 @@ service AppEndpoint
 
         ErrorLog errors = new ErrorLog();
         if (!hostManager.ensureCertificate(accountName, appInfo, cryptoPwd, errors)) {
-            httpServer.removeRoute(hostName);
+            appInfo.forEachHostName(hostName -> httpServer.removeRoute(hostName));
             return new SimpleResponse(Conflict, errors.collectErrors());
         }
 
@@ -494,12 +517,13 @@ service AppEndpoint
         CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
         ErrorLog       errors   = new ErrorLog();
 
-        if (Certificate cert := hostManager.ensureCertificate(accountName, appInfo, storePwd,
-                                    errors, force=changeProvider)) {
+        if (Certificate[] certs := hostManager.ensureCertificate(accountName, appInfo, storePwd,
+                                        errors, force=changeProvider)) {
             if (changeProvider) {
                 accountManager.addOrUpdateApp(accountName, appInfo);
             }
-            return new SimpleResponse(OK, cert.toString());
+
+            return new SimpleResponse(OK, certs.toString(sep="\n\n", pre="", post=""));
         } else {
             return new SimpleResponse(Conflict, errors.collectErrors());
         }

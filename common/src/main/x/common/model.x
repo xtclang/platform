@@ -157,45 +157,48 @@ package model {
     import names.SelfSigner as Self;
 
     const WebAppInfo(
-            String     deployment,           // @see AppInfo
-            String     moduleName,           // @see AppInfo
-            String     hostName,             // the full host name (e.g. "shop.acme.com.xqiz.it")
-            String     password,             // an encrypted password to the keystore for this deployment
-            String     provider    = Self,   // the name of the certificate provider
-            Boolean    autoStart   = False,  // @see AppInfo
-            Boolean    active      = False,  // @see AppInfo
-            Injections injections  = [],     // @see AppInfo
-            String[]   sharedDBs   = [],     // names of shared DB deployments
-            Boolean    useCookies  = True,   // use CookieBroker as a session broker
-            Boolean    useAuth     = False,  // use DBRealm for authentication
-            IdpInfos   idProviders = [],     // IdentityProvider (via OAuth) info by provider
+            String     deployment,             // @see AppInfo
+            String     moduleName,             // @see AppInfo
+            String     hostName,               // the full host name (e.g. "shop.acme.com.xqiz.it")
+            String     password,               // an encrypted password to the keystore for this deployment
+            String     provider       = Self,  // the name of the certificate provider
+            Boolean    autoStart      = False, // @see AppInfo
+            Boolean    active         = False, // @see AppInfo
+            Injections injections     = [],    // @see AppInfo
+            String[]   sharedDBs      = [],    // names of shared DB deployments
+            Boolean    useCookies     = True,  // use CookieBroker as a session broker
+            Boolean    useAuth        = False, // use DBRealm for authentication
+            IdpInfos   idProviders    = [],    // IdentityProvider (via OAuth) info by provider
+            String?    externalHost   = Null,  // the optional external host name
             )
             extends AppInfo(deployment, moduleName, autoStart, active, injections) {
 
         @Override
         WebAppInfo with(
-            Boolean?    autoStart   = Null,
-            Boolean?    active      = Null,
-            Injections? injections  = Null,
-            String?     hostName    = Null,
-            String?     password    = Null,
-            String?     provider    = Null,
-            String[]?   sharedDBs   = Null,
-            Boolean?    useCookies  = Null,
-            Boolean?    useAuth     = Null,
-            IdpInfos?   idProviders = Null,
+            Boolean?    autoStart      = Null,
+            Boolean?    active         = Null,
+            Injections? injections     = Null,
+            String?     hostName       = Null,
+            String?     password       = Null,
+            String?     provider       = Null,
+            String[]?   sharedDBs      = Null,
+            Boolean?    useCookies     = Null,
+            Boolean?    useAuth        = Null,
+            IdpInfos?   idProviders    = Null,
+            String?     externalHost   = Null,
             ) {
             return new WebAppInfo(deployment, moduleName,
-                hostName    ?: this.hostName,
-                password    ?: this.password,
-                provider    ?: this.provider,
-                autoStart   ?: this.autoStart,
-                active      ?: this.active,
-                injections  ?: this.injections,
-                sharedDBs   ?: this.sharedDBs,
-                useCookies  ?: this.useCookies,
-                useAuth     ?: this.useAuth,
-                idProviders ?: this.idProviders,
+                hostName       ?: this.hostName,
+                password       ?: this.password,
+                provider       ?: this.provider,
+                autoStart      ?: this.autoStart,
+                active         ?: this.active,
+                injections     ?: this.injections,
+                sharedDBs      ?: this.sharedDBs,
+                useCookies     ?: this.useCookies,
+                useAuth        ?: this.useAuth,
+                idProviders    ?: this.idProviders,
+                externalHost   ?: this.externalHost,
                 );
         }
 
@@ -203,6 +206,15 @@ package model {
         WebAppInfo redact() = this.with(password="")
                                   .with(idProviders=idProviders.map(e ->
                                       e.value.redact(), new CollectImmutableMap<String, IdpInfo>()));
+        /**
+         * Perform the specified action for all host names associated with this WebApp.
+         */
+        void forEachHostName(function void(String) process) {
+            process(hostName);
+            if (String host ?= externalHost) {
+                process(host);
+            }
+        }
     }
 
     const DbAppInfo(

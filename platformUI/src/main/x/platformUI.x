@@ -176,12 +176,13 @@ module platformUI.xqiz.it {
                                                     accountName, appInfo.deployment);
                     CryptoPassword appPwd   = accountManager.decrypt(appInfo.password);
                     KeyStore       appStore = loadKeyStore(appDir.fileFor(names.KeyStoreName), appPwd);
-                    String         appHost  = appInfo.hostName;
 
-                    if (Certificate cert := appStore.getCertificate(appHost)) {
-                        proxyManager.updateProxyConfig^(appStore, appPwd, appHost, appHost,
-                            msg -> console.print($"{common.logTime($)} {msg}"));
-                    }
+                    appInfo.forEachHostName(appHost -> {
+                        if (Certificate cert := appStore.getCertificate(appHost)) {
+                            proxyManager.updateProxyConfig^(appStore, appPwd, appHost, appHost,
+                                msg -> console.print($"{common.logTime($)} {msg}"));
+                        }
+                    });
 
                     if (appInfo.autoStart) {
                         // the "stub" will serve the ACME protocol challenge requests

@@ -77,8 +77,8 @@ interface HostManager {
     // ----- WebApp management ---------------------------------------------------------------------
 
     /**
-     * Ensure there is a keystore for the specified web app that contains a private key, a
-     * certificate for the application host name and a symmetrical key for cookie encryption.
+     * Ensure there is a keystore for the specified web app that contains a private key,
+     * certificates for the application host names and a symmetrical key for cookie encryption.
      *
      * @param accountName  the account the web app belongs to
      * @param webAppInfo   the web application info
@@ -86,12 +86,22 @@ interface HostManager {
      * @param errors       the logger to report errors to
      * @param force        (optional) if True, create a new certificate regardless of the expiry
      *
-     * @return True iff the certificate exists and is valid; otherwise an error is logged
-     * @return (conditional) the certificate
+     * @return True iff the certificates exist and are valid; otherwise an error is logged
+     * @return (conditional) the certificates for the application host names
      */
-    conditional Certificate ensureCertificate(String accountName, WebAppInfo appInfo,
-                                              CryptoPassword pwd, Log errors,
-                                              Boolean force = False);
+    conditional Certificate[] ensureCertificate(String accountName, WebAppInfo appInfo,
+                                                CryptoPassword pwd, Log errors,
+                                                Boolean force = False);
+
+    /**
+     * Add a route for one host name of the specified web app.
+     *
+     * @param accountName  the account name
+     * @param webAppInfo   the web application info
+     * @param pwd          the password to use for the keystore
+     * @param hostName     the host name to route
+     */
+    void addWebRoute(String accountName, WebAppInfo appInfo, CryptoPassword pwd, String hostName);
 
     /**
      * Add a stub route for the specified web app.

@@ -1,0 +1,49 @@
+External Host Workflow
+
+The platform supports an external host only as part of web app registration. Adding external hosts
+to an existing web app is intentionally out of scope for now.
+
+Registration
+
+When a web app is registered with an external host, for example:
+
+    externalHost=files.acme.com
+
+the platform:
+
+1. Generates an internal host name for the deployment, for example:
+
+       files.acme.com.7f3a9c.xqiz.it
+
+2. Stores the external host in WebAppInfo.externalHost:
+
+       "files.acme.com"
+
+3. Ensures certificates for all host names:
+
+   - the internal host gets a certificate from the configured provider
+   - the external host gets a self-signed placeholder certificate
+
+The nullable external host is the only persisted external-host state. Whether the external
+certificate is still pending is determined from the keystore: a self-signed certificate for the
+external host is a placeholder, while a provider-issued certificate is the active public
+certificate.
+
+DNS Setup
+
+After registration, the customer points the external host at the generated internal host. For
+example:
+
+    files.acme.com -> files.acme.com.7f3a9c.xqiz.it
+
+Certificate Renewal
+
+After DNS is configured, the customer renews the certificate for the deployment. During renewal, the
+platform:
+
+1. Calls ensureCertificate().
+2. Sees the existing self-signed placeholder for WebAppInfo.externalHost.
+3. Uses the configured provider to replace that placeholder with a provider-issued certificate.
+
+If certificate issuance fails, the stored WebAppInfo does not change and the self-signed
+placeholder remains in the keystore. A later renewal can retry the provider-issued certificate.

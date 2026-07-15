@@ -67,9 +67,10 @@ service Projects
     JsonObject registerApp(@BodyParam JsonObject projectInfo) {
         assert AccountInfo accountInfo := accountManager.getAccount(accountName);
 
-        String  deployment = projectInfo["name"].as(String);
-        String  moduleName = projectInfo["module"].as(String);
-        String? provider   = projectInfo["certProvider"].as(String?);
+        String  deployment   = projectInfo["name"].as(String);
+        String  moduleName   = projectInfo["module"].as(String);
+        String? provider     = projectInfo["certProvider"].as(String?);
+        String? externalHost = projectInfo["externalHost"].as(String?);
 
         (Injections | SimpleResponse) result = delegate.prepareRegister(deployment, moduleName);
         if (result.is(SimpleResponse)) {
@@ -82,7 +83,7 @@ service Projects
             if (provider == Null || provider.empty) {
                 provider = ControllerConfig.provider;
             }
-            appInfo = delegate.registerWebApp(deployment, moduleName, provider);
+            appInfo = delegate.registerWebApp(deployment, moduleName, provider, externalHost=externalHost);
         } else if (moduleInfo.kind == Db) {
             appInfo = delegate.registerDbApp(deployment, moduleName);
 
@@ -252,6 +253,7 @@ service Projects
                 "certProvider" = info.provider,
                 "useCookies"   = info.useCookies,
                 "useAuth"      = info.useAuth,
+                "externalHost" = info.externalHost,
             ]);
 
             JsonObjectBuilder idProviders = json.objectBuilder();

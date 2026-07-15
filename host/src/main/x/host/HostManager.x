@@ -236,10 +236,12 @@ service HostManager
         host.deactivate(True);
 
         if (host.is(WebHost)) {
-            httpServer.removeRoute(host.appInfo.hostName);
+            WebAppInfo appInfo = host.appInfo;
+
+            appInfo.forEachHostName(hostName -> httpServer.removeRoute(hostName));
 
             // leave the webapp stub active
-            host.addStubRoute();
+            host.addStubRoute(appInfo);
         }
 
         String deployment = host.appInfo?.deployment : assert;
@@ -251,76 +253,40 @@ service HostManager
     // ----- WebApp management ---------------------------------------------------------------------
 
     @Override
-    conditional Certificate ensureCertificate(String accountName, WebAppInfo appInfo,
-                                              CryptoPassword pwd, Log errors,
-                                              Boolean force = False) {
-
-        static void ensureEncryptionKeys(KeyStore keystore, CertificateManager manager,
-                                         File store, CryptoPassword pwd) {
-            for (String name : [names.CookieEncryptionKey, names.PasswordEncryptionKey]) {
-                if (!keystore.getKey(name)) {
-                    manager.createSymmetricKey(store, pwd, name);
-                }
-            }
-        }
+    conditional Certificate[] ensureCertificate(String accountName, WebAppInfo appInfo,
+                                                CryptoPassword pwd, Log errors,
+                                                Boolean force = False) {
+        String deployment = appInfo.deployment;
+        String certName   = appInfo.hostName;
+        String provider   = appInfo.provider;
 
         (Directory homeDir, Boolean newHome) =
-                ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
+                ensureDeploymentHomeDirectory(accountName, deployment);
 
-        String  hostName = appInfo.hostName;
-        String  provider = appInfo.provider;
         File    store    = homeDir.fileFor(names.KeyStoreName);
         Boolean newStore = !store.exists;
-        Boolean newCert  = True;
 
         try {
-            if (!newStore && !force) {
-                @Inject(opts=provider) CertificateManager manager;
-                KeyStore keystore = manager.keystoreFor(store, pwd);
+            Certificate[] certs = new Certificate[];
 
-                ensureEncryptionKeys(keystore, manager, store, pwd);
+            certs += ensureCertificate(homeDir, store, pwd, accountName,
+                        deployment, certName, provider, force);
 
-                CheckValid:
-                if (Certificate cert := keystore.getCertificate(hostName)) {
-                    newCert = False;
-
-                    Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
-                    if (daysLeft < 14) {
-                        // less than two weeks left - renew the certificate
-                        break CheckValid;
+            if (String externalHost ?= appInfo.externalHost) {
+                certName = externalHost;
+                if (store.exists) {
+                    @Inject(opts=provider) CertificateManager manager;
+                    KeyStore keystore = manager.keystoreFor(store, pwd);
+                    if (!keystore.getCertificate(certName)) {
+                        provider = names.SelfSigner;
                     }
-                    return True, cert;
                 }
+
+                certs += ensureCertificate(homeDir, store, pwd, accountName,
+                            deployment, certName, provider, force);
             }
 
-            String dName = CertificateManager.distinguishedName(hostName,
-                                org=accountName, orgUnit=appInfo.deployment);
-
-            Boolean selfSigner = provider == names.SelfSigner;
-            if (newCert && !selfSigner) {
-                // if there are any proxies, we need to make sure they have registered a new "site"
-                // before we can create the real certificate; use self-signed one
-                @Inject(opts=names.SelfSigner) CertificateManager manager;
-                manager.createCertificate(store, pwd, hostName, dName);
-
-                // wait for the manager to get back a confirmation, so we can proceed with signing
-                proxyManager.updateProxyConfig(manager.keystoreFor(store, pwd),
-                        pwd, hostName, hostName, &log(homeDir));
-            }
-
-            // create or renew the certificate using the host name as its name (alias)
-            @Inject(opts=provider) CertificateManager manager;
-            manager.createCertificate(store, pwd, hostName, dName);
-
-            KeyStore keystore = manager.keystoreFor(store, pwd);
-            assert Certificate cert := keystore.getCertificate(hostName), cert.valid;
-
-            ensureEncryptionKeys(keystore, manager, store, pwd);
-
-            log(homeDir, $|{newStore ? "Created" : "Renewed"} a certificate for "{hostName}"
-                          );
-            proxyManager.updateProxyConfig^(keystore, pwd, hostName, hostName, &log(homeDir));
-            return True, cert;
+            return True, certs.makeImmutable();
         } catch (Exception e) {
             try {
                 if (newStore) {
@@ -333,8 +299,83 @@ service HostManager
                 }
             } catch (Exception ignore) {}
 
-            errors.add($"Error: Failed to obtain a certificate for {hostName.quoted()}: {e.message}");
+            errors.add($"Error: Failed to obtain a certificate for {certName.quoted()}: {e.message}");
             return False;
+        }
+
+        Certificate ensureCertificate(Directory homeDir, File store, CryptoPassword pwd,
+                                      String accountName, String deployment,
+                                      String certName, String certProvider, Boolean force) {
+
+            static void ensureEncryptionKeys(KeyStore keystore, CertificateManager manager,
+                                             File store, CryptoPassword pwd) {
+                for (String name : [names.CookieEncryptionKey, names.PasswordEncryptionKey]) {
+                    if (!keystore.getKey(name)) {
+                        manager.createSymmetricKey(store, pwd, name);
+                    }
+                }
+            }
+
+            Boolean newCert  = True;
+            Boolean newStore = !store.exists;
+
+            if (!newStore && !force) {
+                @Inject(opts=certProvider) CertificateManager manager;
+                KeyStore keystore = manager.keystoreFor(store, pwd);
+
+                ensureEncryptionKeys(keystore, manager, store, pwd);
+
+                CheckValid:
+                if (Certificate cert := keystore.getCertificate(certName)) {
+                    newCert = False;
+
+                    String subjectCN = cert.subject.splitMap().getOrDefault("CN", "");
+                    if (subjectCN != certName) {
+                        break CheckValid;
+                    }
+
+                    String issuerCN = cert.issuer.splitMap().getOrDefault("CN", "");
+                    if (issuerCN == certName && certProvider != names.SelfSigner) {
+                        break CheckValid;
+                    }
+
+                    Int daysLeft = (cert.lifetime.upperBound - clock.now.date).days;
+                    if (daysLeft < 14) {
+                        // less than two weeks left; renew the certificate
+                        break CheckValid;
+                    }
+                    return cert;
+                }
+            }
+
+            String dName = CertificateManager.distinguishedName(certName,
+                                org=accountName, orgUnit=deployment);
+
+            Boolean selfSigner = certProvider == names.SelfSigner;
+            if (newCert && !selfSigner) {
+                // if there are any proxies, we need to make sure they have registered a new "site"
+                // before we can create the real certificate; use self-signed one
+                @Inject(opts=names.SelfSigner) CertificateManager manager;
+                manager.createCertificate(store, pwd, certName, dName);
+
+                // wait for the manager to get back a confirmation, so we can proceed with signing
+                proxyManager.updateProxyConfig(manager.keystoreFor(store, pwd),
+                        pwd, certName, certName, &log(homeDir));
+            }
+
+            // create or renew the certificate using the host name as its name (alias)
+            @Inject(opts=certProvider) CertificateManager manager;
+            manager.createCertificate(store, pwd, certName, dName);
+
+            KeyStore keystore = manager.keystoreFor(store, pwd);
+            assert Certificate cert := keystore.getCertificate(certName), cert.valid;
+
+            ensureEncryptionKeys(keystore, manager, store, pwd);
+
+            log(homeDir, $|{newStore ? "Created" : "Renewed"} a certificate for "{certName}"
+                          );
+            proxyManager.updateProxyConfig^(keystore, pwd, certName, certName, &log(homeDir));
+            return cert;
         }
     }
 
@@ -342,8 +383,29 @@ service HostManager
     void addStubRoute(String accountName, WebAppInfo appInfo, CryptoPassword? pwd = Null) {
         Directory homeDir  = ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
         File      store    = homeDir.fileFor(names.KeyStoreName);
-        String    hostName = appInfo.hostName;
 
+        appInfo.forEachHostName(hostName -> addStubRoute(homeDir, store, hostName, pwd));
+    }
+
+    @Override
+    void addWebRoute(String accountName, WebAppInfo appInfo, CryptoPassword pwd, String hostName) {
+        Directory homeDir = ensureDeploymentHomeDirectory(accountName, appInfo.deployment);
+        File      store   = homeDir.fileFor(names.KeyStoreName);
+
+        if (WebHost webHost := getWebHost(appInfo.deployment)) {
+            try {
+                @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+
+                httpServer.addRoute(hostName, webHost, keystore,
+                    tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
+                return;
+            } catch (Exception ignore) {}
+        }
+
+        addStubRoute(homeDir, store, hostName, pwd);
+    }
+
+    private void addStubRoute(Directory homeDir, File store, String hostName, CryptoPassword? pwd) {
         import challenge.AcmeChallenge;
         import stub.Unavailable;
         HttpHandler.CatalogExtras extras =
@@ -438,15 +500,17 @@ service HostManager
             sharedDbHosts.freeze(inPlace=True);
         }
 
-        Decryptor       secretsDecryptor = utils.createDecryptor(keystore);
-        function void() addStubRoute     = &addStubRoute(accountName, webAppInfo, storePwd);
+        Decryptor secretsDecryptor = utils.createDecryptor(keystore);
+        function void(WebAppInfo) addStubRoute = appInfo ->
+                addStubRoute(accountName, appInfo, storePwd);
 
-        WebHost webHost = new WebHost(route, accountName, repository, webAppInfo, homeDir, buildDir,
-                                      sharedDbHosts, challengeApp, extras,
+        WebHost webHost = new WebHost(route, accountName, repository, webAppInfo, homeDir,
+                                      buildDir, sharedDbHosts, challengeApp, extras,
                                       secretsDecryptor, addStubRoute);
         deployedHosts.put(deployment, webHost);
-        httpServer.addRoute(hostName, webHost, keystore,
-                tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
+        webAppInfo.forEachHostName(hostName ->
+            httpServer.addRoute(hostName, webHost, keystore,
+                tlsKey=hostName, cookieKey=names.CookieEncryptionKey));
 
         checkLoad^();
         return True, webHost;
@@ -490,6 +554,9 @@ service HostManager
             if (store.exists) {
                 @Inject(opts=webAppInfo.provider) CertificateManager manager;
                 manager.revokeCertificate(store, storePwd, hostName);
+                if (String externalHost ?= webAppInfo.externalHost) {
+                    manager.revokeCertificate(store, storePwd, externalHost);
+                }
                 store.delete();
             }
         } catch (Exception ignore) {}
@@ -498,7 +565,8 @@ service HostManager
 
         removeFiles(homeDir, keepLogs);
 
-        proxyManager.removeProxyConfig^(hostName, keepLogs ? &log(homeDir) : (_) -> {});
+        webAppInfo.forEachHostName(hostName ->
+            proxyManager.removeProxyConfig^(hostName, keepLogs ? &log(homeDir) : (_) -> {}));
     }
 
     // ----- DbApp management ----------------------------------------------------------------------

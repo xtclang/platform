@@ -275,19 +275,16 @@ service HostManager
             for (String externalHost : appInfo.externalHosts) {
                 certName = externalHost;
 
-                String certProvider = provider;
+                // if the certificate for the external host doesn't exist yet - self-sign it
+                String certProvider = names.SelfSigner;
                 if (store.exists) {
-                    @Inject(opts=certProvider) CertificateManager manager;
+                    @Inject(opts=provider) CertificateManager manager;
                     KeyStore keystore = manager.keystoreFor(store, pwd);
-                    if (Certificate cert := keystore.getCertificate(certName)) {
-                        if (utils.isSelfSigned(cert, externalHost) && !force) {
-                            certProvider = names.SelfSigner;
-                        }
-                    } else {
-                        certProvider = names.SelfSigner;
+                    if (keystore.getCertificate(certName)) {
+                        // TODO verify the external host CNAME matches the generated target before
+                        // using the configured provider
+                        certProvider = provider;
                     }
-                } else {
-                    certProvider = names.SelfSigner;
                 }
 
                 certs += ensureCertificate(homeDir, store, pwd, accountName,

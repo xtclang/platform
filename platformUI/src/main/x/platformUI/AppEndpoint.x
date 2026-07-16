@@ -493,9 +493,8 @@ service AppEndpoint
         CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
         ErrorLog       errors   = new ErrorLog();
 
-        Boolean force = changeProvider || !appInfo.externalHosts.empty;
         if (Certificate[] certs := hostManager.ensureCertificate(accountName, appInfo, storePwd,
-                                        errors, force=force)) {
+                                        errors, force=changeProvider)) {
             if (changeProvider) {
                 accountManager.addOrUpdateApp(accountName, appInfo);
             }

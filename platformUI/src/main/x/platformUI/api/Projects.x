@@ -67,10 +67,9 @@ service Projects
     JsonObject registerApp(@BodyParam JsonObject projectInfo) {
         assert AccountInfo accountInfo := accountManager.getAccount(accountName);
 
-        String  deployment   = projectInfo["name"].as(String);
-        String  moduleName   = projectInfo["module"].as(String);
-        String? provider     = projectInfo["certProvider"].as(String?);
-        String? externalHost = projectInfo["externalHost"].as(String?);
+        String  deployment = projectInfo["name"].as(String);
+        String  moduleName = projectInfo["module"].as(String);
+        String? provider   = projectInfo["certProvider"].as(String?);
 
         (Injections | SimpleResponse) result = delegate.prepareRegister(deployment, moduleName);
         if (result.is(SimpleResponse)) {
@@ -84,16 +83,6 @@ service Projects
                 provider = ControllerConfig.provider;
             }
             appInfo = delegate.registerWebApp(deployment, moduleName, provider);
-            if (appInfo.is(SimpleResponse)) {
-                return toJsonObject(appInfo);
-            }
-
-            if (externalHost != Null && !externalHost.empty) {
-                appInfo = delegate.addExternalHost(deployment, externalHost);
-                if (appInfo.is(SimpleResponse) && appInfo.status != OK) {
-                    return toJsonObject(appInfo);
-                }
-            }
         } else if (moduleInfo.kind == Db) {
             appInfo = delegate.registerDbApp(deployment, moduleName);
 
@@ -145,18 +134,18 @@ service Projects
         return delegate.unregisterApp(id);
     }
 
-    @Put("{/id}/external-hosts{/externalHost}")
-    JsonObject addExternalHost(String id, String externalHost) {
-        AppResponse appInfo = delegate.addExternalHost(id, externalHost);
+    @Put("{/id}/domains{/domain}")
+    JsonObject addExternalHost(String id, String domain) {
+        AppResponse appInfo = delegate.addExternalHost(id, domain);
         if (appInfo.is(SimpleResponse)) {
             return toJsonObject(appInfo);
         }
         return toJsonObject(appInfo.as(AppInfo));
     }
 
-    @Delete("{/id}/external-hosts{/externalHost}")
-    JsonObject removeExternalHost(String id, String externalHost) {
-        AppResponse appInfo = delegate.removeExternalHost(id, externalHost);
+    @Delete("{/id}/domains{/domain}")
+    JsonObject removeExternalHost(String id, String domain) {
+        AppResponse appInfo = delegate.removeExternalHost(id, domain);
         if (appInfo.is(SimpleResponse)) {
             return toJsonObject(appInfo);
         }
@@ -281,7 +270,7 @@ service Projects
                 "certProvider" = info.provider,
                 "useCookies"   = info.useCookies,
                 "useAuth"      = info.useAuth,
-                "externalHosts"= info.externalHosts,
+                "domains"      = info.externalHosts,
                 "UUID"         = info.UUID,
             ]);
 

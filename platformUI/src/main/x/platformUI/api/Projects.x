@@ -140,11 +140,7 @@ service Projects
         if (response.status != OK) {
             return toJsonObject(response);
         }
-        // augment the project json with the "cname" value
-        JsonObject project = getProject(id).as(JsonObject);
-        return new JsonObjectBuilder(project)
-            .add("cname", response.bytes.unpackUtf8())
-            .build();
+        return getProject(id).as(JsonObject);
     }
 
     @Patch("{/id}/domains{/domain}")
@@ -292,6 +288,9 @@ service Projects
                     ["clientId"=value.clientId, "clientSecret"=value.redact().clientSecret]);
             }
             project.add("idProviders", idProviders);
+            if (String uuid ?= info.UUID) {
+                project.add("externalRoute", $"{uuid}.{baseDomain}");
+            }
         } else if (info.is(DbAppInfo)) {
             project.add("kind", "db");
         }

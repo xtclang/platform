@@ -90,12 +90,16 @@ class ApiTest {
     @Command("api-stop", "API V1: stop the app")
     String stop(String projectName) = platformCLI.post($"/api/v1/projects/{projectName}/stop");
 
-    @Command("api-add-external", "API V1: add an external host to a project")
-    String addExternalHost(String projectName, String domain) =
+    @Command("api-add-domain", "API V1: add an external host to a project")
+    String addDoamin(String projectName, String domain) =
         platformCLI.put($"/api/v1/projects/{projectName}/domains/{domain}");
 
-    @Command("api-remove-external", "API V1: remove an external host from a project")
-    String removeExternalHost(String projectName, String domain) =
+    @Command("api-verify-domain", "API V1: add an external host to a project")
+    String verifyDomain(String projectName, String domain) =
+        platformCLI.patch($"/api/v1/projects/{projectName}/domains/{domain}");
+
+    @Command("api-remove-domain", "API V1: remove an external host from a project")
+    String removeDoamin(String projectName, String domain) =
         platformCLI.delete($"/api/v1/projects/{projectName}/domains/{domain}");
 
     @Command("api-requests", "API V1: show requests stats")

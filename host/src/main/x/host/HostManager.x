@@ -281,9 +281,16 @@ service HostManager
                     @Inject(opts=provider) CertificateManager manager;
                     KeyStore keystore = manager.keystoreFor(store, pwd);
                     if (keystore.getCertificate(certName)) {
-                        // TODO verify the external host CNAME matches the generated target before
-                        // using the configured provider
-                        certProvider = provider;
+                        @Inject("secureNetwork") net.Network network;
+
+                        String cnameValue = appInfo.cnameValue(externalHost);
+                        if (network.nameService.records(externalHost).any(r ->
+                                r.type == "CNAME" && r.data == cnameValue)) {
+                            certProvider = provider;
+                        } else {
+                            errors.add($"Error: The DNS CNAME record is missing: {cnameValue.quoted()}");
+                            return False;
+                        }
                     }
                 }
 
@@ -418,8 +425,15 @@ service HostManager
 
         try {
             if (store.exists) {
-                @Inject(opts=appInfo.provider) CertificateManager manager;
-                manager.revokeCertificate(store, pwd, hostName);
+                @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+                if (Certificate cert := keystore.getCertificate(hostName)) {
+                    // the certificate for the external hosts could still be self-signed
+                    String provider = utils.isSelfSigned(cert, hostName)
+                            ? names.SelfSigner
+                            : appInfo.provider;
+                    @Inject(opts=provider) CertificateManager manager;
+                    manager.revokeCertificate(store, pwd, hostName);
+                }
             }
         } catch (Exception ignore) {}
 

@@ -136,11 +136,23 @@ service Projects
 
     @Put("{/id}/domains{/domain}")
     JsonObject addExternalHost(String id, String domain) {
-        AppResponse appInfo = delegate.addExternalHost(id, domain);
-        if (appInfo.is(SimpleResponse)) {
-            return toJsonObject(appInfo);
+        SimpleResponse response = delegate.addExternalHost(id, domain);
+        if (response.status != OK) {
+            return toJsonObject(response);
         }
-        return toJsonObject(appInfo.as(AppInfo));
+        // augment the project json with the "cname" value
+        JsonObject project = getProject(id).as(JsonObject);
+        return new JsonObjectBuilder(project)
+            .add("cname", response.bytes.unpackUtf8())
+            .build();
+    }
+
+    @Patch("{/id}/domains{/domain}")
+    JsonObject verifyExternalHost(String id, String domain) {
+        SimpleResponse response = delegate.renewCertificate(id, externalHost=domain);
+        return toJsonObject(response.status == OK
+                ? new SimpleResponse(OK, $"Successfully verified: {domain.quoted()}")
+                : response);
     }
 
     @Delete("{/id}/domains{/domain}")
@@ -295,6 +307,6 @@ service Projects
 
     static JsonObject toJsonObject(SimpleResponse response) = [
         "status"  = response.status.code.toString(),
-        "message" = response.toString()
+        "message" = response.bytes.unpackUtf8()
     ];
 }

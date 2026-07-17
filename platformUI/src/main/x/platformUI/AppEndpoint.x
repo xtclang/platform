@@ -473,8 +473,9 @@ service AppEndpoint
     /**
      * Handle a request to renew the certificate.
      */
-    @Post("/renew{/deployment}{/provider}")
-    SimpleResponse renewCertificate(String deployment, String? provider = Null) {
+    @Post("/renew{/deployment}{/provider}{/externalHost}")
+    SimpleResponse renewCertificate(String deployment, String? provider = Null,
+                                    String? externalHost = Null) {
         WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
@@ -493,7 +494,22 @@ service AppEndpoint
         CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
         ErrorLog       errors   = new ErrorLog();
 
-        if (Certificate[] certs := hostManager.ensureCertificate(accountName, appInfo, storePwd,
+        WebAppInfo renewInfo = appInfo;
+        if (externalHost != Null) {
+            String[] externalHosts = appInfo.externalHosts;
+
+            externalHost = externalHost.toLowercase();
+            if (externalHosts.contains(externalHost)) {
+                if (externalHosts.size > 1) {
+                    // remove all but the specified name
+                    renewInfo = appInfo.with(externalHosts=[externalHost]);
+                }
+            } else {
+                return new SimpleResponse(Conflict, $"Unknown domain: {externalHost.quoted()}");
+            }
+        }
+
+        if (Certificate[] certs := hostManager.ensureCertificate(accountName, renewInfo, storePwd,
                                         errors, force=changeProvider)) {
             if (changeProvider) {
                 accountManager.addOrUpdateApp(accountName, appInfo);
@@ -509,7 +525,7 @@ service AppEndpoint
      * Add an external host name for a registered web app.
      */
     @Put("/external{/deployment}{/externalHost}")
-    AppResponse addExternalHost(String deployment, String externalHost) {
+    SimpleResponse addExternalHost(String deployment, String externalHost) {
         WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
@@ -522,13 +538,13 @@ service AppEndpoint
 
         if (String error := validateDeploymentName(externalHost)) {
             return new SimpleResponse(Conflict,
-                    $"Invalid external host {externalHost.quoted()}: {error}");
+                    $"Invalid domain {externalHost.quoted()}: {error}");
         }
 
         externalHost = externalHost.toLowercase();
         if (externalHost.endsWith(baseDomain)) {
             return new SimpleResponse(Conflict,
-                    $"External host is a subdomain: {externalHost.quoted()}");
+                    $"Invalid subdomain: {externalHost.quoted()}");
         }
 
         String[] externalHosts = appInfo.externalHosts;
@@ -537,7 +553,7 @@ service AppEndpoint
                                     route.host.toString() == externalHost);
         if (addHost && routeExists) {
             return new SimpleResponse(Conflict,
-                    $"External host is already registered {externalHost.quoted()}");
+                    $"Already registered {externalHost.quoted()}");
         }
 
         String UUID;
@@ -569,8 +585,7 @@ service AppEndpoint
 
         accountManager.addOrUpdateApp(accountName, appInfo);
 
-        String cnameTarget = $"{externalHost}.{UUID}.{baseDomain}";
-        return new SimpleResponse(OK, cnameTarget);
+        return new SimpleResponse(OK, appInfo.cnameValue(externalHost));
     }
 
     /**

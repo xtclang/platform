@@ -209,6 +209,18 @@ package model {
         WebAppInfo redact() = this.with(password="")
                                   .with(idProviders=idProviders.map(e ->
                                       e.value.redact(), new CollectImmutableMap<String, IdpInfo>()));
+
+        /**
+         * Compute a CNAME target value for the specified external host. This is the value that
+         * customers will need to place as a DNS CNAME record for an external domain routing.
+         */
+        String cnameValue(String externalHost) {
+            assert externalHosts.contains(externalHost) && hostName.startsWith(deployment);
+
+            String baseDomain = hostName.substring(deployment.size);
+            return $"{externalHost}.{UUID}{baseDomain}";
+        }
+
         /**
          * Perform the specified action for all host names associated with this WebApp.
          */

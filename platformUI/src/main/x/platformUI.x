@@ -71,7 +71,7 @@ module platformUI.xqiz.it {
             throw new IllegalState($"Invalid host address: {hostName.quoted()}");
         }
 
-        KeyStore keystore = loadKeyStore(homeDir.fileFor(names.KeyStoreName), pwd);
+        KeyStore keystore = utils.loadKeyStore(homeDir.fileFor(names.KeyStoreName), pwd);
         HostInfo route    = new HostInfo(hostName);
 
         import challenge.AcmeChallenge;
@@ -175,7 +175,7 @@ module platformUI.xqiz.it {
                     Directory      appDir   = hostManager.ensureDeploymentHomeDirectory(
                                                     accountName, appInfo.deployment);
                     CryptoPassword appPwd   = accountManager.decrypt(appInfo.password);
-                    KeyStore       appStore = loadKeyStore(appDir.fileFor(names.KeyStoreName), appPwd);
+                    KeyStore       appStore = utils.loadKeyStore(appDir.fileFor(names.KeyStoreName), appPwd);
 
                     appInfo.forEachHostName(appHost -> {
                         if (Certificate cert := appStore.getCertificate(appHost)) {
@@ -220,17 +220,6 @@ module platformUI.xqiz.it {
             errors.reportAll(msg -> console.print(msg));
         }
     }
-
-    /**
-     * Load the [KeyStore] from the specified file.
-     *
-     * Note: the `KeyStore` is a "constant" content object; it doesn't reflect any changes made to
-     *       the file after the `KeeStore` was loaded.
-     */
-     KeyStore loadKeyStore(File storeFile, CryptoPassword pwd) {
-        @Inject(opts=new KeyStore.Info(storeFile.contents, pwd)) KeyStore keystore;
-        return keystore;
-     }
 
     /**
      * Make sure the platform certificate is up-to-date.
@@ -299,7 +288,7 @@ module platformUI.xqiz.it {
                      );
 
         // reload the keystore
-        keystore = loadKeyStore(homeDir.fileFor(names.KeyStoreName), pwd);
+        keystore = utils.loadKeyStore(homeDir.fileFor(names.KeyStoreName), pwd);
         proxyManager.updateProxyConfig^(keystore, pwd, names.PlatformTlsKey, hostName,
             msg -> console.print($"{common.logTime($)} {msg}"));
         return keystore;

@@ -140,7 +140,7 @@ service AppEndpoint
         Directory      homeDir    = hostManager.ensureDeploymentHomeDirectory(accountName, deployment);
         File           store      = homeDir.fileFor(names.KeyStoreName);
         CryptoPassword storePwd   = accountManager.decrypt(appInfo.password);
-        @Inject("keystore", opts=new KeyStore.Info(store.contents, storePwd)) KeyStore keystore;
+        KeyStore       keystore   = utils.loadKeyStore(store, storePwd);
 
         Decryptor decryptor = utils.createDecryptor(keystore);
 

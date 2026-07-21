@@ -405,7 +405,7 @@ service HostManager
 
         if (WebHost webHost := getWebHost(appInfo.deployment)) {
             try {
-                @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+                KeyStore keystore = utils.loadKeyStore(store, pwd);
 
                 httpServer.addRoute(hostName, webHost, keystore,
                     tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
@@ -425,7 +425,7 @@ service HostManager
 
         try {
             if (store.exists) {
-                @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+                KeyStore keystore = utils.loadKeyStore(store, pwd);
                 if (Certificate cert := keystore.getCertificate(hostName)) {
                     // the certificate for the external hosts could still be self-signed
                     String provider = utils.isSelfSigned(cert, hostName)
@@ -454,7 +454,7 @@ service HostManager
         HttpHandler handler = new HttpHandler(new HostInfo(hostName), stubApp, extras);
         if (store.exists && pwd != Null) {
             try {
-                @Inject("keystore", opts=new KeyStore.Info(store.contents, pwd)) KeyStore keystore;
+                KeyStore keystore = utils.loadKeyStore(store, pwd);
 
                 httpServer.addRoute(hostName, handler, keystore,
                     tlsKey=hostName, cookieKey=names.CookieEncryptionKey);
@@ -489,8 +489,7 @@ service HostManager
 
         KeyStore keystore;
         try {
-            @Inject("keystore", opts=new KeyStore.Info(store.contents, storePwd)) KeyStore ks;
-            keystore = ks;
+            keystore = utils.loadKeyStore(store, storePwd);
         } catch (Exception e) {
             errors.add($|Error: {store.exists ? "Corrupted" : "Missing"} keystore: "{store}"; \
                         |application "{deployment}" for account "{accountName}" needs to be redeployed

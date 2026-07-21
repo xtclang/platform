@@ -16,6 +16,7 @@ import ecstasy.text.Log;
 import conv.formats.Base64Format;
 
 import crypto.Certificate;
+import crypto.CryptoPassword;
 import crypto.Decryptor;
 import crypto.KeyStore;
 
@@ -213,6 +214,17 @@ package utils {
 
         return True, injections.filter(ikey -> ikey.type.isA(Destringable))
                                .map(ikey -> new Key(ikey.name, ikey.type.toString())).toArray();
+    }
+
+    /**
+     * Load the [KeyStore] from the specified file.
+     *
+     * Note: the `KeyStore` is a "constant" content object; it doesn't reflect any changes made to
+     *       the file after the `KeeStore` was loaded.
+     */
+    static KeyStore loadKeyStore(File storeFile, CryptoPassword pwd) {
+        @Inject(opts=new KeyStore.Info(storeFile.contents, pwd)) KeyStore keystore;
+        return keystore;
     }
 
     /**

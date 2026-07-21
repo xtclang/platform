@@ -14,6 +14,13 @@ import common.model.InjectionKey;
 import common.model.Injections;
 import common.model.WebAppInfo;
 
+import common.names;
+import common.utils;
+
+import crypto.Certificate;
+import crypto.CryptoPassword;
+import crypto.KeyStore;
+
 import AppEndpoint.AppResponse;
 
 /**
@@ -278,7 +285,7 @@ service Projects
                 "certProvider" = info.provider,
                 "useCookies"   = info.useCookies,
                 "useAuth"      = info.useAuth,
-                "domains"      = info.externalHosts,
+                "domains"      = collectDomains(info),
                 "UUID"         = info.UUID,
             ]);
 
@@ -302,6 +309,30 @@ service Projects
         project.add("injections", injections);
 
         return project.build();
+
+        JsonArray collectDomains(WebAppInfo info) {
+            if (info.externalHosts.empty) {
+                return [];
+            }
+
+            KeyStore? keyStore = Null;
+            try {
+                CryptoPassword pwd     = accountManager.decrypt(info.password);
+                Directory      homeDir = hostManager.ensureDeploymentHomeDirectory(
+                                                accountName, info.deployment);
+                keyStore = utils.loadKeyStore(homeDir.fileFor(names.KeyStoreName), pwd);
+            } catch (Exception ignore) {}
+
+            JsonArrayBuilder domains = json.arrayBuilder();
+            for (String name : info.externalHosts) {
+                Boolean verified = False;
+                if (KeyStore store ?= keyStore, Certificate cert := store.getCertificate(name)) {
+                    verified = !utils.isSelfSigned(cert, name);
+                }
+                domains.addObject(["name"=name, "verified"=verified]);
+            }
+            return domains.build();
+        }
     }
 
     static JsonObject toJsonObject(SimpleResponse response) = [

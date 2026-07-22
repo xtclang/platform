@@ -548,10 +548,10 @@ service AppEndpoint
         }
 
         String[] externalHosts = appInfo.externalHosts;
-        Boolean  addHost       = !externalHosts.contains(externalHost);
+        Boolean  hostExists    = externalHosts.contains(externalHost);
         Boolean  routeExists   = httpServer.routes.keys.any(route ->
                                     route.host.toString() == externalHost);
-        if (addHost && routeExists) {
+        if (hostExists || routeExists) {
             return new SimpleResponse(Conflict,
                     $"Already registered {externalHost.quoted()}");
         }
@@ -564,10 +564,7 @@ service AppEndpoint
             UUID = random.uint(1_000_000 .. 9_999_999).toString();
         }
 
-        if (addHost || appInfo.UUID == Null) {
-            appInfo = appInfo.with(UUID=UUID,
-                    externalHosts=addHost ? externalHosts + externalHost : externalHosts);
-        }
+        appInfo = appInfo.with(UUID=UUID, externalHosts=externalHosts + externalHost);
 
         CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
         WebAppInfo     certInfo = appInfo.with(externalHosts=[externalHost]);
@@ -576,9 +573,7 @@ service AppEndpoint
             return new SimpleResponse(Conflict, errors.collectErrors());
         }
 
-        if (!routeExists) {
-            hostManager.addWebRoute(accountName, appInfo, storePwd, externalHost);
-        }
+        hostManager.addWebRoute(accountName, appInfo, storePwd, externalHost);
 
         if (AppHost host := hostManager.getHost(deployment)) {
             host.appInfo = appInfo;

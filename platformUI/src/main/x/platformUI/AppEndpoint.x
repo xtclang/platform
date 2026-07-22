@@ -431,6 +431,7 @@ service AppEndpoint
      */
     @Put("/web{/deployment}{/moduleName}{/provider}")
     AppResponse registerWebApp(String deployment, String moduleName, String? provider = Null) {
+        deployment = deployment.toLowercase();
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
         if (injections.is(SimpleResponse)) {
@@ -442,7 +443,7 @@ service AppEndpoint
         }
 
         // compute the full host name (e.g. "welcome.localhost.xqiz.it")
-        String hostName = $"{deployment}.{baseDomain}".toLowercase();
+        String hostName = $"{deployment}.{baseDomain}";
 
         if (httpServer.routes.keys.any(route -> route.host.toString() == hostName)) {
             return new SimpleResponse(Conflict, $"Deployment already exists: '{deployment}'");
@@ -695,6 +696,7 @@ service AppEndpoint
      */
     @Put("/db{/deployment}{/moduleName}")
     AppResponse registerDbApp(String deployment, String moduleName) {
+        deployment = deployment.toLowercase();
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
         if (injections.is(SimpleResponse)) {

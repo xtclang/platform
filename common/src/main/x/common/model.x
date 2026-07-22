@@ -215,7 +215,8 @@ package model {
          * customers will need to place as a DNS CNAME record for an external domain routing.
          */
         String cnameValue(String externalHost) {
-            assert externalHosts.contains(externalHost) && hostName.startsWith(deployment);
+            assert externalHosts.contains(externalHost) &&
+                hostName.toLowercase().startsWith(deployment.toLowercase());
 
             String baseDomain = hostName.substring(deployment.size);
             return $"{externalHost}.{UUID}{baseDomain}";

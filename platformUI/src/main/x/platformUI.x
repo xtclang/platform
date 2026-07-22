@@ -66,7 +66,7 @@ module platformUI.xqiz.it {
         // we need to extract the base domain ("localhost.xqiz.it")
         String baseDomain;
         if (Int dot := hostName.indexOf('.')) {
-            baseDomain = hostName.substring(dot + 1);
+            baseDomain = hostName.substring(dot + 1).toLowercase();
         } else {
             throw new IllegalState($"Invalid host address: {hostName.quoted()}");
         }

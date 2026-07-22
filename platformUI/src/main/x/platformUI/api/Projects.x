@@ -74,7 +74,7 @@ service Projects
     JsonObject registerApp(@BodyParam JsonObject projectInfo) {
         assert AccountInfo accountInfo := accountManager.getAccount(accountName);
 
-        String  deployment = projectInfo["name"].as(String);
+        String  deployment = projectInfo["name"].as(String).toLowercase();
         String  moduleName = projectInfo["module"].as(String);
         String? provider   = projectInfo["certProvider"].as(String?);
 

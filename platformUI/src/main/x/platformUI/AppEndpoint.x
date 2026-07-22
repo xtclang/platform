@@ -570,8 +570,9 @@ service AppEndpoint
         }
 
         CryptoPassword storePwd = accountManager.decrypt(appInfo.password);
+        WebAppInfo     certInfo = appInfo.with(externalHosts=[externalHost]);
         ErrorLog       errors   = new ErrorLog();
-        if (!hostManager.ensureCertificate(accountName, appInfo, storePwd, errors)) {
+        if (!hostManager.ensureCertificate(accountName, certInfo, storePwd, errors)) {
             return new SimpleResponse(Conflict, errors.collectErrors());
         }
 

@@ -299,7 +299,8 @@ service Projects
                 project.add("externalRoute", $"{uuid}.{baseDomain}");
             }
         } else if (info.is(DbAppInfo)) {
-            project.add("kind", "db");
+            project.add("kind", "db")
+                   .add("domains", []); // the front-end needs it to be present
         }
 
         JsonObjectBuilder injections = json.objectBuilder();

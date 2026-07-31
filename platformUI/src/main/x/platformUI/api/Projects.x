@@ -160,11 +160,11 @@ service Projects
 
     @Delete("{/id}/domains{/domain}")
     JsonObject removeExternalHost(String id, String domain) {
-        AppResponse appInfo = delegate.removeExternalHost(id, domain);
-        if (appInfo.is(SimpleResponse)) {
-            return toJsonObject(appInfo);
+        AppResponse response = delegate.removeExternalHost(id, domain);
+        if (response.is(SimpleResponse)) {
+            return toJsonObject(response);
         }
-        return toJsonObject(appInfo.as(AppInfo));
+        return getProject(id).as(JsonObject);
     }
 
     @Patch("{/id}/oauth-providers{/provider}")

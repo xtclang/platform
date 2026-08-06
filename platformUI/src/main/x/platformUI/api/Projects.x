@@ -245,7 +245,10 @@ service Projects
                 };
                 (UInt32[] counts, Time time) = host.queryRequests(rate, limit);
                 for (UInt32 count : counts) {
-                    response.addObject(["time"=time.toString(), "requests"=count.toIntLiteral()]);
+                    response.addObject([
+                        "time"     = time.toString(iso8601=True),
+                        "requests" = count.toIntLiteral(),
+                    ]);
                     time += rate;
                 }
             } catch (Exception e) {

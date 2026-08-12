@@ -236,13 +236,22 @@ service Projects
 
         JsonArrayBuilder response = json.arrayBuilder();
         if (AppHost host := hostManager.getHost(id), host.is(WebHost)) {
+            Duration rate;
+            switch (rateString) {
+            case "hour":
+                rate = Hour;
+                break;
+            case "day":
+                rate = Day;
+                break;
+            case "week":
+                rate = ofDays(7);
+                break;
+            default:
+                return new SimpleResponse(Conflict, $"Invalid rate: {rateString}");
+            }
+
             try {
-                Duration rate = switch (rateString) {
-                    case "minute": Minute;
-                    case "hour":   Hour;
-                    case "day":    ofHours(24);
-                    default   :    throw new IllegalArgument($"Invalid {rateString=}");
-                };
                 (UInt32[] counts, Time time) = host.queryRequests(rate, limit);
                 for (UInt32 count : counts) {
                     response.addObject([

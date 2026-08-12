@@ -141,11 +141,22 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
     static Duration StatsInterval = ofSeconds(10);
 
     /**
-     * The request info is collected every minute and the retention window is 7 days.
+     * The request info is collected every minute with hourly fidelity and a 60-day retention
+     * window.
      *
-     * The total cost is 60*24*7 ~ 10,000 of Int32 values ~ 40KB
+     * The total cost is 24*60 = 1,440 UInt32 values ~ 6KB
      */
-    TimeSeries<UInt32> requestStats = new TimeSeries(Minute, ofDays(7));
+    TimeSeries<UInt32> requestStats = new TimeSeries(Hour, ofDays(60));
+
+    /**
+     * The epoch-aligned hour currently being collected.
+     */
+    private Int requestStatsHour = -1;
+
+    /**
+     * The running request count for [requestStatsHour].
+     */
+    private UInt32 requestStatsHourCount = 0;
 
     /**
      * The frequency of the request collection; collected every minute (every 6th base cycle).
@@ -352,7 +363,19 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
      */
     void collectStats(Int collectCount, Int prevRequestCount) {
         if (collectCount % RequestRate == 0) {
-            requestStats.add(clock.now, (totalRequests - prevRequestCount).toUInt32());
+            Time   now      = clock.now;
+            Int    hour     = (now.epochPicos / Duration.PicosPerHour).toInt64();
+            UInt32 newCount = (totalRequests - prevRequestCount).toUInt32();
+
+            if (hour == requestStatsHour) {
+                requestStatsHourCount += newCount;
+            } else {
+                requestStatsHour      = hour;
+                requestStatsHourCount = newCount;
+            }
+
+            // replaces its running total ("now" maps to the current hourly bucket)
+            requestStats.add(now, requestStatsHourCount);
             prevRequestCount = totalRequests;
         }
 

@@ -159,6 +159,11 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
     private UInt32 requestStatsHourCount = 0;
 
     /**
+     * The `totalRequests` value at the previous statistics refresh.
+     */
+    private Int requestStatsLastCount = 0;
+
+    /**
      * The frequency of the request collection; collected every minute (every 6th base cycle).
      */
     static Int RequestRate = 60/10;
@@ -212,7 +217,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
                     challengeHandler?.close^();
                     challengeHandler = Null;
 
-                    clock.schedule(StatsInterval, &collectStats(0, totalRequests));
+                    clock.schedule(StatsInterval, &collectStats(0));
 
                     return True, handler;
                 } catch (Exception e) {
@@ -358,30 +363,36 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
     // ----- Statistics support --------------------------------------------------------------------
 
     /**
-     * @param collectCount      the monotonic counter of consecutive invocations
-     * @param prevRequestCount  the `totalRequests` Count during the previous invocation
+     * @param collectCount  the monotonic counter of consecutive invocations
      */
-    void collectStats(Int collectCount, Int prevRequestCount) {
+    void collectStats(Int collectCount) {
         if (collectCount % RequestRate == 0) {
-            Time   now      = clock.now;
-            Int    hour     = (now.epochPicos / Duration.PicosPerHour).toInt64();
-            UInt32 newCount = (totalRequests - prevRequestCount).toUInt32();
-
-            if (hour == requestStatsHour) {
-                requestStatsHourCount += newCount;
-            } else {
-                requestStatsHour      = hour;
-                requestStatsHourCount = newCount;
-            }
-
-            // replaces its running total ("now" maps to the current hourly bucket)
-            requestStats.add(now, requestStatsHourCount);
-            prevRequestCount = totalRequests;
+            refreshRequestStats();
         }
 
         if (active) {
-            clock.schedule(StatsInterval, &collectStats(collectCount+1, prevRequestCount));
+            clock.schedule(StatsInterval, &collectStats(collectCount+1));
         }
+    }
+
+    /**
+     * Refresh the current hourly request count.
+     */
+    private void refreshRequestStats() {
+        Time   now      = clock.now;
+        Int    hour     = (now.epochPicos / Duration.PicosPerHour).toInt64();
+        UInt32 newCount = (totalRequests - requestStatsLastCount).toUInt32();
+
+        if (hour == requestStatsHour) {
+            requestStatsHourCount += newCount;
+        } else {
+            requestStatsHour      = hour;
+            requestStatsHourCount = newCount;
+        }
+
+        // replaces its running total ("now" maps to the current hourly bucket)
+        requestStats.add(now, requestStatsHourCount);
+        requestStatsLastCount = totalRequests;
     }
 
     /**
@@ -390,9 +401,11 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
      * return the array of request numbers from the TimeSeries
      * return the timestamp of the oldest sample
      */
-    (immutable UInt32[] counts, Time endTime) queryRequests(Duration rate, Int limit) =
-        requestStats.query(rate, limit,
-                           rate == requestStats.resolution ? Null : new agg.Sum<UInt32>());
+    (immutable UInt32[] counts, Time endTime) queryRequests(Duration rate, Int limit) {
+        refreshRequestStats();
+        return requestStats.query(rate, limit,
+                                  rate == requestStats.resolution ? Null : new agg.Sum<UInt32>());
+    }
 
     // ----- Helper methods ------------------------------------------------------------------------
 

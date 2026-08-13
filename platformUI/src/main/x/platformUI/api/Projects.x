@@ -253,11 +253,13 @@ service Projects
 
             try {
                 (UInt32[] counts, Time time) = host.queryRequests(rate, limit);
-                for (UInt32 count : counts) {
-                    response.addObject([
-                        "time"     = time.toString(iso8601=True),
-                        "requests" = count.toIntLiteral(),
-                    ]);
+                Loop: for (UInt32 count : counts) {
+                    if (count > 0 || Loop.first || Loop.last) {
+                        response.addObject([
+                            "time"     = time.toString(iso8601=True),
+                            "requests" = count.toIntLiteral(),
+                        ]);
+                    }
                     time += rate;
                 }
             } catch (Exception e) {

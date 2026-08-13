@@ -391,7 +391,8 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
      * return the timestamp of the oldest sample
      */
     (immutable UInt32[] counts, Time endTime) queryRequests(Duration rate, Int limit) =
-            requestStats.query(rate, limit, new agg.Sum<UInt32>());
+        requestStats.query(rate, limit,
+                           rate == requestStats.resolution ? Null : new agg.Sum<UInt32>());
 
     // ----- Helper methods ------------------------------------------------------------------------
 

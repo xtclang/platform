@@ -124,7 +124,8 @@ service AppEndpoint
         clientId     = Base64Format.Instance.decode(clientId).unpackUtf8();
         clientSecret = Base64Format.Instance.decode(clientSecret).unpackUtf8();
 
-        return ensureAuthProvider(deployment, provider, clientId, clientSecret);
+        AppResponse appInfo = ensureAuthProvider(deployment, provider, clientId, clientSecret);
+        return appInfo.is(SimpleResponse) ? appInfo : appInfo.redact();
     }
 
     /**
@@ -154,7 +155,7 @@ service AppEndpoint
             // update the webHost
             host.appInfo = appInfo;
         }
-        return appInfo.redact();
+        return appInfo;
     }
 
     /**
@@ -264,8 +265,8 @@ service AppEndpoint
      * Store an injection value.
      */
     @Put("/injections{/deployment}{/name}{/type}")
-    SimpleResponse setInjectionValue(String deployment, String name, @BodyParam String value,
-                                     String type = "") {
+    AppResponse setInjectionValue(String deployment, String name, @BodyParam String value,
+                                  String type = "", Boolean internal = False) {
         AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
@@ -285,7 +286,7 @@ service AppEndpoint
             host.appInfo         = appInfo;
             host.restartRequired = True;
         }
-        return new SimpleResponse(OK);
+        return internal ? appInfo : new SimpleResponse(OK);
     }
 
     /**
@@ -314,7 +315,7 @@ service AppEndpoint
      * Handle a request to start a deployment.
      */
     @Post("/start{/deployment}")
-    AppResponse startApp(String deployment) {
+    AppResponse startApp(String deployment, Boolean internal = False) {
         AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
@@ -353,7 +354,7 @@ service AppEndpoint
         if (host.activate(True, errors)) {
             appInfo = appInfo.with(autoStart=True);
             accountManager.addOrUpdateApp(accountName, appInfo);
-            return appInfo.redact();
+            return internal ? appInfo : appInfo.redact();
         } else {
             hostManager.removeHost(host);
             return new SimpleResponse(Conflict, errors.collectErrors());
@@ -364,7 +365,7 @@ service AppEndpoint
      * Handle a request to stop a deployment.
      */
     @Post("/stop{/deployment}")
-    SimpleResponse stopApp(String deployment) {
+    AppResponse stopApp(String deployment, Boolean internal = False) {
         AppResponse appInfo = getAppInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
@@ -372,14 +373,18 @@ service AppEndpoint
 
         if (AppHost host := hostManager.getHost(deployment)) {
             hostManager.removeHost(host);
-            accountManager.addOrUpdateApp(accountName, appInfo.with(autoStart=False));
-            return new SimpleResponse(OK);
+            appInfo = appInfo.with(autoStart=False);
+            accountManager.addOrUpdateApp(accountName, appInfo);
+            return internal ? appInfo : new SimpleResponse(OK);
         } else {
             if (appInfo.autoStart) {
                 // there's no host, but the deployment is marked as `autoStart`; fix it
-                accountManager.addOrUpdateApp(accountName, appInfo.with(autoStart=False));
+                appInfo = appInfo.with(autoStart=False);
+                accountManager.addOrUpdateApp(accountName, appInfo);
             }
-            return new SimpleResponse(OK, "The application is not active");
+            return internal
+                    ? appInfo
+                    : new SimpleResponse(OK, "The application is not active");
         }
     }
 
@@ -430,7 +435,8 @@ service AppEndpoint
      *  - a deployment has one and only one app
      */
     @Put("/web{/deployment}{/moduleName}{/provider}")
-    AppResponse registerWebApp(String deployment, String moduleName, String? provider = Null) {
+    AppResponse registerWebApp(String deployment, String moduleName, String? provider = Null,
+                               Boolean internal = False) {
         deployment = deployment.toLowercase();
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
@@ -468,15 +474,15 @@ service AppEndpoint
         }
 
         accountManager.addOrUpdateApp(accountName, appInfo);
-        return appInfo.redact();
+        return internal ? appInfo : appInfo.redact();
     }
 
     /**
      * Handle a request to renew the certificate.
      */
     @Post("/renew{/deployment}{/provider}{/externalHost}")
-    SimpleResponse renewCertificate(String deployment, String? provider = Null,
-                                    String? externalHost = Null) {
+    AppResponse renewCertificate(String deployment, String? provider = Null,
+                                 String? externalHost = Null, Boolean internal = False) {
         WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
@@ -516,7 +522,9 @@ service AppEndpoint
                 accountManager.addOrUpdateApp(accountName, appInfo);
             }
 
-            return new SimpleResponse(OK, certs.toString(sep="\n\n", pre="", post=""));
+            return internal
+                    ? appInfo
+                    : new SimpleResponse(OK, certs.toString(sep="\n\n", pre="", post=""));
         } else {
             return new SimpleResponse(Conflict, errors.collectErrors());
         }
@@ -526,7 +534,7 @@ service AppEndpoint
      * Add an external host name for a registered web app.
      */
     @Put("/external{/deployment}{/externalHost}")
-    SimpleResponse addExternalHost(String deployment, String externalHost) {
+    AppResponse addExternalHost(String deployment, String externalHost, Boolean internal = False) {
         WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
@@ -582,14 +590,16 @@ service AppEndpoint
 
         accountManager.addOrUpdateApp(accountName, appInfo);
 
-        return new SimpleResponse(OK, appInfo.cnameValue(externalHost));
+        return internal
+                ? appInfo
+                : new SimpleResponse(OK, appInfo.cnameValue(externalHost));
     }
 
     /**
      * Remove an external host name from a registered web app.
      */
     @Delete("/external{/deployment}{/externalHost}")
-    AppResponse removeExternalHost(String deployment, String externalHost) {
+    AppResponse removeExternalHost(String deployment, String externalHost, Boolean internal = False) {
         WebResponse appInfo = getWebInfo(deployment);
         if (appInfo.is(SimpleResponse)) {
             return appInfo;
@@ -617,7 +627,7 @@ service AppEndpoint
         }
 
         accountManager.addOrUpdateApp(accountName, appInfo);
-        return appInfo.redact();
+        return internal ? appInfo : appInfo.redact();
     }
 
     /**
@@ -695,7 +705,7 @@ service AppEndpoint
      * Handle a request to register a db app for a module.
      */
     @Put("/db{/deployment}{/moduleName}")
-    AppResponse registerDbApp(String deployment, String moduleName) {
+    AppResponse registerDbApp(String deployment, String moduleName, Boolean internal = False) {
         deployment = deployment.toLowercase();
 
         (Injections | SimpleResponse) injections = prepareRegister(deployment, moduleName);
@@ -705,7 +715,7 @@ service AppEndpoint
 
         DbAppInfo appInfo = new DbAppInfo(deployment, moduleName, injections=injections);
         accountManager.addOrUpdateApp(accountName, appInfo);
-        return appInfo.redact();
+        return internal ? appInfo : appInfo.redact();
     }
 
     // ----- helper methods ------------------------------------------------------------------------

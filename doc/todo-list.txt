@@ -1,4 +1,7 @@
-- test db logs (change the API)
+- keep tombstones for recent certificates and don't attempt to re-apply; also limit the number of
+  attempts ti avoid the CA shunning
+
+- update the module dependencies when a new module is loaded
 
 - use email as a username for the platform authentication
 

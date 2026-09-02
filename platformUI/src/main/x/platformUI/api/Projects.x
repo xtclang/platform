@@ -89,9 +89,9 @@ service Projects
             if (provider == Null || provider.empty) {
                 provider = ControllerConfig.provider;
             }
-            appInfo = delegate.registerWebApp(deployment, moduleName, provider);
+            appInfo = delegate.registerWebApp(deployment, moduleName, provider, internal=True);
         } else if (moduleInfo.kind == Db) {
-            appInfo = delegate.registerDbApp(deployment, moduleName);
+            appInfo = delegate.registerDbApp(deployment, moduleName, internal=True);
 
         } else {
             appInfo = new SimpleResponse(Conflict, "Unsupported project type");
@@ -100,14 +100,12 @@ service Projects
         if (appInfo.is(SimpleResponse)) {
             return toJsonObject(appInfo);
         }
-        return updateApp(deployment, projectInfo);
+        return updateApp(deployment, projectInfo, appInfo);
     }
 
     @Patch("{/id}")
-    JsonObject updateApp(String id, @BodyParam JsonObject projectInfo) {
-        assert AccountInfo accountInfo := accountManager.getAccount(accountName);
-
-        AppResponse appInfo = delegate.getAppInfo(id);
+    JsonObject updateApp(String id, @BodyParam JsonObject projectInfo, AppInfo? current = Null) {
+        AppResponse appInfo = current ?: delegate.getAppInfo(id);
         if (appInfo.is(SimpleResponse)) {
             return toJsonObject(appInfo);
         }
@@ -118,22 +116,23 @@ service Projects
         if (injections != Null) {
             for ((String key, Doc value) : injections) {
                 if (value.is(String)) {
-                    SimpleResponse response = delegate.setInjectionValue(id, key, value);
-                    if (response.status != OK) {
+                    AppResponse response = delegate.setInjectionValue(id, key, value, internal=True);
+                    if (response.is(SimpleResponse)) {
                         return toJsonObject(response);
                     }
+                    appInfo = response;
                 }
             }
         }
 
         if (appInfo.is(WebAppInfo) && provider != Null && appInfo.provider != provider) {
-            SimpleResponse response = delegate.renewCertificate(id, provider);
-            if (response.status != OK) {
+            AppResponse response = delegate.renewCertificate(id, provider, internal=True);
+            if (response.is(SimpleResponse)) {
                 return toJsonObject(response);
             }
+            appInfo = response;
         }
-        appInfo = delegate.getAppInfo(id);
-        return toJsonObject(appInfo.as(AppInfo));
+        return toJsonObject(appInfo);
     }
 
     @Delete("{/id}")
@@ -143,16 +142,16 @@ service Projects
 
     @Put("{/id}/domains{/domain}")
     JsonObject addExternalHost(String id, String domain) {
-        SimpleResponse response = delegate.addExternalHost(id, domain);
-        if (response.status != OK) {
+        AppResponse response = delegate.addExternalHost(id, domain, internal=True);
+        if (response.is(SimpleResponse)) {
             return toJsonObject(response);
         }
-        return getProject(id).as(JsonObject);
+        return toJsonObject(response);
     }
 
     @Patch("{/id}/domains{/domain}")
     JsonObject verifyExternalHost(String id, String domain) {
-        SimpleResponse response = delegate.renewCertificate(id, externalHost=domain);
+        SimpleResponse response = delegate.renewCertificate(id, externalHost=domain).as(SimpleResponse);
         return toJsonObject(response.status == OK
                 ? new SimpleResponse(OK, $"Successfully verified: {domain.quoted()}")
                 : response);
@@ -160,11 +159,11 @@ service Projects
 
     @Delete("{/id}/domains{/domain}")
     JsonObject removeExternalHost(String id, String domain) {
-        AppResponse response = delegate.removeExternalHost(id, domain);
+        AppResponse response = delegate.removeExternalHost(id, domain, internal=True);
         if (response.is(SimpleResponse)) {
             return toJsonObject(response);
         }
-        return getProject(id).as(JsonObject);
+        return toJsonObject(response);
     }
 
     @Patch("{/id}/oauth-providers{/provider}")
@@ -206,7 +205,7 @@ service Projects
 
     @Post("/{id}/start")
     JsonObject start(String id) {
-        AppResponse appInfo = delegate.startApp(id);
+        AppResponse appInfo = delegate.startApp(id, internal=True);
         if (appInfo.is(SimpleResponse)) {
             return toJsonObject(appInfo);
         }
@@ -215,16 +214,11 @@ service Projects
 
     @Post("/{id}/stop")
     JsonObject stop(String id) {
-        SimpleResponse result = delegate.stopApp(id);
-        if (result.status == OK) {
-            AppResponse appInfo = delegate.getAppInfo(id);
-            if (appInfo.is(AppInfo)) {
-                return toJsonObject(appInfo);
-            } else {
-                result = appInfo;
-            }
+        AppResponse appInfo = delegate.stopApp(id, internal=True);
+        if (appInfo.is(SimpleResponse)) {
+            return toJsonObject(appInfo);
         }
-        return toJsonObject(result);
+        return toJsonObject(appInfo);
     }
 
     @Get("/{id}/stats/requests{?rate,limit}")

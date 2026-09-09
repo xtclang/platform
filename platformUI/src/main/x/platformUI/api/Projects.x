@@ -263,6 +263,33 @@ service Projects
         return response.build();
     }
 
+    @Get("/{id}/stats/state")
+    JsonObject stateStats(String id) {
+        AppResponse appInfo = delegate.getAppInfo(id);
+        if (appInfo.is(SimpleResponse)) {
+            return toJsonObject(appInfo);
+        }
+
+        String message;
+        if (appInfo.is(WebAppInfo)) {
+            if (AppHost host := hostManager.getHost(id), host.is(WebHost)) {
+                (Int active, Int chilled, Int frozen, Int wakes) = host.queryState();
+                return [
+                    "active"     = active .toIntLiteral(),
+                    "chilled"    = chilled.toIntLiteral(),
+                    "frozen"     = frozen .toIntLiteral(),
+                    "wake-count" = wakes  .toIntLiteral(),
+                ];
+            }
+            message = "Project is stopped";
+        } else {
+            message = "Unsupported project type";
+        }
+        return ["status"  = HttpStatus.Conflict.code.toString(),
+                "message" = message,
+               ];
+    }
+
     @Get("/{id}/logs/{kind}{/specifier}")
     @Produces(Text)
     String report(String id, String kind, String specifier = "") {

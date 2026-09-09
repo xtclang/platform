@@ -168,6 +168,41 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
      */
     static Int RequestRate = 60/10;
 
+    /**
+     * The mutually exclusive states used to account for the WebHost lifetime.
+     */
+    private enum RuntimeState {Active, Chilled, Frozen}
+
+    /**
+     * The current runtime state. State accounting starts with the first successful activation.
+     */
+    private RuntimeState runtimeState = Frozen;
+
+    /**
+     * The start of the current runtime state, or Null before the first activation.
+     */
+    private Time? runtimeStateSince;
+
+    /**
+     * Accumulated time spent processing one or more requests.
+     */
+    private Duration activeTime = None;
+
+    /**
+     * Accumulated time spent loaded in memory without processing a request.
+     */
+    private Duration chilledTime = None;
+
+    /**
+     * Accumulated time spent off-loaded after the first activation.
+     */
+    private Duration frozenTime = None;
+
+    /**
+     * The number of transitions from frozen to chilled, excluding the initial activation.
+     */
+    private Int wakeCount;
+
     // ----- AppHost methods -----------------------------------------------------------------------
 
     /*
@@ -212,6 +247,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
 
                     this.container = container;
                     this.handler   = handler;
+                    transitionState(Chilled);
 
                     // if a challengeHandler has been activated, close and drop it
                     challengeHandler?.close^();
@@ -250,6 +286,7 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
         } else if (paused && (explicit || pendingRequests == 0)) {
             unload(explicit);
         }
+        transitionState(Frozen);
         return True;
 
         void unload(Boolean explicit) {
@@ -355,8 +392,14 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
 
         totalRequests++;
         pendingRequests++;
+        transitionState(Active);
 
-        request.observe((_) -> {--pendingRequests;});
+        request.observe(_ -> {
+            // a forced deactivation may have already transitioned the host to "Frozen"
+            if (--pendingRequests == 0 && runtimeState == Active) {
+                transitionState(Chilled);
+            }
+        });
         handler.handle^(request);
     }
 
@@ -405,6 +448,73 @@ service WebHost(HostInfo route, String account, ModuleRepository repository,
         refreshRequestStats();
         return requestStats.query(rate, limit,
                                   rate == requestStats.resolution ? Null : new agg.Sum<UInt32>());
+    }
+
+    /**
+     * Obtain a snapshot of the runtime state totals.
+     *
+     * Concurrent requests form a single active interval, so active, chilled, and frozen always
+     * partition the elapsed time since the first successful activation.
+     *
+     * @return the number of seconds spent processing requests
+     * @return the number of seconds spent loaded but idle
+     * @return the number of seconds spent off-loaded
+     * @return the number of transitions from frozen to chilled
+     */
+    (Int active, Int chilled, Int frozen, Int wakes) queryState() {
+        Duration active   = activeTime;
+        Duration chilled  = chilledTime;
+        Duration frozen   = frozenTime;
+        Time     now      = clock.now;
+
+        if (Time since ?= runtimeStateSince) {
+            Duration elapsed = now - since;
+            switch (runtimeState) {
+            case Active:
+                active += elapsed;
+                break;
+            case Chilled:
+                chilled += elapsed;
+                break;
+            case Frozen:
+                frozen += elapsed;
+                break;
+            }
+        }
+
+        return active.seconds, chilled.seconds, frozen.seconds, wakeCount;
+    }
+
+    /**
+     * Complete the current runtime interval and enter the specified state.
+     */
+    private void transitionState(RuntimeState nextState) {
+        Time now = clock.now;
+        if (Time since ?= runtimeStateSince) {
+            if (nextState == runtimeState) {
+                return;
+            }
+
+            Duration elapsed = now - since;
+            switch (runtimeState) {
+            case Active:
+                activeTime += elapsed;
+                break;
+            case Chilled:
+                chilledTime += elapsed;
+                break;
+            case Frozen:
+                frozenTime += elapsed;
+                break;
+            }
+
+            if (runtimeState == Frozen && nextState == Chilled) {
+                ++wakeCount;
+            }
+        }
+
+        runtimeState      = nextState;
+        runtimeStateSince = now;
     }
 
     // ----- Helper methods ------------------------------------------------------------------------

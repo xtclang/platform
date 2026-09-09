@@ -106,6 +106,10 @@ class ApiTest {
     String requestStats(String projectName, String rate = "hour", Int limit = 24) =
         platformCLI.get($"/api/v1/projects/{projectName}/stats/requests?{rate=}&{limit=}");
 
+    @Command("api-state", "API V1: show state stats")
+    String stateStats(String projectName) =
+        platformCLI.get($"/api/v1/projects/{projectName}/stats/state");
+
     @Command("api-logs", "API V1: show the logs")
     String showLogs(String projectName, String logKind, String specifier = "") =
         platformCLI.get($"/api/v1/projects/{projectName}/logs/{logKind}/{specifier}");

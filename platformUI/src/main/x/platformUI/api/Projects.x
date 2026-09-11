@@ -47,14 +47,19 @@ service Projects
     HttpStatus preflight() = OK;
 
     @Get("/")
-    JsonArray getProjects() {
+    JsonArray getProjects(@QueryParam Boolean stateOnly = False) {
         assert AccountInfo accountInfo := accountManager.getAccount(accountName);
 
         Map<String, AppInfo> deployments = accountInfo.apps;
 
         JsonArrayBuilder response = json.arrayBuilder();
         for (AppInfo info : deployments.values) {
-            response.add(toJsonObject(info));
+            if (stateOnly) {
+                String id = info.deployment;
+                response.addObject(["id"=id, "active"=delegate.isActive(id)]);
+            } else {
+                response.add(toJsonObject(info));
+            }
         }
         return response.build();
     }
@@ -275,10 +280,10 @@ service Projects
             if (AppHost host := hostManager.getHost(id), host.is(WebHost)) {
                 (Int active, Int chilled, Int frozen, Int wakes) = host.queryState();
                 return [
-                    "active"     = active .toIntLiteral(),
-                    "chilled"    = chilled.toIntLiteral(),
-                    "frozen"     = frozen .toIntLiteral(),
-                    "wake-count" = wakes  .toIntLiteral(),
+                    "active"    = active .toIntLiteral(),
+                    "chilled"   = chilled.toIntLiteral(),
+                    "frozen"    = frozen .toIntLiteral(),
+                    "wakeCount" = wakes  .toIntLiteral(),
                 ];
             }
             message = "Project is stopped";

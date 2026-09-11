@@ -34,7 +34,8 @@ class ApiTest {
     // ----- projects ------------------------------------------------------------------------------
 
     @Command("api-all-projects", "API V1: list projects (deployments)")
-    String getProjects() = platformCLI.get("/api/v1/projects");
+    String getProjects(Boolean stateOnly = False) =
+            platformCLI.get($"/api/v1/projects?stateOnly={stateOnly ? "true" : "false"}");
 
     @Command("api-get-project", "API V1: get project by name")
     String getProject(String projectName) = platformCLI.get($"/api/v1/projects/{projectName}");

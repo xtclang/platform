@@ -13,8 +13,9 @@ dependencies {
     xtcModule(projects.platformDB)
 }
 
-// Process cfg.json template with port overrides if set
-tasks.named<ProcessResources>("processResources") {
+// Process cfg.json template with port overrides if set. This must be the XTC resource
+// task: its output is what compileXtc embeds and what cfgJsonElements exports.
+tasks.processXtcResources {
     val httpPort = providers.gradleProperty("platform.httpPort")
     val httpsPort = providers.gradleProperty("platform.httpsPort")
 

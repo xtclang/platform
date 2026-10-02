@@ -91,7 +91,11 @@ sourceSets {
     }
 }
 
-// Make processResources depend on GUI build
+// Make processResources and processXtcResources depend on GUI build; both copy guiDistDir
 val processResources = tasks.named("processResources") {
+    dependsOn(buildGui)
+}
+
+tasks.processXtcResources {
     dependsOn(buildGui)
 }

@@ -3086,10 +3086,10 @@ qs@~6.15.1:
     es-define-property "^1.0.1"
     side-channel "^1.1.1"
 
-quasar@2.21.1:
-  version "2.21.1"
-  resolved "https://registry.yarnpkg.com/quasar/-/quasar-2.21.1.tgz#6525b55b67dce579bbb8460c843f3b675710b0ef"
-  integrity sha512-fB+i8BzKjfU5dbQK8lv+bGthZ4SAYQiRWi0HDrFQSYvQoV5437o45dnCQpQBcwO/tnaKAFzglsahbXxOc43mww==
+quasar@2.35.6:
+  version "2.35.6"
+  resolved "https://registry.yarnpkg.com/quasar/-/quasar-2.35.6.tgz#47efcb007df15239f2ff4a7adf210a5bd8018cdc"
+  integrity sha512-BxQLJNzV5gK+DqgEqv2dl/PJWAcNRnedV5ozwjLpJ2OWf1LTrDXdR8BH09TY/HyXR8xgYiyHH35NxRieDlo5og==
 
 range-parser@~1.2.1:
   version "1.2.1"

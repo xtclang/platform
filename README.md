@@ -259,10 +259,12 @@ docker rmi xtc-platform:latest         # Remove image
 For automated testing and CI/CD pipelines, you can create custom Gradle tasks that bootstrap the platform from the `installDist` output directory. Here's an example of how to define `up` and `down` tasks:
 
 ```kotlin
+import org.xtclang.plugin.launchers.ExecutionMode
+
 // Configure the XTC plugin's runtime behavior
 xtcRun {
     verbose = true
-    detach = true  // if this is executed from the install lifecycle, live on after the build has exited.
+    executionMode = ExecutionMode.DETACHED  // if this is executed from the install lifecycle, live on after the build has exited.
     modulePath.setFrom(layout.buildDirectory.dir("install/platform/lib"))
     module {
         moduleName = "kernel.xqiz.it"
